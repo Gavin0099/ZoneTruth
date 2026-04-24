@@ -116,7 +116,7 @@ struct StravaTokenExchangeResponse: Equatable, Codable, Sendable {
     let refreshToken: String
     let expiresAt: Date
     let expiresIn: Int
-    let athlete: StravaTokenAthlete
+    let athlete: StravaTokenAthlete?
 
     enum CodingKeys: String, CodingKey {
         case tokenType = "token_type"
@@ -133,7 +133,7 @@ struct StravaTokenExchangeResponse: Equatable, Codable, Sendable {
         accessToken = try container.decode(String.self, forKey: .accessToken)
         refreshToken = try container.decode(String.self, forKey: .refreshToken)
         expiresIn = try container.decode(Int.self, forKey: .expiresIn)
-        athlete = try container.decode(StravaTokenAthlete.self, forKey: .athlete)
+        athlete = try container.decodeIfPresent(StravaTokenAthlete.self, forKey: .athlete)
 
         let epochSeconds = try container.decode(TimeInterval.self, forKey: .expiresAt)
         expiresAt = Date(timeIntervalSince1970: epochSeconds)
@@ -141,7 +141,7 @@ struct StravaTokenExchangeResponse: Equatable, Codable, Sendable {
 
     var session: StravaSession {
         StravaSession(
-            athleteID: athlete.id,
+            athleteID: athlete?.id,
             accessToken: accessToken,
             refreshToken: refreshToken,
             expiresAt: expiresAt
@@ -160,7 +160,7 @@ protocol StravaOAuthClient {
 
 enum StravaOAuthError: Error, Equatable, Sendable {
     case invalidCallback
-    case tokenExchangeNotImplemented
+    case httpError(statusCode: Int)
 }
 
 struct StravaSession: Equatable, Sendable {
@@ -250,6 +250,7 @@ struct SystemStravaClient: StravaClient {
 
 protocol StravaSessionStore {
     func loadSession() -> StravaSession?
+    func saveSession(_ session: StravaSession)
 }
 
 struct StravaAuthorizationParser {
@@ -288,14 +289,38 @@ struct StravaAuthorizationParser {
 }
 
 struct SystemStravaOAuthClient: StravaOAuthClient {
+    private static let tokenURL = URL(string: "https://www.strava.com/oauth/v3/token")!
+    private let urlSession: URLSession
+
+    init(urlSession: URLSession = .shared) {
+        self.urlSession = urlSession
+    }
+
     func exchangeToken(using request: StravaTokenExchangeRequest) async throws -> StravaTokenExchangeResponse {
-        _ = request
-        throw StravaOAuthError.tokenExchangeNotImplemented
+        try await post(formBody: request.formBody)
     }
 
     func refreshToken(using request: StravaTokenRefreshRequest) async throws -> StravaTokenExchangeResponse {
-        _ = request
-        throw StravaOAuthError.tokenExchangeNotImplemented
+        try await post(formBody: request.formBody)
+    }
+
+    private func post(formBody: [String: String]) async throws -> StravaTokenExchangeResponse {
+        var urlRequest = URLRequest(url: Self.tokenURL)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = formBody
+            .map { "\($0.key)=\($0.value.stravaFormEncoded)" }
+            .sorted()
+            .joined(separator: "&")
+            .data(using: .utf8)
+
+        let (data, response) = try await urlSession.data(for: urlRequest)
+
+        if let http = response as? HTTPURLResponse, !(200 ..< 300).contains(http.statusCode) {
+            throw StravaOAuthError.httpError(statusCode: http.statusCode)
+        }
+
+        return try JSONDecoder.zoneTruth.decode(StravaTokenExchangeResponse.self, from: data)
     }
 }
 
@@ -318,6 +343,12 @@ struct FileStravaSessionStore: StravaSessionStore {
         } catch {
             return nil
         }
+    }
+
+    func saveSession(_ session: StravaSession) {
+        let file = StravaSessionFile(session: session)
+        guard let data = try? JSONEncoder.zoneTruth.encode(file) else { return }
+        try? data.write(to: fileURL, options: .atomic)
     }
 }
 
@@ -393,11 +424,18 @@ final class StravaActivityRepository: WorkoutRepository {
     }
 }
 
-private struct StravaSessionFile: Decodable {
+private struct StravaSessionFile: Codable {
     let athleteID: Int?
     let accessToken: String
     let refreshToken: String?
     let expiresAt: Date?
+
+    init(session: StravaSession) {
+        athleteID = session.athleteID
+        accessToken = session.accessToken
+        refreshToken = session.refreshToken
+        expiresAt = session.expiresAt
+    }
 
     var session: StravaSession {
         StravaSession(
@@ -406,5 +444,19 @@ private struct StravaSessionFile: Decodable {
             refreshToken: refreshToken,
             expiresAt: expiresAt
         )
+    }
+}
+
+private extension String {
+    var stravaFormEncoded: String {
+        addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? self
+    }
+}
+
+extension JSONEncoder {
+    static var zoneTruth: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
     }
 }
