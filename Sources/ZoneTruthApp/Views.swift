@@ -17,7 +17,8 @@ struct WorkoutListView: View {
                         Task {
                             await viewModel.requestHealthAccess()
                         }
-                    }
+                    },
+                    stravaAuthorizationURL: viewModel.canConnectStrava ? viewModel.stravaAuthorizationURL : nil
                 )
 
                 List(selection: $viewModel.selectedWorkout) {
@@ -60,6 +61,9 @@ struct WorkoutSourceBannerView: View {
     let isRequestingAuthorization: Bool
     let canRequestHealthAccess: Bool
     let onRequestHealthAccess: () -> Void
+    var stravaAuthorizationURL: URL? = nil
+
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -87,6 +91,18 @@ struct WorkoutSourceBannerView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 .disabled(isRequestingAuthorization || isRefreshing)
+            }
+
+            if let url = stravaAuthorizationURL {
+                Button {
+                    openURL(url)
+                } label: {
+                    Text("Connect Strava")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isRefreshing)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

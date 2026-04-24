@@ -4,6 +4,7 @@ import ZoneTruthCore
 struct AppEnvironment {
     let repository: WorkoutRepository
     let stravaCallbackHandler: StravaCallbackHandler?
+    let stravaAuthorizationURL: URL?
 
     static func live(fileManager: FileManager = .default) -> AppEnvironment {
         let sessionStore = FileStravaSessionStore(
@@ -37,7 +38,8 @@ struct AppEnvironment {
                     MockWorkoutRepository(),
                 ]
             ),
-            stravaCallbackHandler: callbackHandler
+            stravaCallbackHandler: callbackHandler,
+            stravaAuthorizationURL: stravaConfig?.mobileAuthorizationURL
         )
     }
 

@@ -7,7 +7,10 @@ struct ZoneTruthApp: App {
 
     init() {
         let environment = AppEnvironment.live()
-        _viewModel = StateObject(wrappedValue: WorkoutListViewModel(repository: environment.repository))
+        _viewModel = StateObject(wrappedValue: WorkoutListViewModel(
+            repository: environment.repository,
+            stravaAuthorizationURL: environment.stravaAuthorizationURL
+        ))
         callbackHandler = environment.stravaCallbackHandler
     }
 

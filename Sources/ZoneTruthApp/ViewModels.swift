@@ -35,11 +35,17 @@ final class WorkoutListViewModel: ObservableObject {
     @Published private(set) var currentSource: WorkoutDataSource = .none
     @Published private(set) var statusMessage: String?
 
+    let stravaAuthorizationURL: URL?
     private let repository: WorkoutRepository
 
-    init(repository: WorkoutRepository) {
+    init(repository: WorkoutRepository, stravaAuthorizationURL: URL? = nil) {
         self.repository = repository
+        self.stravaAuthorizationURL = stravaAuthorizationURL
         apply(repository.loadResult())
+    }
+
+    var canConnectStrava: Bool {
+        stravaAuthorizationURL != nil && currentSource != .strava
     }
 
     func selectWorkout(_ workout: WorkoutInput) {

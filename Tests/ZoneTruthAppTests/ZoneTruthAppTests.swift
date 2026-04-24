@@ -434,6 +434,28 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testViewModelCanConnectStravaWhenURLSetAndSourceIsNotStrava() {
+        let stravaURL = URL(string: "https://www.strava.com/oauth/mobile/authorize?client_id=1")!
+        let viewModel = WorkoutListViewModel(
+            repository: MockWorkoutRepository(),
+            stravaAuthorizationURL: stravaURL
+        )
+
+        // MockWorkoutRepository returns .mockSamples, not .strava
+        XCTAssertTrue(viewModel.canConnectStrava)
+    }
+
+    @MainActor
+    func testViewModelCannotConnectStravaWhenURLNotSet() {
+        let viewModel = WorkoutListViewModel(
+            repository: MockWorkoutRepository(),
+            stravaAuthorizationURL: nil
+        )
+
+        XCTAssertFalse(viewModel.canConnectStrava)
+    }
+
+    @MainActor
     func testViewModelCanRequestHealthAccessWhenFallbackDataIsActive() {
         let viewModel = WorkoutListViewModel(
             repository: CompositeWorkoutRepository(

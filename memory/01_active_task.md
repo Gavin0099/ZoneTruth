@@ -19,6 +19,7 @@
 - Added session auto-refresh inside `SystemStravaClient.fetchRecentActivities`: expired token calls `refreshToken`, carries over `athleteID`, writes new session, then continues.
 - Implemented real `fetchRecentActivities`: activity list + per-activity heart-rate streams, sport_type mapping, graceful fallback to empty HR when stream unavailable.
 - Added README.md covering architecture, data sources, analysis policy, Strava setup, and JSON import format.
+- Added "Connect Strava" button in the banner: `AppEnvironment.stravaAuthorizationURL` → `WorkoutListViewModel.canConnectStrava` → `WorkoutSourceBannerView` opens OAuth URL via `@Environment(\.openURL)`.
 
 ## Next Steps
 
