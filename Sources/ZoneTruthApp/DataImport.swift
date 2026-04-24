@@ -34,26 +34,52 @@ struct AppEnvironment {
 struct CompositeWorkoutRepository: WorkoutRepository {
     let repositories: [WorkoutRepository]
 
-    func loadWorkouts() -> [WorkoutInput] {
-        for repository in repositories {
-            let workouts = repository.loadWorkouts()
-            if !workouts.isEmpty {
-                return workouts
-            }
-        }
-
-        return []
+    func loadResult() -> WorkoutLoadResult {
+        resolve(results: repositories.map { $0.loadResult() })
     }
 
-    func refreshWorkouts() async -> [WorkoutInput] {
+    func refreshResult() async -> WorkoutLoadResult {
+        var results: [WorkoutLoadResult] = []
         for repository in repositories {
-            let workouts = await repository.refreshWorkouts()
-            if !workouts.isEmpty {
-                return workouts
+            results.append(await repository.refreshResult())
+        }
+        return resolve(results: results)
+    }
+
+    private func resolve(results: [WorkoutLoadResult]) -> WorkoutLoadResult {
+        var notices: [String] = []
+
+        for result in results {
+            if let statusMessage = result.statusMessage {
+                notices.append(statusMessage)
+            }
+
+            if !result.workouts.isEmpty {
+                return WorkoutLoadResult(
+                    workouts: result.workouts,
+                    source: result.source,
+                    statusMessage: mergedMessage(for: result, notices: notices)
+                )
             }
         }
 
-        return []
+        return WorkoutLoadResult(
+            workouts: [],
+            source: .none,
+            statusMessage: notices.isEmpty ? "No workouts are available yet." : notices.joined(separator: " ")
+        )
+    }
+
+    private func mergedMessage(for result: WorkoutLoadResult, notices: [String]) -> String? {
+        let unique = notices.reduce(into: [String]()) { partial, item in
+            if !partial.contains(item) {
+                partial.append(item)
+            }
+        }
+
+        guard !unique.isEmpty else { return result.statusMessage }
+        guard result.source != .healthKit else { return result.statusMessage ?? unique.first }
+        return unique.joined(separator: " ")
     }
 }
 
@@ -66,15 +92,29 @@ struct JSONWorkoutRepository: WorkoutRepository {
         self.fileManager = fileManager
     }
 
-    func loadWorkouts() -> [WorkoutInput] {
-        guard fileManager.fileExists(atPath: fileURL.path) else { return [] }
+    func loadResult() -> WorkoutLoadResult {
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .jsonImport,
+                statusMessage: "No imported JSON file was found at SampleData/workouts.json."
+            )
+        }
 
         do {
             let data = try Data(contentsOf: fileURL)
             let payload = try JSONDecoder.zoneTruth.decode(ImportedWorkoutPayload.self, from: data)
-            return payload.workouts.map(\.toDomainWorkout)
+            return WorkoutLoadResult(
+                workouts: payload.workouts.map(\.toDomainWorkout),
+                source: .jsonImport,
+                statusMessage: "Loaded workouts from SampleData/workouts.json."
+            )
         } catch {
-            return []
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .jsonImport,
+                statusMessage: "Imported JSON could not be parsed, so this source was skipped."
+            )
         }
     }
 }

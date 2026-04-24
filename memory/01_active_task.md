@@ -10,10 +10,12 @@
 - Added a HealthKit adapter skeleton in the app layer so future Apple Health reads can map into `WorkoutInput` without leaking native types into the core.
 - Added async HealthKit authorization / refresh boundaries so the app now has the right shape for real Apple Health queries.
 - Implemented the first real HealthKit query path for recent workouts and time-bounded heart-rate samples inside the adapter boundary.
+- Added source-aware loading metadata so the UI can show whether data came from Apple Health, imported JSON, or preview samples.
 
 ## Next Steps
 
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
 - Define the first user-facing import contract from exported workout data into `WorkoutInput`.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
+- Add an explicit UI action for requesting Apple Health authorization instead of relying only on passive refresh.
 - Add HealthKit adapters only after Zone 2 judgment feels trustworthy on fixed cases.

@@ -6,17 +6,25 @@ struct WorkoutListView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $viewModel.selectedWorkout) {
-                ForEach(viewModel.workouts, id: \.id) { workout in
-                    Button {
-                        viewModel.selectWorkout(workout)
-                    } label: {
-                        WorkoutRowView(
-                            workout: workout,
-                            result: viewModel.analysisResult(for: workout)
-                        )
+            VStack(spacing: 0) {
+                WorkoutSourceBannerView(
+                    source: viewModel.currentSource,
+                    statusMessage: viewModel.statusMessage,
+                    isRefreshing: viewModel.isRefreshing
+                )
+
+                List(selection: $viewModel.selectedWorkout) {
+                    ForEach(viewModel.workouts, id: \.id) { workout in
+                        Button {
+                            viewModel.selectWorkout(workout)
+                        } label: {
+                            WorkoutRowView(
+                                workout: workout,
+                                result: viewModel.analysisResult(for: workout)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .navigationTitle("ZoneTruth")
@@ -35,6 +43,36 @@ struct WorkoutListView: View {
         .task {
             await viewModel.refreshWorkouts()
         }
+    }
+}
+
+struct WorkoutSourceBannerView: View {
+    let source: WorkoutDataSource
+    let statusMessage: String?
+    let isRefreshing: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(source.rawValue)
+                    .font(.headline)
+                Spacer()
+                if isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.primary.opacity(0.04))
     }
 }
 

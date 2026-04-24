@@ -73,8 +73,12 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         self.cachedWorkouts = cachedWorkouts
     }
 
-    func loadWorkouts() -> [WorkoutInput] {
-        cachedWorkouts
+    func loadResult() -> WorkoutLoadResult {
+        WorkoutLoadResult(
+            workouts: cachedWorkouts,
+            source: cachedWorkouts.isEmpty ? .healthKit : .healthKit,
+            statusMessage: statusMessage(for: store.authorizationStatus, workoutCount: cachedWorkouts.count)
+        )
     }
 
     func requestAuthorizationIfNeeded() async -> HealthAuthorizationStatus {
@@ -84,25 +88,57 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         return await store.requestAuthorization()
     }
 
-    func refreshWorkouts() async -> [WorkoutInput] {
+    func refreshResult() async -> WorkoutLoadResult {
         guard store.isAvailable else {
             cachedWorkouts = []
-            return []
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .healthKit,
+                statusMessage: "Apple Health is not available on this device."
+            )
         }
 
         let authorizationStatus = store.authorizationStatus
         guard authorizationStatus == .sharingAuthorized else {
             cachedWorkouts = []
-            return []
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .healthKit,
+                statusMessage: statusMessage(for: authorizationStatus, workoutCount: 0)
+            )
         }
 
         do {
             cachedWorkouts = try await store.fetchRecentWorkouts(limit: workoutLimit).map(\.toDomainWorkout)
         } catch {
             cachedWorkouts = []
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .healthKit,
+                statusMessage: "Apple Health was authorized, but workout data could not be loaded."
+            )
         }
 
-        return cachedWorkouts
+        return WorkoutLoadResult(
+            workouts: cachedWorkouts,
+            source: .healthKit,
+            statusMessage: statusMessage(for: authorizationStatus, workoutCount: cachedWorkouts.count)
+        )
+    }
+
+    private func statusMessage(for authorizationStatus: HealthAuthorizationStatus, workoutCount: Int) -> String {
+        switch authorizationStatus {
+        case .unavailable:
+            return "Apple Health is not available on this device."
+        case .notDetermined:
+            return "Apple Health permission has not been granted yet."
+        case .sharingDenied:
+            return "Apple Health access is denied, so a fallback data source will be used."
+        case .sharingAuthorized:
+            return workoutCount > 0
+                ? "Loaded workouts from Apple Health."
+                : "Apple Health is authorized, but no recent workouts were found."
+        }
     }
 }
 

@@ -12,12 +12,13 @@ final class ZoneTruthAppTests: XCTestCase {
         try samplePayload.write(to: fileURL, atomically: true, encoding: .utf8)
 
         let repository = JSONWorkoutRepository(fileURL: fileURL, fileManager: fileManager)
-        let workouts = repository.loadWorkouts()
+        let result = repository.loadResult()
 
-        XCTAssertEqual(workouts.count, 1)
-        XCTAssertEqual(workouts.first?.workoutType, .running)
-        XCTAssertEqual(workouts.first?.intent, .zone2)
-        XCTAssertEqual(workouts.first?.heartRateSamples.count, 3)
+        XCTAssertEqual(result.source, .jsonImport)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.workoutType, .running)
+        XCTAssertEqual(result.workouts.first?.intent, .zone2)
+        XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 3)
     }
 
     func testJSONWorkoutRepositoryReturnsEmptyForInvalidJSON() throws {
@@ -28,7 +29,11 @@ final class ZoneTruthAppTests: XCTestCase {
 
         let repository = JSONWorkoutRepository(fileURL: fileURL, fileManager: .default)
 
-        XCTAssertTrue(repository.loadWorkouts().isEmpty)
+        let result = repository.loadResult()
+
+        XCTAssertTrue(result.workouts.isEmpty)
+        XCTAssertEqual(result.source, .jsonImport)
+        XCTAssertNotNil(result.statusMessage)
     }
 
     func testFallbackWorkoutRepositoryUsesFallbackWhenImportMissing() throws {
@@ -42,7 +47,11 @@ final class ZoneTruthAppTests: XCTestCase {
             ]
         )
 
-        XCTAssertFalse(repository.loadWorkouts().isEmpty)
+        let result = repository.loadResult()
+
+        XCTAssertFalse(result.workouts.isEmpty)
+        XCTAssertEqual(result.source, .mockSamples)
+        XCTAssertNotNil(result.statusMessage)
     }
 
     func testHealthKitWorkoutRepositoryReturnsEmptyWhenUnauthorized() {
@@ -55,7 +64,11 @@ final class ZoneTruthAppTests: XCTestCase {
             )
         )
 
-        XCTAssertTrue(repository.loadWorkouts().isEmpty)
+        let result = repository.loadResult()
+
+        XCTAssertTrue(result.workouts.isEmpty)
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertNotNil(result.statusMessage)
     }
 
     func testHealthKitWorkoutRepositoryMapsAuthorizedSnapshotsAfterRefresh() async {
@@ -68,12 +81,13 @@ final class ZoneTruthAppTests: XCTestCase {
             )
         )
 
-        let workouts = await repository.refreshWorkouts()
+        let result = await repository.refreshResult()
 
-        XCTAssertEqual(workouts.count, 1)
-        XCTAssertEqual(workouts.first?.workoutType, .cycling)
-        XCTAssertEqual(workouts.first?.intent, .activityReview)
-        XCTAssertEqual(workouts.first?.heartRateSamples.count, 2)
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.workoutType, .cycling)
+        XCTAssertEqual(result.workouts.first?.intent, .activityReview)
+        XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 2)
     }
 
     func testHealthKitWorkoutRepositoryRequestsAuthorizationWhenNeeded() async {

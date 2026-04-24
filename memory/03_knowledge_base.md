@@ -13,3 +13,4 @@
 - HealthKit integration is now split into `HealthKitWorkoutStore` and `HealthKitWorkoutRepository`; native access remains isolated in the store, while the repository only maps authorized snapshots into domain inputs.
 - The app-side repository flow now supports async refresh, and `WorkoutListView` triggers a refresh task so authorized HealthKit data can replace fallback data later without changing the screen structure.
 - `SystemHealthKitWorkoutStore.fetchRecentWorkouts(limit:)` now uses `HKSampleQuery` wrappers to load recent workouts and then fetch heart-rate quantity samples in each workout time window before mapping them into `HealthKitWorkoutSnapshot`.
+- Repository loading now returns `WorkoutLoadResult`, which carries both workouts and source/status metadata so fallback behavior is visible in the UI instead of being silent.

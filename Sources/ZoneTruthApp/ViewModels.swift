@@ -1,22 +1,43 @@
 import Foundation
 import ZoneTruthCore
 
+enum WorkoutDataSource: String, Equatable, Sendable {
+    case healthKit = "Apple Health"
+    case jsonImport = "Imported JSON"
+    case mockSamples = "Preview Samples"
+    case none = "No Data"
+}
+
+struct WorkoutLoadResult: Equatable, Sendable {
+    let workouts: [WorkoutInput]
+    let source: WorkoutDataSource
+    let statusMessage: String?
+
+    init(
+        workouts: [WorkoutInput],
+        source: WorkoutDataSource,
+        statusMessage: String? = nil
+    ) {
+        self.workouts = workouts
+        self.source = source
+        self.statusMessage = statusMessage
+    }
+}
+
 @MainActor
 final class WorkoutListViewModel: ObservableObject {
     @Published var workouts: [WorkoutInput] = []
     @Published var selectedWorkout: WorkoutInput?
     @Published var selectedIntent: TrainingIntent = .zone2
     @Published var isRefreshing = false
+    @Published private(set) var currentSource: WorkoutDataSource = .none
+    @Published private(set) var statusMessage: String?
 
     private let repository: WorkoutRepository
 
     init(repository: WorkoutRepository) {
         self.repository = repository
-        self.workouts = repository.loadWorkouts()
-        self.selectedWorkout = workouts.first
-        if let intent = workouts.first?.intent {
-            self.selectedIntent = intent
-        }
+        apply(repository.loadResult())
     }
 
     func selectWorkout(_ workout: WorkoutInput) {
@@ -30,12 +51,8 @@ final class WorkoutListViewModel: ObservableObject {
 
     func refreshWorkouts() async {
         isRefreshing = true
-        let refreshed = await repository.refreshWorkouts()
-        workouts = refreshed
-        selectedWorkout = refreshed.first
-        if let intent = refreshed.first?.intent {
-            selectedIntent = intent
-        }
+        let refreshed = await repository.refreshResult()
+        apply(refreshed)
         isRefreshing = false
     }
 
@@ -51,21 +68,43 @@ final class WorkoutListViewModel: ObservableObject {
         )
         return WorkoutIntentAnalyzer.analyze(rewritten)
     }
+
+    private func apply(_ result: WorkoutLoadResult) {
+        workouts = result.workouts
+        currentSource = result.source
+        statusMessage = result.statusMessage
+        selectedWorkout = result.workouts.first
+        if let intent = result.workouts.first?.intent {
+            selectedIntent = intent
+        }
+    }
 }
 
 protocol WorkoutRepository {
-    func loadWorkouts() -> [WorkoutInput]
-    func refreshWorkouts() async -> [WorkoutInput]
+    func loadResult() -> WorkoutLoadResult
+    func refreshResult() async -> WorkoutLoadResult
 }
 
 extension WorkoutRepository {
+    func loadWorkouts() -> [WorkoutInput] {
+        loadResult().workouts
+    }
+
     func refreshWorkouts() async -> [WorkoutInput] {
-        loadWorkouts()
+        await refreshResult().workouts
+    }
+
+    func refreshResult() async -> WorkoutLoadResult {
+        loadResult()
     }
 }
 
 struct MockWorkoutRepository: WorkoutRepository {
-    func loadWorkouts() -> [WorkoutInput] {
-        SampleWorkoutCases.previewWorkouts()
+    func loadResult() -> WorkoutLoadResult {
+        WorkoutLoadResult(
+            workouts: SampleWorkoutCases.previewWorkouts(),
+            source: .mockSamples,
+            statusMessage: "Showing preview samples until imported or Apple Health data is available."
+        )
     }
 }
