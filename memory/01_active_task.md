@@ -17,11 +17,13 @@
 - Implemented real `SystemStravaOAuthClient` with URLSession token exchange/refresh, added `saveSession(_:)` to `StravaSessionStore`/`FileStravaSessionStore`, and made `StravaTokenExchangeResponse.athlete` optional to unify exchange and refresh response types.
 - Added `StravaCallbackHandler` (URL parse → exchange → save), shared `FileStravaSessionStore` instance in `AppEnvironment`, and wired `.onOpenURL` in `ZoneTruthApp` to call `refreshWorkouts()` on success.
 - Added session auto-refresh inside `SystemStravaClient.fetchRecentActivities`: expired token calls `refreshToken`, carries over `athleteID`, writes new session, then continues.
+- Implemented real `fetchRecentActivities`: activity list + per-activity heart-rate streams, sport_type mapping, graceful fallback to empty HR when stream unavailable.
+- Added README.md covering architecture, data sources, analysis policy, Strava setup, and JSON import format.
 
 ## Next Steps
 
-- Implement `fetchRecentActivities` with real Strava API (`GET /api/v3/athlete/activities`), mapping each activity to `StravaActivitySnapshot`.
-- Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
+- Validate the full Strava flow on-device with real credentials (fill in `StravaCredentials`, register URL scheme in Xcode target).
+- Validate the HealthKit query path on-device; decide how to handle workouts with sparse or missing heart-rate samples.
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.

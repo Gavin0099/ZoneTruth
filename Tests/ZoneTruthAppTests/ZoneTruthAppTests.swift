@@ -235,6 +235,22 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(sessionStore.savedSessions.isEmpty)
     }
 
+    func testStravaTokenExchangeResponseMapsToSessionPreservingAthleteID() throws {
+        let json = """
+        {
+          "token_type": "Bearer",
+          "access_token": "new-access",
+          "refresh_token": "new-refresh",
+          "expires_at": 1900000000,
+          "expires_in": 21600
+        }
+        """
+        let response = try JSONDecoder.zoneTruth.decode(StravaTokenExchangeResponse.self, from: Data(json.utf8))
+        XCTAssertNil(response.athlete)
+        XCTAssertNil(response.session.athleteID)
+        XCTAssertEqual(response.session.accessToken, "new-access")
+    }
+
     func testSystemStravaClientAutoRefreshesExpiredToken() async throws {
         let expiredSession = StravaSession(
             athleteID: 7,
@@ -249,11 +265,9 @@ final class ZoneTruthAppTests: XCTestCase {
             configuration: makeStravaConfig()
         )
 
-        do {
-            _ = try await client.fetchRecentActivities(limit: 5)
-        } catch StravaClientError.notImplemented {
-            // expected — refresh succeeded, fetch placeholder not yet implemented
-        }
+        // Ignore the error — the network call after refresh will fail without a real server.
+        // We only care that the session was refreshed and saved before the fetch was attempted.
+        _ = try? await client.fetchRecentActivities(limit: 5)
 
         XCTAssertEqual(sessionStore.savedSessions.count, 1)
         XCTAssertEqual(sessionStore.savedSessions.first?.accessToken, "stub-access-token")

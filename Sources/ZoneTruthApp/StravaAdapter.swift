@@ -222,6 +222,7 @@ enum StravaClientError: Error, Equatable, Sendable {
     case unavailable
     case disconnected
     case expiredSession
+    case networkError
     case notImplemented
 }
 
@@ -229,15 +230,20 @@ struct SystemStravaClient: StravaClient {
     let sessionStore: StravaSessionStore
     let oauthClient: StravaOAuthClient
     let configuration: StravaOAuthConfiguration?
+    private let urlSession: URLSession
+
+    private static let apiBase = URL(string: "https://www.strava.com/api/v3")!
 
     init(
         sessionStore: StravaSessionStore,
         oauthClient: StravaOAuthClient = SystemStravaOAuthClient(),
-        configuration: StravaOAuthConfiguration? = nil
+        configuration: StravaOAuthConfiguration? = nil,
+        urlSession: URLSession = .shared
     ) {
         self.sessionStore = sessionStore
         self.oauthClient = oauthClient
         self.configuration = configuration
+        self.urlSession = urlSession
     }
 
     var connectionStatus: StravaConnectionStatus {
@@ -246,16 +252,72 @@ struct SystemStravaClient: StravaClient {
     }
 
     func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot] {
-        _ = limit
-
         guard let session = sessionStore.loadSession() else {
             throw StravaClientError.disconnected
         }
 
         let validSession = session.isExpired ? try await refreshed(from: session) : session
-        _ = validSession
+        let summaries = try await fetchActivitySummaries(accessToken: validSession.accessToken, limit: limit)
 
-        throw StravaClientError.notImplemented
+        return try await summaries.stravaAsyncMap { summary in
+            let heartRateSamples: [HeartRateSample]
+            if summary.hasHeartrate {
+                heartRateSamples = (try? await fetchHeartRateSamples(
+                    activityID: summary.id,
+                    startDate: summary.startDate,
+                    accessToken: validSession.accessToken
+                )) ?? []
+            } else {
+                heartRateSamples = []
+            }
+            return summary.toSnapshot(heartRateSamples: heartRateSamples)
+        }
+    }
+
+    private func fetchActivitySummaries(accessToken: String, limit: Int) async throws -> [StravaActivitySummary] {
+        let url = Self.apiBase.appendingPathComponent("athlete/activities")
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "per_page", value: String(limit))]
+
+        let (data, response) = try await urlSession.data(for: authorized(components.url!, token: accessToken))
+        try validateHTTP(response)
+        return try JSONDecoder.zoneTruth.decode([StravaActivitySummary].self, from: data)
+    }
+
+    private func fetchHeartRateSamples(activityID: Int, startDate: Date, accessToken: String) async throws -> [HeartRateSample] {
+        let url = Self.apiBase.appendingPathComponent("activities/\(activityID)/streams")
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "keys", value: "heartrate,time"),
+            URLQueryItem(name: "key_by_type", value: "true"),
+        ]
+
+        let (data, response) = try await urlSession.data(for: authorized(components.url!, token: accessToken))
+        try validateHTTP(response)
+
+        let streams = try JSONDecoder.zoneTruth.decode(StravaActivityStreams.self, from: data)
+
+        guard let hrData = streams.heartrate?.data,
+              let timeData = streams.time?.data,
+              hrData.count == timeData.count else {
+            return []
+        }
+
+        return zip(timeData, hrData).map { offsetSeconds, bpm in
+            HeartRateSample(timestamp: startDate.addingTimeInterval(offsetSeconds), bpm: bpm)
+        }
+    }
+
+    private func authorized(_ url: URL, token: String) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    private func validateHTTP(_ response: URLResponse) throws {
+        guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
+            throw StravaClientError.networkError
+        }
     }
 
     private func refreshed(from expired: StravaSession) async throws -> StravaSession {
@@ -548,5 +610,69 @@ extension JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         return encoder
+    }
+}
+
+private struct StravaActivitySummary: Decodable {
+    let id: Int
+    let name: String
+    let sportType: String
+    let startDate: Date
+    let elapsedTime: Int
+    let hasHeartrate: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case sportType = "sport_type"
+        case startDate = "start_date"
+        case elapsedTime = "elapsed_time"
+        case hasHeartrate = "has_heartrate"
+    }
+
+    func toSnapshot(heartRateSamples: [HeartRateSample]) -> StravaActivitySnapshot {
+        StravaActivitySnapshot(
+            activityID: id,
+            name: name,
+            workoutType: domainWorkoutType(for: sportType),
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(TimeInterval(elapsedTime)),
+            heartRateSamples: heartRateSamples
+        )
+    }
+
+    private func domainWorkoutType(for sportType: String) -> WorkoutType {
+        switch sportType {
+        case "Run", "TrailRun", "VirtualRun":
+            return .running
+        case "Ride", "VirtualRide", "EBikeRide", "GravelRide", "Handcycle", "Velomobile":
+            return .cycling
+        case "Swim":
+            return .swimming
+        case "Walk", "Hike":
+            return .walking
+        case "WeightTraining", "Crossfit", "Workout", "RockClimbing", "Yoga":
+            return .strengthTraining
+        default:
+            return .other
+        }
+    }
+}
+
+private struct StravaActivityStreams: Decodable {
+    let heartrate: StreamSeries?
+    let time: StreamSeries?
+
+    struct StreamSeries: Decodable {
+        let data: [Double]
+    }
+}
+
+private extension Sequence {
+    func stravaAsyncMap<T>(_ transform: (Element) async throws -> T) async throws -> [T] {
+        var results: [T] = []
+        for element in self {
+            results.append(try await transform(element))
+        }
+        return results
     }
 }
