@@ -447,6 +447,61 @@ private struct StravaSessionFile: Codable {
     }
 }
 
+final class StravaCallbackHandler {
+    private let configuration: StravaOAuthConfiguration
+    private let oauthClient: StravaOAuthClient
+    private let sessionStore: StravaSessionStore
+
+    init(
+        configuration: StravaOAuthConfiguration,
+        oauthClient: StravaOAuthClient = SystemStravaOAuthClient(),
+        sessionStore: StravaSessionStore
+    ) {
+        self.configuration = configuration
+        self.oauthClient = oauthClient
+        self.sessionStore = sessionStore
+    }
+
+    // Returns true if the URL was a recognized Strava callback that was handled.
+    func handle(_ url: URL) async -> Bool {
+        guard url.scheme == configuration.callbackScheme else { return false }
+        guard case .code(let authCode) = StravaAuthorizationParser.parseCallbackURL(url) else { return false }
+
+        do {
+            let response = try await oauthClient.exchangeToken(
+                using: StravaTokenExchangeRequest(
+                    clientID: configuration.clientID,
+                    clientSecret: configuration.clientSecret,
+                    code: authCode.code
+                )
+            )
+            sessionStore.saveSession(response.session)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
+extension StravaOAuthConfiguration {
+    // Returns nil when placeholder credentials have not been filled in.
+    static var appDefault: StravaOAuthConfiguration? {
+        guard StravaCredentials.clientID != 0 else { return nil }
+        return StravaOAuthConfiguration(
+            clientID: StravaCredentials.clientID,
+            clientSecret: StravaCredentials.clientSecret,
+            redirectURI: "zonetruth://strava/callback",
+            callbackScheme: "zonetruth"
+        )
+    }
+}
+
+// Replace with values from https://www.strava.com/settings/api
+private enum StravaCredentials {
+    static let clientID: Int = 0
+    static let clientSecret: String = ""
+}
+
 private extension String {
     var stravaFormEncoded: String {
         addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? self

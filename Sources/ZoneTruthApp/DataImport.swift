@@ -3,23 +3,26 @@ import ZoneTruthCore
 
 struct AppEnvironment {
     let repository: WorkoutRepository
+    let stravaCallbackHandler: StravaCallbackHandler?
 
     static func live(fileManager: FileManager = .default) -> AppEnvironment {
+        let sessionStore = FileStravaSessionStore(
+            fileURL: defaultStravaSessionURL(fileManager: fileManager),
+            fileManager: fileManager
+        )
         let healthKitRepository = HealthKitWorkoutRepository(
             store: SystemHealthKitWorkoutStore()
         )
         let stravaRepository = StravaActivityRepository(
-            client: SystemStravaClient(
-                sessionStore: FileStravaSessionStore(
-                    fileURL: defaultStravaSessionURL(fileManager: fileManager),
-                    fileManager: fileManager
-                )
-            )
+            client: SystemStravaClient(sessionStore: sessionStore)
         )
         let importedRepository = JSONWorkoutRepository(
             fileURL: defaultImportURL(fileManager: fileManager),
             fileManager: fileManager
         )
+        let callbackHandler = StravaOAuthConfiguration.appDefault.map {
+            StravaCallbackHandler(configuration: $0, sessionStore: sessionStore)
+        }
 
         return AppEnvironment(
             repository: CompositeWorkoutRepository(
@@ -29,7 +32,8 @@ struct AppEnvironment {
                     importedRepository,
                     MockWorkoutRepository(),
                 ]
-            )
+            ),
+            stravaCallbackHandler: callbackHandler
         )
     }
 

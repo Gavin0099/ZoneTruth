@@ -15,11 +15,13 @@
 - Added a Strava adapter skeleton with session-file loading, activity snapshot mapping, and repository integration, while keeping OAuth/network work deferred.
 - Added Strava OAuth contract models for authorization URLs, callback parsing, and token exchange/refresh payloads so the integration boundary is now shaped around the official flow.
 - Implemented real `SystemStravaOAuthClient` with URLSession token exchange/refresh, added `saveSession(_:)` to `StravaSessionStore`/`FileStravaSessionStore`, and made `StravaTokenExchangeResponse.athlete` optional to unify exchange and refresh response types.
+- Added `StravaCallbackHandler` (URL parse → exchange → save), shared `FileStravaSessionStore` instance in `AppEnvironment`, and wired `.onOpenURL` in `ZoneTruthApp` to call `refreshWorkouts()` on success.
 
 ## Next Steps
 
-- Wire the OAuth callback: handle `onOpenURL`, call `exchangeToken`, then `sessionStore.saveSession`, then `refreshWorkouts`.
-- Add session expiry auto-refresh: before any API call, check `session.isExpired` and call `refreshToken` transparently.
+- Add session expiry auto-refresh: before any Strava API call, check `session.isExpired` and call `refreshToken` transparently inside `SystemStravaClient`.
 - Implement `fetchRecentActivities` with real Strava API (`GET /api/v3/athlete/activities`).
+- Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
+- Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.

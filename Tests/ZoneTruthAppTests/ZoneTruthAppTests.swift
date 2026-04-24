@@ -169,6 +169,115 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(response.session.refreshToken, "refresh-token")
     }
 
+    func testStravaTokenRefreshResponseDecodesWithoutAthlete() throws {
+        let json = """
+        {
+          "token_type": "Bearer",
+          "access_token": "refreshed-access-token",
+          "refresh_token": "refreshed-refresh-token",
+          "expires_at": 1790000000,
+          "expires_in": 21600
+        }
+        """
+
+        let response = try JSONDecoder.zoneTruth.decode(StravaTokenExchangeResponse.self, from: Data(json.utf8))
+
+        XCTAssertNil(response.session.athleteID)
+        XCTAssertEqual(response.session.accessToken, "refreshed-access-token")
+    }
+
+    func testStravaCallbackHandlerExchangesTokenAndSavesSession() async {
+        let sessionStore = SpyStravaSessionStore()
+        let oauthClient = StubStravaOAuthClient(
+            result: .success(makeTokenExchangeResponse())
+        )
+        let handler = StravaCallbackHandler(
+            configuration: makeStravaConfig(),
+            oauthClient: oauthClient,
+            sessionStore: sessionStore
+        )
+        let callbackURL = URL(string: "zonetruth://strava/callback?code=abc123&scope=activity:read&state=zonetruth")!
+
+        let handled = await handler.handle(callbackURL)
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(sessionStore.savedSessions.count, 1)
+        XCTAssertEqual(sessionStore.savedSessions.first?.accessToken, "stub-access-token")
+    }
+
+    func testStravaCallbackHandlerIgnoresUnrelatedURLScheme() async {
+        let sessionStore = SpyStravaSessionStore()
+        let handler = StravaCallbackHandler(
+            configuration: makeStravaConfig(),
+            oauthClient: StubStravaOAuthClient(result: .success(makeTokenExchangeResponse())),
+            sessionStore: sessionStore
+        )
+        let unrelatedURL = URL(string: "https://example.com/callback?code=abc")!
+
+        let handled = await handler.handle(unrelatedURL)
+
+        XCTAssertFalse(handled)
+        XCTAssertTrue(sessionStore.savedSessions.isEmpty)
+    }
+
+    func testStravaCallbackHandlerHandlesDeniedCallback() async {
+        let sessionStore = SpyStravaSessionStore()
+        let handler = StravaCallbackHandler(
+            configuration: makeStravaConfig(),
+            oauthClient: StubStravaOAuthClient(result: .success(makeTokenExchangeResponse())),
+            sessionStore: sessionStore
+        )
+        let deniedURL = URL(string: "zonetruth://strava/callback?error=access_denied&state=zonetruth")!
+
+        let handled = await handler.handle(deniedURL)
+
+        XCTAssertFalse(handled)
+        XCTAssertTrue(sessionStore.savedSessions.isEmpty)
+    }
+
+    func testFileStravaSessionStoreRoundTrips() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("strava-session.json")
+        let store = FileStravaSessionStore(fileURL: fileURL)
+
+        let original = StravaSession(
+            athleteID: 42,
+            accessToken: "at-xyz",
+            refreshToken: "rt-xyz",
+            expiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+        )
+
+        store.saveSession(original)
+        let loaded = store.loadSession()
+
+        XCTAssertEqual(loaded?.athleteID, 42)
+        XCTAssertEqual(loaded?.accessToken, "at-xyz")
+        XCTAssertEqual(loaded?.refreshToken, "rt-xyz")
+    }
+
+    private func makeStravaConfig() -> StravaOAuthConfiguration {
+        StravaOAuthConfiguration(
+            clientID: 1,
+            clientSecret: "secret",
+            redirectURI: "zonetruth://strava/callback",
+            callbackScheme: "zonetruth"
+        )
+    }
+
+    private func makeTokenExchangeResponse() -> StravaTokenExchangeResponse {
+        let json = """
+        {
+          "token_type": "Bearer",
+          "access_token": "stub-access-token",
+          "refresh_token": "stub-refresh-token",
+          "expires_at": 1900000000,
+          "expires_in": 21600,
+          "athlete": { "id": 7 }
+        }
+        """
+        return try! JSONDecoder.zoneTruth.decode(StravaTokenExchangeResponse.self, from: Data(json.utf8))
+    }
+
     func testHealthKitWorkoutRepositoryMapsAuthorizedSnapshotsAfterRefresh() async {
         let repository = HealthKitWorkoutRepository(
             store: StubHealthKitWorkoutStore(
@@ -340,5 +449,29 @@ private struct StubStravaClient: StravaClient {
     func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot] {
         _ = limit
         return activities
+    }
+}
+
+private struct StubStravaOAuthClient: StravaOAuthClient {
+    let result: Result<StravaTokenExchangeResponse, StravaOAuthError>
+
+    func exchangeToken(using request: StravaTokenExchangeRequest) async throws -> StravaTokenExchangeResponse {
+        try result.get()
+    }
+
+    func refreshToken(using request: StravaTokenRefreshRequest) async throws -> StravaTokenExchangeResponse {
+        try result.get()
+    }
+}
+
+private final class SpyStravaSessionStore: StravaSessionStore {
+    private(set) var savedSessions: [StravaSession] = []
+    private var stored: StravaSession?
+
+    func loadSession() -> StravaSession? { stored }
+
+    func saveSession(_ session: StravaSession) {
+        stored = session
+        savedSessions.append(session)
     }
 }
