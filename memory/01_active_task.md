@@ -20,12 +20,15 @@
 - Implemented real `fetchRecentActivities`: activity list + per-activity heart-rate streams, sport_type mapping, graceful fallback to empty HR when stream unavailable.
 - Added README.md covering architecture, data sources, analysis policy, Strava setup, and JSON import format.
 - Added "Connect Strava" button in the banner: `AppEnvironment.stravaAuthorizationURL` → `WorkoutListViewModel.canConnectStrava` → `WorkoutSourceBannerView` opens OAuth URL via `@Environment(\.openURL)`.
+- Sparse HR early return in `Zone2QualityAnalyzer`: no misleading stability/drift analysis when sample count too low; returns clear "too low" reason instead.
+- Added 3 edge-case labeled samples (sparse HR, high drift low leakage, unstable but Zone 2) and 3 matching core tests.
+- Created `Info.plist` with `zonetruth://` URL scheme and HealthKit usage strings; `Package.swift` excludes it from SPM processing (Xcode picks it up automatically).
 
 ## Next Steps
 
-- Validate the full Strava flow on-device with real credentials (fill in `StravaCredentials`, register URL scheme in Xcode target).
-- Validate the HealthKit query path on-device; decide how to handle workouts with sparse or missing heart-rate samples.
-- Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
+- Open Package.swift in Xcode and verify Info.plist is picked up; run on real device with Strava credentials.
+- Consider adding VO2/Interval and Strength analysis paths beyond the current "outside MVP scope" placeholder.
+- Add personalized zone bounds via user settings (Resting HR, Zone 2 lower/upper bound inputs).
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.

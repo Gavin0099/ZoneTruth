@@ -69,6 +69,61 @@ public enum SampleWorkoutCases {
                 expectedVerdict: .pass,
                 expectedReasonSnippets: ["general activity"]
             ),
+            LabeledWorkoutCase(
+                name: "sparse_hr_cycling",
+                summary: "Adequate session duration but too few HR samples after sanitization due to recording gaps.",
+                workout: WorkoutInput(
+                    workoutType: .cycling,
+                    startDate: start.addingTimeInterval(5 * 86_400),
+                    endDate: start.addingTimeInterval(5 * 86_400 + 30 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start.addingTimeInterval(5 * 86_400),
+                        values: [95, 112, 118, 119, 120, 121, 116],
+                        intervalSeconds: 5 * 60
+                    ),
+                    intent: .zone2
+                ),
+                expectedVerdict: .fail,
+                expectedReasonSnippets: ["too low"]
+            ),
+            LabeledWorkoutCase(
+                name: "high_drift_zone2_ride",
+                summary: "Zone 3 leakage is minimal but HR rises steadily across the session, causing a drift failure.",
+                workout: WorkoutInput(
+                    workoutType: .cycling,
+                    startDate: start.addingTimeInterval(6 * 86_400),
+                    endDate: start.addingTimeInterval(6 * 86_400 + 35 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start.addingTimeInterval(6 * 86_400),
+                        values: [96, 100, 104, 108, 110,
+                                 110, 110, 110, 110, 111, 110, 111, 110, 110, 111, 110, 111, 110,
+                                 120, 121, 122, 122, 123, 123, 123, 123, 124, 124, 124, 124, 124, 124,
+                                 118, 110, 102]
+                    ),
+                    intent: .zone2
+                ),
+                expectedVerdict: .fail,
+                expectedReasonSnippets: ["exceeded 8%"]
+            ),
+            LabeledWorkoutCase(
+                name: "unstable_zone2_run",
+                summary: "Average HR stays in Zone 2 and drift is low, but high beat-to-beat variability causes a warning.",
+                workout: WorkoutInput(
+                    workoutType: .running,
+                    startDate: start.addingTimeInterval(7 * 86_400),
+                    endDate: start.addingTimeInterval(7 * 86_400 + 30 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start.addingTimeInterval(7 * 86_400),
+                        values: [95, 100, 104, 108, 110,
+                                 111, 124, 111, 124, 111, 124, 111, 124, 111, 124, 111, 124, 111, 124,
+                                 111, 124, 111, 124, 111, 124, 111, 124,
+                                 116, 108, 100]
+                    ),
+                    intent: .zone2
+                ),
+                expectedVerdict: .warning,
+                expectedReasonSnippets: ["variability was moderate"]
+            ),
         ]
     }
 
@@ -76,9 +131,9 @@ public enum SampleWorkoutCases {
         zone2ValidationCases().map(\.workout)
     }
 
-    private static func makeSamples(start: Date, values: [Double]) -> [HeartRateSample] {
+    private static func makeSamples(start: Date, values: [Double], intervalSeconds: TimeInterval = 60) -> [HeartRateSample] {
         values.enumerated().map { index, bpm in
-            HeartRateSample(timestamp: start.addingTimeInterval(TimeInterval(index * 60)), bpm: bpm)
+            HeartRateSample(timestamp: start.addingTimeInterval(TimeInterval(index) * intervalSeconds), bpm: bpm)
         }
     }
 }

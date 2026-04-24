@@ -116,8 +116,19 @@ public enum Zone2QualityAnalyzer {
         }
 
         if preparedSamples.count < policy.minimumSampleCount {
-            reasons.append("Heart rate sample count is too low after warm-up, cool-down, and spike filtering.")
-            severityScores.append(2)
+            // Return early — running stability and drift on too few samples produces misleading reasons.
+            let thinDistribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
+            return AnalysisResult(
+                verdict: .fail,
+                confidence: 0.4,
+                reasons: reasons + ["Heart rate sample count is too low after filtering. The device may not have recorded heart rate throughout the session."],
+                recommendations: RecommendationEngine.recommendations(
+                    for: workout.intent, verdict: .fail, distribution: thinDistribution, driftRatio: nil
+                ),
+                zoneDistribution: thinDistribution,
+                stabilityStandardDeviation: nil,
+                driftRatio: nil
+            )
         }
 
         let leakageVerdict = Zone3LeakageAnalyzer.verdict(for: distribution)

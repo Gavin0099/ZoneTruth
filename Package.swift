@@ -23,7 +23,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "ZoneTruthApp",
-            dependencies: ["ZoneTruthCore"]
+            dependencies: ["ZoneTruthCore"],
+            exclude: ["Info.plist"]
         ),
         .testTarget(
             name: "ZoneTruthCoreTests",

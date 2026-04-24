@@ -84,6 +84,46 @@ final class ZoneTruthCoreTests: XCTestCase {
         }
     }
 
+    func testZone2AnalyzerFailsForSparseHeartRateData() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "sparse_hr_cycling" }!
+            .workout
+
+        let result = Zone2QualityAnalyzer.analyze(workout: workout)
+
+        XCTAssertEqual(result.verdict, .fail)
+        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("too low") })
+        XCTAssertNil(result.stabilityStandardDeviation)
+        XCTAssertNil(result.driftRatio)
+    }
+
+    func testZone2AnalyzerFailsForHighDriftWithLowLeakage() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "high_drift_zone2_ride" }!
+            .workout
+
+        let result = Zone2QualityAnalyzer.analyze(workout: workout)
+
+        XCTAssertEqual(result.verdict, .fail)
+        XCTAssertEqual(result.zoneDistribution.ratio(for: .zone3), 0.0)
+        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("exceeded 8%") })
+    }
+
+    func testZone2AnalyzerWarnsForHighVariabilityWithGoodZones() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "unstable_zone2_run" }!
+            .workout
+
+        let result = Zone2QualityAnalyzer.analyze(workout: workout)
+
+        XCTAssertEqual(result.verdict, .warning)
+        XCTAssertEqual(result.zoneDistribution.ratio(for: .zone3), 0.0)
+        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("variability was moderate") })
+    }
+
     func testSanitizerRemovesWarmupCooldownAndSpikes() {
         let policy = AnalysisPolicy.default
         let samples = makeSamples([90, 92, 95, 100, 108, 116, 118, 160, 119, 120, 121, 118, 112, 100])
