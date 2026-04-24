@@ -31,7 +31,7 @@ public enum TrainingZone: Int, CaseIterable, Codable, Sendable {
     case zone5
 }
 
-public struct HeartRateSample: Codable, Equatable, Sendable {
+public struct HeartRateSample: Codable, Equatable, Hashable, Sendable {
     public let timestamp: Date
     public let bpm: Double
 
@@ -41,7 +41,7 @@ public struct HeartRateSample: Codable, Equatable, Sendable {
     }
 }
 
-public struct ZoneBounds: Codable, Equatable, Sendable {
+public struct ZoneBounds: Codable, Equatable, Hashable, Sendable {
     public let zone2LowerBound: Double
     public let zone2UpperBound: Double
     public let zone4Threshold: Double
@@ -68,7 +68,7 @@ public struct ZoneBounds: Codable, Equatable, Sendable {
     }
 }
 
-public struct AnalysisPolicy: Codable, Equatable, Sendable {
+public struct AnalysisPolicy: Codable, Equatable, Hashable, Sendable {
     public let warmupExclusionSeconds: TimeInterval
     public let cooldownExclusionSeconds: TimeInterval
     public let minimumDurationSeconds: TimeInterval
@@ -115,7 +115,7 @@ public struct AnalysisPolicy: Codable, Equatable, Sendable {
     )
 }
 
-public struct WorkoutInput: Codable, Equatable, Sendable {
+public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let id: UUID
     public let workoutType: WorkoutType
     public let startDate: Date
@@ -182,6 +182,28 @@ public struct AnalysisResult: Equatable, Sendable {
         self.zoneDistribution = zoneDistribution
         self.stabilityStandardDeviation = stabilityStandardDeviation
         self.driftRatio = driftRatio
+    }
+}
+
+public struct LabeledWorkoutCase: Equatable, Sendable {
+    public let name: String
+    public let summary: String
+    public let workout: WorkoutInput
+    public let expectedVerdict: AnalysisVerdict
+    public let expectedReasonSnippets: [String]
+
+    public init(
+        name: String,
+        summary: String,
+        workout: WorkoutInput,
+        expectedVerdict: AnalysisVerdict,
+        expectedReasonSnippets: [String] = []
+    ) {
+        self.name = name
+        self.summary = summary
+        self.workout = workout
+        self.expectedVerdict = expectedVerdict
+        self.expectedReasonSnippets = expectedReasonSnippets
     }
 }
 

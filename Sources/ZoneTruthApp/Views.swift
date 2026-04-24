@@ -32,6 +32,9 @@ struct WorkoutListView: View {
                 ContentUnavailableView("No Workout", systemImage: "heart.text.square")
             }
         }
+        .task {
+            await viewModel.refreshWorkouts()
+        }
     }
 }
 
@@ -189,7 +192,7 @@ struct AnalysisResultView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -211,6 +214,6 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }

@@ -7,4 +7,8 @@
 - VO2 / Interval and Strength are intentionally deferred because heart rate alone is not trusted enough for first-pass verdicts.
 - The useful core signals for MVP are zone distribution, Zone 3 leakage, HR stability, and HR drift.
 - Analysis should stay session-level and explainable; avoid pretending heart rate is ground truth.
-- This environment does not have a Swift toolchain, so code structure was updated but local `swift test` verification is still pending.
+- This environment does have a usable Swift toolchain, but `swift test` may need to run outside the sandbox because SwiftPM and clang cache directories are not writable inside the default sandbox.
+- `SampleWorkoutCases` now acts as a labeled validation dataset, not just mock workouts, and is safe to reuse in both tests and preview UI.
+- Real sample import currently lives in the app adapter layer through `JSONWorkoutRepository`, which reads `SampleData/workouts.json` and falls back cleanly to mock data on missing or invalid files.
+- HealthKit integration is now split into `HealthKitWorkoutStore` and `HealthKitWorkoutRepository`; native access remains isolated in the store, while the repository only maps authorized snapshots into domain inputs.
+- The app-side repository flow now supports async refresh, and `WorkoutListView` triggers a refresh task so authorized HealthKit data can replace fallback data later without changing the screen structure.

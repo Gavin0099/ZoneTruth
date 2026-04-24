@@ -29,5 +29,9 @@ let package = Package(
             name: "ZoneTruthCoreTests",
             dependencies: ["ZoneTruthCore"]
         ),
+        .testTarget(
+            name: "ZoneTruthAppTests",
+            dependencies: ["ZoneTruthApp", "ZoneTruthCore"]
+        ),
     ]
 )

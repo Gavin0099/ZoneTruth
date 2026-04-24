@@ -17,10 +17,10 @@ final class ZoneTruthCoreTests: XCTestCase {
     }
 
     func testZone2AnalyzerPassesForSteadyAerobicSession() {
-        let workout = makeWorkout(
-            intent: .zone2,
-            samples: repeatingSequence(24, value: 118)
-        )
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
 
         let result = Zone2QualityAnalyzer.analyze(workout: workout)
 
@@ -30,10 +30,10 @@ final class ZoneTruthCoreTests: XCTestCase {
     }
 
     func testZone2AnalyzerWarnsForModerateLeakageAndDrift() {
-        let workout = makeWorkout(
-            intent: .zone2,
-            samples: [116, 117, 118, 120, 121, 122, 123, 124, 126, 128, 129, 130, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132]
-        )
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "leaky_zone2_run" }!
+            .workout
 
         let result = Zone2QualityAnalyzer.analyze(workout: workout)
 
@@ -42,10 +42,10 @@ final class ZoneTruthCoreTests: XCTestCase {
     }
 
     func testZone2AnalyzerFailsForHeavyLeakageAndHighDrift() {
-        let workout = makeWorkout(
-            intent: .zone2,
-            samples: [116, 117, 118, 119, 120, 121, 122, 123, 126, 128, 130, 133, 136, 138, 140, 142, 144, 145, 146, 147, 148, 149, 150, 151]
-        )
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "drifting_swim" }!
+            .workout
 
         let result = Zone2QualityAnalyzer.analyze(workout: workout)
 
@@ -54,10 +54,10 @@ final class ZoneTruthCoreTests: XCTestCase {
     }
 
     func testActivityReviewReturnsDescriptivePass() {
-        let workout = makeWorkout(
-            intent: .activityReview,
-            samples: [92, 98, 104, 110, 112, 108, 105, 101, 98, 96, 94, 92, 95, 97, 99, 101, 100, 98, 96, 95, 94, 93, 92, 91]
-        )
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "badminton_activity_review" }!
+            .workout
 
         let result = WorkoutIntentAnalyzer.analyze(workout)
 
@@ -65,9 +65,28 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(result.reasons.contains { $0.contains("general activity") })
     }
 
+    func testValidationDatasetMatchesExpectedVerdicts() {
+        for testCase in SampleWorkoutCases.zone2ValidationCases() {
+            let result = WorkoutIntentAnalyzer.analyze(testCase.workout)
+
+            XCTAssertEqual(
+                result.verdict,
+                testCase.expectedVerdict,
+                "Unexpected verdict for case '\(testCase.name)'"
+            )
+
+            for snippet in testCase.expectedReasonSnippets {
+                XCTAssertTrue(
+                    result.reasons.contains(where: { $0.localizedCaseInsensitiveContains(snippet) }),
+                    "Missing reason snippet '\(snippet)' for case '\(testCase.name)'"
+                )
+            }
+        }
+    }
+
     func testSanitizerRemovesWarmupCooldownAndSpikes() {
         let policy = AnalysisPolicy.default
-        let samples = makeSamples([90, 92, 118, 119, 160, 120, 121, 122, 100])
+        let samples = makeSamples([90, 92, 95, 100, 108, 116, 118, 160, 119, 120, 121, 118, 112, 100])
 
         let sanitized = HeartRateSampleSanitizer.sanitize(samples, policy: policy)
 
@@ -92,9 +111,5 @@ final class ZoneTruthCoreTests: XCTestCase {
         return samples.enumerated().map { index, bpm in
             HeartRateSample(timestamp: start.addingTimeInterval(TimeInterval(index * 60)), bpm: bpm)
         }
-    }
-
-    private func repeatingSequence(_ count: Int, value: Double) -> [Double] {
-        Array(repeating: value, count: count)
     }
 }
