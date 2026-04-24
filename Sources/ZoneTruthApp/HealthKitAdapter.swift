@@ -15,7 +15,7 @@ enum HealthAuthorizationStatus: Equatable, Sendable {
 enum HealthKitStoreError: Error, Equatable, Sendable {
     case unavailable
     case unauthorized
-    case queryNotImplemented
+    case queryNotSupported
 }
 
 struct HealthKitWorkoutSnapshot: Equatable, Sendable {
@@ -109,7 +109,7 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
 struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
     var isAvailable: Bool {
         #if canImport(HealthKit)
-        if #available(iOS 17.0, *) {
+        if #available(iOS 17.0, macOS 14.0, *) {
             return HKHealthStore.isHealthDataAvailable()
         }
         return false
@@ -120,9 +120,11 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
 
     var authorizationStatus: HealthAuthorizationStatus {
         #if canImport(HealthKit)
-        if #available(iOS 17.0, *) {
+        if #available(iOS 17.0, macOS 14.0, *) {
             let store = HKHealthStore()
-            guard let workoutType = HKObjectType.workoutType() as HKObjectType? else {
+            let workoutType = HKObjectType.workoutType()
+
+            guard isAvailable else {
                 return .unavailable
             }
 
@@ -145,13 +147,16 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
 
     func requestAuthorization() async -> HealthAuthorizationStatus {
         #if canImport(HealthKit)
-        if #available(iOS 17.0, *) {
+        if #available(iOS 17.0, macOS 14.0, *) {
             guard isAvailable else { return .unavailable }
 
             let store = HKHealthStore()
+            guard let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
+                return .unavailable
+            }
             let readTypes: Set<HKObjectType> = [
                 HKObjectType.workoutType(),
-                HKQuantityType(.heartRate),
+                heartRateType,
             ]
 
             do {
@@ -172,9 +177,120 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
         guard isAvailable else { throw HealthKitStoreError.unavailable }
         guard authorizationStatus == .sharingAuthorized else { throw HealthKitStoreError.unauthorized }
 
-        // Real HK queries live here later. Keeping the adapter boundary in place now
-        // prevents domain logic from depending on HealthKit types.
+        #if canImport(HealthKit)
+        if #available(iOS 17.0, macOS 14.0, *) {
+            let store = HKHealthStore()
+            let workouts = try await recentWorkouts(from: store, limit: limit)
+
+            return try await workouts.asyncMap { workout in
+                let heartRateSamples = try await heartRateSamples(for: workout, from: store)
+                return HealthKitWorkoutSnapshot(
+                    workoutType: domainWorkoutType(for: workout.workoutActivityType),
+                    startDate: workout.startDate,
+                    endDate: workout.endDate,
+                    heartRateSamples: heartRateSamples
+                )
+            }
+        }
+        throw HealthKitStoreError.unavailable
+        #else
         _ = limit
-        throw HealthKitStoreError.queryNotImplemented
+        throw HealthKitStoreError.unavailable
+        #endif
+    }
+}
+
+#if canImport(HealthKit)
+@available(iOS 17.0, macOS 14.0, *)
+private func recentWorkouts(from store: HKHealthStore, limit: Int) async throws -> [HKWorkout] {
+    let sortDescriptors = [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+
+    return try await withCheckedThrowingContinuation { continuation in
+        let query = HKSampleQuery(
+            sampleType: HKObjectType.workoutType(),
+            predicate: nil,
+            limit: limit,
+            sortDescriptors: sortDescriptors
+        ) { _, samples, error in
+            if let error {
+                continuation.resume(throwing: error)
+                return
+            }
+
+            continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
+        }
+
+        store.execute(query)
+    }
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+private func heartRateSamples(for workout: HKWorkout, from store: HKHealthStore) async throws -> [HeartRateSample] {
+    guard let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
+        throw HealthKitStoreError.queryNotSupported
+    }
+
+    let predicate = HKQuery.predicateForSamples(
+        withStart: workout.startDate,
+        end: workout.endDate,
+        options: [.strictStartDate, .strictEndDate]
+    )
+    let sortDescriptors = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+    let beatsPerMinuteUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+
+    let quantitySamples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+        let query = HKSampleQuery(
+            sampleType: heartRateType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: sortDescriptors
+        ) { _, samples, error in
+            if let error {
+                continuation.resume(throwing: error)
+                return
+            }
+
+            continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
+        }
+
+        store.execute(query)
+    }
+
+    return quantitySamples.map { sample in
+        HeartRateSample(
+            timestamp: sample.startDate,
+            bpm: sample.quantity.doubleValue(for: beatsPerMinuteUnit)
+        )
+    }
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+private func domainWorkoutType(for activityType: HKWorkoutActivityType) -> WorkoutType {
+    switch activityType {
+    case .running:
+        return .running
+    case .cycling:
+        return .cycling
+    case .swimming:
+        return .swimming
+    case .walking, .hiking:
+        return .walking
+    case .traditionalStrengthTraining, .functionalStrengthTraining, .coreTraining:
+        return .strengthTraining
+    case .mixedCardio, .highIntensityIntervalTraining, .kickboxing, .martialArts:
+        return .mixed
+    default:
+        return .other
+    }
+}
+#endif
+
+private extension Sequence {
+    func asyncMap<T>(_ transform: (Element) async throws -> T) async throws -> [T] {
+        var results: [T] = []
+        for element in self {
+            results.append(try await transform(element))
+        }
+        return results
     }
 }
