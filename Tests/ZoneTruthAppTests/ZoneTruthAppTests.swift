@@ -102,6 +102,73 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 2)
     }
 
+    func testStravaOAuthConfigurationBuildsMobileAuthorizationURL() {
+        let configuration = StravaOAuthConfiguration(
+            clientID: 123,
+            clientSecret: "secret",
+            redirectURI: "zonetruth://strava/callback",
+            requestedScopes: [.activityRead, .activityReadAll],
+            approvalPrompt: .auto,
+            callbackScheme: "zonetruth"
+        )
+
+        let urlString = configuration.mobileAuthorizationURL?.absoluteString
+
+        XCTAssertNotNil(urlString)
+        XCTAssertTrue(urlString?.contains("client_id=123") == true)
+        XCTAssertTrue(urlString?.contains("response_type=code") == true)
+        XCTAssertTrue(urlString?.contains("scope=activity:read,activity:read_all") == true)
+    }
+
+    func testStravaAuthorizationParserParsesAcceptedCallback() {
+        let callbackURL = URL(string: "zonetruth://strava/callback?state=zonetruth&code=abc123&scope=activity:read_all,activity:read")!
+
+        let result = StravaAuthorizationParser.parseCallbackURL(callbackURL)
+
+        switch result {
+        case .code(let authorizationCode):
+            XCTAssertEqual(authorizationCode.code, "abc123")
+            XCTAssertEqual(authorizationCode.state, "zonetruth")
+            XCTAssertEqual(authorizationCode.scope, [.activityReadAll, .activityRead])
+        default:
+            XCTFail("Expected authorization code callback")
+        }
+    }
+
+    func testStravaAuthorizationParserParsesDeniedCallback() {
+        let callbackURL = URL(string: "zonetruth://strava/callback?state=zonetruth&error=access_denied")!
+
+        let result = StravaAuthorizationParser.parseCallbackURL(callbackURL)
+
+        switch result {
+        case .accessDenied(let state):
+            XCTAssertEqual(state, "zonetruth")
+        default:
+            XCTFail("Expected access denied callback")
+        }
+    }
+
+    func testStravaTokenExchangeResponseMapsToSession() throws {
+        let json = """
+        {
+          "token_type": "Bearer",
+          "access_token": "access-token",
+          "refresh_token": "refresh-token",
+          "expires_at": 1780000000,
+          "expires_in": 21600,
+          "athlete": {
+            "id": 999
+          }
+        }
+        """
+
+        let response = try JSONDecoder.zoneTruth.decode(StravaTokenExchangeResponse.self, from: Data(json.utf8))
+
+        XCTAssertEqual(response.session.athleteID, 999)
+        XCTAssertEqual(response.session.accessToken, "access-token")
+        XCTAssertEqual(response.session.refreshToken, "refresh-token")
+    }
+
     func testHealthKitWorkoutRepositoryMapsAuthorizedSnapshotsAfterRefresh() async {
         let repository = HealthKitWorkoutRepository(
             store: StubHealthKitWorkoutStore(

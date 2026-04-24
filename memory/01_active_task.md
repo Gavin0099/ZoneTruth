@@ -13,6 +13,7 @@
 - Added source-aware loading metadata so the UI can show whether data came from Apple Health, imported JSON, or preview samples.
 - Added an explicit Apple Health authorization action so the app can request permission instead of only waiting for passive refresh.
 - Added a Strava adapter skeleton with session-file loading, activity snapshot mapping, and repository integration, while keeping OAuth/network work deferred.
+- Added Strava OAuth contract models for authorization URLs, callback parsing, and token exchange/refresh payloads so the integration boundary is now shaped around the official flow.
 
 ## Next Steps
 
@@ -21,4 +22,5 @@
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
 - Add a richer post-authorization experience, such as showing why Apple Health access failed or linking users to system settings when access is denied.
 - Implement real Strava OAuth and API calls on top of the new adapter boundary.
+- Add session persistence writes and real URLSession-based token exchange for Strava.
 - Add HealthKit adapters only after Zone 2 judgment feels trustworthy on fixed cases.

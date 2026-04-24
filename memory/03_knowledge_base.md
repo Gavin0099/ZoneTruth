@@ -16,3 +16,4 @@
 - Repository loading now returns `WorkoutLoadResult`, which carries both workouts and source/status metadata so fallback behavior is visible in the UI instead of being silent.
 - Health access requests now flow through the same repository boundary (`requestHealthAccess`) so UI code can trigger authorization without importing or depending on HealthKit types.
 - Strava now has a parallel adapter boundary (`StravaClient`, `StravaSessionStore`, `StravaActivityRepository`) and reads an optional `SampleData/strava-session.json` session file, but network fetching is still intentionally unimplemented.
+- Strava OAuth specifics are now modeled explicitly with `StravaOAuthConfiguration`, `StravaAuthorizationParser`, and token exchange request/response types, using the official short-lived token + refresh token flow.
