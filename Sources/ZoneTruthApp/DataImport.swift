@@ -10,17 +10,21 @@ struct AppEnvironment {
             fileURL: defaultStravaSessionURL(fileManager: fileManager),
             fileManager: fileManager
         )
+        let stravaConfig = StravaOAuthConfiguration.appDefault
         let healthKitRepository = HealthKitWorkoutRepository(
             store: SystemHealthKitWorkoutStore()
         )
         let stravaRepository = StravaActivityRepository(
-            client: SystemStravaClient(sessionStore: sessionStore)
+            client: SystemStravaClient(
+                sessionStore: sessionStore,
+                configuration: stravaConfig
+            )
         )
         let importedRepository = JSONWorkoutRepository(
             fileURL: defaultImportURL(fileManager: fileManager),
             fileManager: fileManager
         )
-        let callbackHandler = StravaOAuthConfiguration.appDefault.map {
+        let callbackHandler = stravaConfig.map {
             StravaCallbackHandler(configuration: $0, sessionStore: sessionStore)
         }
 

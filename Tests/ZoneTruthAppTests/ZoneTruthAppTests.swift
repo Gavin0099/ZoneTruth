@@ -235,6 +235,76 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(sessionStore.savedSessions.isEmpty)
     }
 
+    func testSystemStravaClientAutoRefreshesExpiredToken() async throws {
+        let expiredSession = StravaSession(
+            athleteID: 7,
+            accessToken: "old-access",
+            refreshToken: "valid-refresh",
+            expiresAt: Date(timeIntervalSince1970: 1)
+        )
+        let sessionStore = SpyStravaSessionStore(initial: expiredSession)
+        let client = SystemStravaClient(
+            sessionStore: sessionStore,
+            oauthClient: StubStravaOAuthClient(result: .success(makeTokenExchangeResponse())),
+            configuration: makeStravaConfig()
+        )
+
+        do {
+            _ = try await client.fetchRecentActivities(limit: 5)
+        } catch StravaClientError.notImplemented {
+            // expected — refresh succeeded, fetch placeholder not yet implemented
+        }
+
+        XCTAssertEqual(sessionStore.savedSessions.count, 1)
+        XCTAssertEqual(sessionStore.savedSessions.first?.accessToken, "stub-access-token")
+        XCTAssertEqual(sessionStore.savedSessions.first?.athleteID, 7) // carried over from old session
+    }
+
+    func testSystemStravaClientThrowsExpiredWhenNoRefreshToken() async {
+        let expiredSession = StravaSession(
+            athleteID: 1,
+            accessToken: "old",
+            refreshToken: nil,
+            expiresAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = SystemStravaClient(
+            sessionStore: SpyStravaSessionStore(initial: expiredSession),
+            oauthClient: StubStravaOAuthClient(result: .success(makeTokenExchangeResponse())),
+            configuration: makeStravaConfig()
+        )
+
+        do {
+            _ = try await client.fetchRecentActivities(limit: 5)
+            XCTFail("Expected expiredSession error")
+        } catch StravaClientError.expiredSession {
+            // expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testSystemStravaClientThrowsExpiredWhenNoConfiguration() async {
+        let expiredSession = StravaSession(
+            athleteID: 1,
+            accessToken: "old",
+            refreshToken: "refresh-token",
+            expiresAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = SystemStravaClient(
+            sessionStore: SpyStravaSessionStore(initial: expiredSession),
+            configuration: nil
+        )
+
+        do {
+            _ = try await client.fetchRecentActivities(limit: 5)
+            XCTFail("Expected expiredSession error")
+        } catch StravaClientError.expiredSession {
+            // expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     func testFileStravaSessionStoreRoundTrips() throws {
         let directoryURL = try makeTemporaryDirectory()
         let fileURL = directoryURL.appendingPathComponent("strava-session.json")
@@ -467,6 +537,10 @@ private struct StubStravaOAuthClient: StravaOAuthClient {
 private final class SpyStravaSessionStore: StravaSessionStore {
     private(set) var savedSessions: [StravaSession] = []
     private var stored: StravaSession?
+
+    init(initial: StravaSession? = nil) {
+        stored = initial
+    }
 
     func loadSession() -> StravaSession? { stored }
 

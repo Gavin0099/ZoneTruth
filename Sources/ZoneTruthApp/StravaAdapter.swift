@@ -227,6 +227,18 @@ enum StravaClientError: Error, Equatable, Sendable {
 
 struct SystemStravaClient: StravaClient {
     let sessionStore: StravaSessionStore
+    let oauthClient: StravaOAuthClient
+    let configuration: StravaOAuthConfiguration?
+
+    init(
+        sessionStore: StravaSessionStore,
+        oauthClient: StravaOAuthClient = SystemStravaOAuthClient(),
+        configuration: StravaOAuthConfiguration? = nil
+    ) {
+        self.sessionStore = sessionStore
+        self.oauthClient = oauthClient
+        self.configuration = configuration
+    }
 
     var connectionStatus: StravaConnectionStatus {
         guard let session = sessionStore.loadSession() else { return .disconnected }
@@ -240,11 +252,34 @@ struct SystemStravaClient: StravaClient {
             throw StravaClientError.disconnected
         }
 
-        guard !session.isExpired else {
+        let validSession = session.isExpired ? try await refreshed(from: session) : session
+        _ = validSession
+
+        throw StravaClientError.notImplemented
+    }
+
+    private func refreshed(from expired: StravaSession) async throws -> StravaSession {
+        guard let configuration, let refreshToken = expired.refreshToken else {
             throw StravaClientError.expiredSession
         }
 
-        throw StravaClientError.notImplemented
+        let response = try await oauthClient.refreshToken(
+            using: StravaTokenRefreshRequest(
+                clientID: configuration.clientID,
+                clientSecret: configuration.clientSecret,
+                refreshToken: refreshToken
+            )
+        )
+
+        // Refresh response omits the athlete object; carry over athleteID from the old session.
+        let refreshed = StravaSession(
+            athleteID: response.session.athleteID ?? expired.athleteID,
+            accessToken: response.session.accessToken,
+            refreshToken: response.session.refreshToken,
+            expiresAt: response.session.expiresAt
+        )
+        sessionStore.saveSession(refreshed)
+        return refreshed
     }
 }
 
