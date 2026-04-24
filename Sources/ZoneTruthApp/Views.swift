@@ -10,7 +10,14 @@ struct WorkoutListView: View {
                 WorkoutSourceBannerView(
                     source: viewModel.currentSource,
                     statusMessage: viewModel.statusMessage,
-                    isRefreshing: viewModel.isRefreshing
+                    isRefreshing: viewModel.isRefreshing,
+                    isRequestingAuthorization: viewModel.isRequestingAuthorization,
+                    canRequestHealthAccess: viewModel.canRequestHealthAccess,
+                    onRequestHealthAccess: {
+                        Task {
+                            await viewModel.requestHealthAccess()
+                        }
+                    }
                 )
 
                 List(selection: $viewModel.selectedWorkout) {
@@ -50,6 +57,9 @@ struct WorkoutSourceBannerView: View {
     let source: WorkoutDataSource
     let statusMessage: String?
     let isRefreshing: Bool
+    let isRequestingAuthorization: Bool
+    let canRequestHealthAccess: Bool
+    let onRequestHealthAccess: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -57,7 +67,7 @@ struct WorkoutSourceBannerView: View {
                 Text(source.rawValue)
                     .font(.headline)
                 Spacer()
-                if isRefreshing {
+                if isRefreshing || isRequestingAuthorization {
                     ProgressView()
                         .controlSize(.small)
                 }
@@ -67,6 +77,16 @@ struct WorkoutSourceBannerView: View {
                 Text(statusMessage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if canRequestHealthAccess {
+                Button(action: onRequestHealthAccess) {
+                    Text(isRequestingAuthorization ? "Requesting Apple Health Access..." : "Request Apple Health Access")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(isRequestingAuthorization || isRefreshing)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

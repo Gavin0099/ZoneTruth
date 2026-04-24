@@ -30,6 +30,7 @@ final class WorkoutListViewModel: ObservableObject {
     @Published var selectedWorkout: WorkoutInput?
     @Published var selectedIntent: TrainingIntent = .zone2
     @Published var isRefreshing = false
+    @Published var isRequestingAuthorization = false
     @Published private(set) var currentSource: WorkoutDataSource = .none
     @Published private(set) var statusMessage: String?
 
@@ -56,6 +57,14 @@ final class WorkoutListViewModel: ObservableObject {
         isRefreshing = false
     }
 
+    func requestHealthAccess() async {
+        guard repository.supportsHealthAuthorization else { return }
+        isRequestingAuthorization = true
+        let result = await repository.requestHealthAccess()
+        apply(result)
+        isRequestingAuthorization = false
+    }
+
     func analysisResult(for workout: WorkoutInput) -> AnalysisResult {
         let rewritten = WorkoutInput(
             id: workout.id,
@@ -78,14 +87,22 @@ final class WorkoutListViewModel: ObservableObject {
             selectedIntent = intent
         }
     }
+
+    var canRequestHealthAccess: Bool {
+        repository.supportsHealthAuthorization && currentSource != .healthKit
+    }
 }
 
 protocol WorkoutRepository {
     func loadResult() -> WorkoutLoadResult
     func refreshResult() async -> WorkoutLoadResult
+    var supportsHealthAuthorization: Bool { get }
+    func requestHealthAccess() async -> WorkoutLoadResult
 }
 
 extension WorkoutRepository {
+    var supportsHealthAuthorization: Bool { false }
+
     func loadWorkouts() -> [WorkoutInput] {
         loadResult().workouts
     }
@@ -96,6 +113,10 @@ extension WorkoutRepository {
 
     func refreshResult() async -> WorkoutLoadResult {
         loadResult()
+    }
+
+    func requestHealthAccess() async -> WorkoutLoadResult {
+        await refreshResult()
     }
 }
 

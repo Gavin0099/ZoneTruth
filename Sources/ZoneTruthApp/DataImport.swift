@@ -34,6 +34,10 @@ struct AppEnvironment {
 struct CompositeWorkoutRepository: WorkoutRepository {
     let repositories: [WorkoutRepository]
 
+    var supportsHealthAuthorization: Bool {
+        repositories.contains { $0.supportsHealthAuthorization }
+    }
+
     func loadResult() -> WorkoutLoadResult {
         resolve(results: repositories.map { $0.loadResult() })
     }
@@ -44,6 +48,18 @@ struct CompositeWorkoutRepository: WorkoutRepository {
             results.append(await repository.refreshResult())
         }
         return resolve(results: results)
+    }
+
+    func requestHealthAccess() async -> WorkoutLoadResult {
+        for repository in repositories where repository.supportsHealthAuthorization {
+            let result = await repository.requestHealthAccess()
+            if !result.workouts.isEmpty || result.source == .healthKit {
+                return result
+            }
+            break
+        }
+
+        return await refreshResult()
     }
 
     private func resolve(results: [WorkoutLoadResult]) -> WorkoutLoadResult {

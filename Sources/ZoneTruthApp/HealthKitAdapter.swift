@@ -73,6 +73,10 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         self.cachedWorkouts = cachedWorkouts
     }
 
+    var supportsHealthAuthorization: Bool {
+        store.isAvailable
+    }
+
     func loadResult() -> WorkoutLoadResult {
         WorkoutLoadResult(
             workouts: cachedWorkouts,
@@ -86,6 +90,34 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         let currentStatus = store.authorizationStatus
         guard currentStatus == .notDetermined else { return currentStatus }
         return await store.requestAuthorization()
+    }
+
+    func requestHealthAccess() async -> WorkoutLoadResult {
+        let status = await requestAuthorizationIfNeeded()
+        guard status == .sharingAuthorized else {
+            cachedWorkouts = []
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .healthKit,
+                statusMessage: statusMessage(for: status, workoutCount: 0)
+            )
+        }
+
+        do {
+            cachedWorkouts = try await store.fetchRecentWorkouts(limit: workoutLimit).map(\.toDomainWorkout)
+            return WorkoutLoadResult(
+                workouts: cachedWorkouts,
+                source: .healthKit,
+                statusMessage: statusMessage(for: status, workoutCount: cachedWorkouts.count)
+            )
+        } catch {
+            cachedWorkouts = []
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .healthKit,
+                statusMessage: "Apple Health permission was granted, but workout data could not be loaded."
+            )
+        }
     }
 
     func refreshResult() async -> WorkoutLoadResult {

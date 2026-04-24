@@ -105,6 +105,64 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(status, .sharingAuthorized)
     }
 
+    func testHealthKitWorkoutRepositoryRequestHealthAccessReturnsAuthorizedRefreshResult() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .notDetermined,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.requestHealthAccess()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+    }
+
+    func testCompositeWorkoutRepositoryRequestsHealthAccessBeforeFallback() async {
+        let repository = CompositeWorkoutRepository(
+            repositories: [
+                HealthKitWorkoutRepository(
+                    store: StubHealthKitWorkoutStore(
+                        isAvailable: true,
+                        authorizationStatus: .notDetermined,
+                        requestedAuthorizationStatus: .sharingAuthorized,
+                        snapshots: [makeHealthSnapshot()]
+                    )
+                ),
+                MockWorkoutRepository(),
+            ]
+        )
+
+        let result = await repository.requestHealthAccess()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+    }
+
+    @MainActor
+    func testViewModelCanRequestHealthAccessWhenFallbackDataIsActive() {
+        let viewModel = WorkoutListViewModel(
+            repository: CompositeWorkoutRepository(
+                repositories: [
+                    HealthKitWorkoutRepository(
+                        store: StubHealthKitWorkoutStore(
+                            isAvailable: true,
+                            authorizationStatus: .notDetermined,
+                            requestedAuthorizationStatus: .sharingAuthorized,
+                            snapshots: []
+                        )
+                    ),
+                    MockWorkoutRepository(),
+                ]
+            )
+        )
+
+        XCTAssertTrue(viewModel.canRequestHealthAccess)
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
