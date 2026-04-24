@@ -3,6 +3,7 @@ import ZoneTruthCore
 
 enum WorkoutDataSource: String, Equatable, Sendable {
     case healthKit = "Apple Health"
+    case strava = "Strava"
     case jsonImport = "Imported JSON"
     case mockSamples = "Preview Samples"
     case none = "No Data"

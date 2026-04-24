@@ -71,6 +71,37 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertNotNil(result.statusMessage)
     }
 
+    func testStravaActivityRepositoryReturnsDisconnectedStatusWithoutSession() {
+        let repository = StravaActivityRepository(
+            client: StubStravaClient(
+                connectionStatus: .disconnected,
+                activities: []
+            )
+        )
+
+        let result = repository.loadResult()
+
+        XCTAssertTrue(result.workouts.isEmpty)
+        XCTAssertEqual(result.source, .strava)
+        XCTAssertNotNil(result.statusMessage)
+    }
+
+    func testStravaActivityRepositoryMapsConnectedActivitiesAfterRefresh() async {
+        let repository = StravaActivityRepository(
+            client: StubStravaClient(
+                connectionStatus: .connected,
+                activities: [makeStravaActivitySnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .strava)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.workoutType, .running)
+        XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 2)
+    }
+
     func testHealthKitWorkoutRepositoryMapsAuthorizedSnapshotsAfterRefresh() async {
         let repository = HealthKitWorkoutRepository(
             store: StubHealthKitWorkoutStore(
@@ -202,6 +233,21 @@ final class ZoneTruthAppTests: XCTestCase {
             ]
         )
     }
+
+    private func makeStravaActivitySnapshot() -> StravaActivitySnapshot {
+        let start = Date(timeIntervalSince1970: 1_715_000_000)
+        return StravaActivitySnapshot(
+            activityID: 42,
+            name: "Evening Run",
+            workoutType: .running,
+            startDate: start,
+            endDate: start.addingTimeInterval(30 * 60),
+            heartRateSamples: [
+                HeartRateSample(timestamp: start, bpm: 121),
+                HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 124),
+            ]
+        )
+    }
 }
 
 private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
@@ -217,5 +263,15 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
     func fetchRecentWorkouts(limit: Int) async throws -> [HealthKitWorkoutSnapshot] {
         _ = limit
         return snapshots
+    }
+}
+
+private struct StubStravaClient: StravaClient {
+    let connectionStatus: StravaConnectionStatus
+    let activities: [StravaActivitySnapshot]
+
+    func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot] {
+        _ = limit
+        return activities
     }
 }

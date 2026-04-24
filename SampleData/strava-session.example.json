@@ -1,0 +1,6 @@
+{
+  "athleteID": 123456,
+  "accessToken": "strava-access-token",
+  "refreshToken": "strava-refresh-token",
+  "expiresAt": "2026-05-01T00:00:00Z"
+}

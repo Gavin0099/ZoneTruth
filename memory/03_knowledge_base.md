@@ -15,3 +15,4 @@
 - `SystemHealthKitWorkoutStore.fetchRecentWorkouts(limit:)` now uses `HKSampleQuery` wrappers to load recent workouts and then fetch heart-rate quantity samples in each workout time window before mapping them into `HealthKitWorkoutSnapshot`.
 - Repository loading now returns `WorkoutLoadResult`, which carries both workouts and source/status metadata so fallback behavior is visible in the UI instead of being silent.
 - Health access requests now flow through the same repository boundary (`requestHealthAccess`) so UI code can trigger authorization without importing or depending on HealthKit types.
+- Strava now has a parallel adapter boundary (`StravaClient`, `StravaSessionStore`, `StravaActivityRepository`) and reads an optional `SampleData/strava-session.json` session file, but network fetching is still intentionally unimplemented.

@@ -8,6 +8,14 @@ struct AppEnvironment {
         let healthKitRepository = HealthKitWorkoutRepository(
             store: SystemHealthKitWorkoutStore()
         )
+        let stravaRepository = StravaActivityRepository(
+            client: SystemStravaClient(
+                sessionStore: FileStravaSessionStore(
+                    fileURL: defaultStravaSessionURL(fileManager: fileManager),
+                    fileManager: fileManager
+                )
+            )
+        )
         let importedRepository = JSONWorkoutRepository(
             fileURL: defaultImportURL(fileManager: fileManager),
             fileManager: fileManager
@@ -17,6 +25,7 @@ struct AppEnvironment {
             repository: CompositeWorkoutRepository(
                 repositories: [
                     healthKitRepository,
+                    stravaRepository,
                     importedRepository,
                     MockWorkoutRepository(),
                 ]
@@ -28,6 +37,12 @@ struct AppEnvironment {
         URL(fileURLWithPath: fileManager.currentDirectoryPath)
             .appendingPathComponent("SampleData", isDirectory: true)
             .appendingPathComponent("workouts.json")
+    }
+
+    private static func defaultStravaSessionURL(fileManager: FileManager) -> URL {
+        URL(fileURLWithPath: fileManager.currentDirectoryPath)
+            .appendingPathComponent("SampleData", isDirectory: true)
+            .appendingPathComponent("strava-session.json")
     }
 }
 
@@ -166,7 +181,7 @@ private struct ImportedHeartRateSample: Decodable {
     }
 }
 
-private extension JSONDecoder {
+extension JSONDecoder {
     static var zoneTruth: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
