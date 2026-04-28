@@ -127,8 +127,97 @@ public enum SampleWorkoutCases {
         ]
     }
 
+    public static func vo2IntervalValidationCases() -> [LabeledWorkoutCase] {
+        let start = Date(timeIntervalSince1970: 10 * 86_400) // Day 10
+
+        return [
+            LabeledWorkoutCase(
+                name: "solid_vo2_max_intervals",
+                summary: "High intensity intervals reaching Zone 4 and Zone 5 consistently.",
+                workout: WorkoutInput(
+                    workoutType: .running,
+                    startDate: start,
+                    endDate: start.addingTimeInterval(40 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start,
+                        values: [90, 100, 110, 120, // Warmup
+                                 145, 150, 155, 120, // Interval 1 + Rest
+                                 146, 152, 158, 121, // Interval 2 + Rest
+                                 147, 153, 159, 122, // Interval 3 + Rest
+                                 148, 154, 160, 123, // Interval 4 + Rest
+                                 110, 100, 90]        // Cooldown
+                    ),
+                    intent: .vo2Interval
+                ),
+                expectedVerdict: .pass,
+                expectedReasonSnippets: ["Sufficient time"]
+            ),
+            LabeledWorkoutCase(
+                name: "low_intensity_intervals",
+                summary: "Intervals that only reach Zone 3, failing to hit VO2 max intensities.",
+                workout: WorkoutInput(
+                    workoutType: .cycling,
+                    startDate: start.addingTimeInterval(86_400),
+                    endDate: start.addingTimeInterval(86_400 + 30 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start.addingTimeInterval(86_400),
+                        values: [95, 105, 115, 125, // Warmup
+                                 130, 132, 130, 120, // Interval 1
+                                 131, 133, 131, 121, // Interval 2
+                                 132, 134, 132, 122, // Interval 3
+                                 110, 100, 95]        // Cooldown
+                    ),
+                    intent: .vo2Interval
+                ),
+                expectedVerdict: .fail,
+                expectedReasonSnippets: ["Minimal time"]
+            )
+        ]
+    }
+
+    public static func strengthValidationCases() -> [LabeledWorkoutCase] {
+        let start = Date(timeIntervalSince1970: 15 * 86_400) // Day 15
+
+        return [
+            LabeledWorkoutCase(
+                name: "traditional_strength_training",
+                summary: "Strength session with adequate rest, keeping average HR low.",
+                workout: WorkoutInput(
+                    workoutType: .strengthTraining,
+                    startDate: start,
+                    endDate: start.addingTimeInterval(45 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start,
+                        values: [85, 95, 110, 90, 115, 92, 112, 88, 118, 95, 110, 85]
+                    ),
+                    intent: .strength
+                ),
+                expectedVerdict: .pass,
+                expectedReasonSnippets: ["typical range"]
+            ),
+            LabeledWorkoutCase(
+                name: "metabolic_strength_circuit",
+                summary: "High-intensity circuit training with high average HR.",
+                workout: WorkoutInput(
+                    workoutType: .strengthTraining,
+                    startDate: start.addingTimeInterval(86_400),
+                    endDate: start.addingTimeInterval(86_400 + 30 * 60),
+                    heartRateSamples: makeSamples(
+                        start: start.addingTimeInterval(86_400),
+                        values: [100, 120, 135, 140, 138, 135, 142, 145, 140, 138, 135, 120]
+                    ),
+                    intent: .strength
+                ),
+                expectedVerdict: .fail,
+                expectedReasonSnippets: ["high", "metabolic"]
+            )
+        ]
+    }
+
     public static func previewWorkouts() -> [WorkoutInput] {
-        zone2ValidationCases().map(\.workout)
+        zone2ValidationCases().map(\.workout) +
+        vo2IntervalValidationCases().map(\.workout) +
+        strengthValidationCases().map(\.workout)
     }
 
     private static func makeSamples(start: Date, values: [Double], intervalSeconds: TimeInterval = 60) -> [HeartRateSample] {

@@ -37,6 +37,7 @@
 | `governance/NATIVE-INTEROP.md` | agent-on-demand | reference | false | AGENT.md | on-demand |
 | `governance/HUMAN-OVERSIGHT.md` | human-only | reference | false | ~ | never |
 | `governance/REVIEW_CRITERIA.md` | human-only | reference | false | ~ | never |
+| `governance/PHASE_D_CLOSE_AUTHORITY.md` | human-only | canonical | false | ~ | never |
 | `AGENTS.md` (workspace) | agent-runtime | derived | false | AGENT.md | always |
 | `.github/copilot-instructions.md` | agent-runtime | derived | false | AGENT.md | always |
 | `.github/agents/*.agent.md` | agent-on-demand | derived | false | AGENT.md | on-demand |
@@ -66,6 +67,9 @@ canonical > reference > derived
 4. workspace instruction（如 `AGENTS.md`、`copilot-instructions`）不得覆蓋 repo canonical
 5. `agent-on-demand` 載入時，可以引入 reference，但不得改寫 canonical 的主張
 6. `derived` 載入時，只能幫助 session_start 或 task context 收斂，不能創造新的 authority
+7. Phase D completion claims: `PHASE_D_CLOSE_AUTHORITY.md` takes precedence over README,
+   PLAN.md, implementation presence, version tags, commit history, and all generated
+   summaries. No agent-produced signal may override this contract.
 
 ---
 

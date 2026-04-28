@@ -192,6 +192,97 @@ public enum Zone2QualityAnalyzer {
     }
 }
 
+public enum VO2IntervalAnalyzer {
+    public static func analyze(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> AnalysisResult {
+        let preparedSamples = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy)
+        let distribution = ZoneDistributionAnalyzer.analyze(
+            samples: preparedSamples,
+            zoneBounds: policy.zoneBounds
+        )
+
+        let highIntensityRatio = distribution.ratio(for: .zone4) + distribution.ratio(for: .zone5)
+        
+        var verdict: AnalysisVerdict = .pass
+        var reasons: [String] = []
+        
+        if highIntensityRatio > 0.10 {
+            verdict = .pass
+            reasons.append("Sufficient time spent in high-intensity zones (Zone 4/5) for a VO2/Interval session.")
+        } else if highIntensityRatio >= 0.05 {
+            verdict = .warning
+            reasons.append("Moderate time in high-intensity zones; consider increasing effort for VO2/Interval work.")
+        } else {
+            verdict = .fail
+            reasons.append("Minimal time in high-intensity zones, which is usually required for VO2/Interval training.")
+        }
+
+        return AnalysisResult(
+            verdict: verdict,
+            confidence: 0.8,
+            reasons: reasons,
+            recommendations: RecommendationEngine.recommendations(
+                for: workout.intent,
+                verdict: verdict,
+                distribution: distribution,
+                driftRatio: nil
+            ),
+            zoneDistribution: distribution,
+            stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples),
+            driftRatio: nil
+        )
+    }
+}
+
+public enum StrengthAnalyzer {
+    public static func analyze(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> AnalysisResult {
+        let preparedSamples = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy)
+        let distribution = ZoneDistributionAnalyzer.analyze(
+            samples: preparedSamples,
+            zoneBounds: policy.zoneBounds
+        )
+
+        let averageHR = preparedSamples.isEmpty ? 0 : preparedSamples.map(\.bpm).reduce(0, +) / Double(preparedSamples.count)
+        
+        var verdict: AnalysisVerdict = .pass
+        var reasons: [String] = []
+        
+        if averageHR >= 90 && averageHR <= 115 {
+            verdict = .pass
+            reasons.append("Average heart rate stayed within the typical range for traditional strength training.")
+        } else if averageHR > 115 && averageHR <= 130 {
+            verdict = .warning
+            reasons.append("Average heart rate was slightly high, suggesting shorter rest periods or higher metabolic demand.")
+        } else if averageHR > 130 {
+            verdict = .fail
+            reasons.append("Average heart rate was high, indicating this session was more metabolic/cardio focused than pure strength.")
+        } else {
+            verdict = .pass
+            reasons.append("Average heart rate was low, which is typical for strength training with long rest periods.")
+        }
+
+        return AnalysisResult(
+            verdict: verdict,
+            confidence: 0.8,
+            reasons: reasons,
+            recommendations: RecommendationEngine.recommendations(
+                for: workout.intent,
+                verdict: verdict,
+                distribution: distribution,
+                driftRatio: nil
+            ),
+            zoneDistribution: distribution,
+            stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples),
+            driftRatio: nil
+        )
+    }
+}
+
 public enum WorkoutIntentAnalyzer {
     public static func analyze(
         _ workout: WorkoutInput,
@@ -202,17 +293,10 @@ public enum WorkoutIntentAnalyzer {
             return Zone2QualityAnalyzer.analyze(workout: workout, policy: policy)
         case .activityReview:
             return basicActivityReview(workout: workout, policy: policy)
-        case .vo2Interval, .strength:
-            return AnalysisResult(
-                verdict: .warning,
-                confidence: 0.35,
-                reasons: ["This intent is outside the first MVP judgment scope and is currently treated as a basic activity review."],
-                recommendations: ["Use Zone 2 or Activity / Skill as the first supported workflow in MVP."],
-                zoneDistribution: ZoneDistributionAnalyzer.analyze(
-                    samples: HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy),
-                    zoneBounds: policy.zoneBounds
-                )
-            )
+        case .vo2Interval:
+            return VO2IntervalAnalyzer.analyze(workout: workout, policy: policy)
+        case .strength:
+            return StrengthAnalyzer.analyze(workout: workout, policy: policy)
         }
     }
 

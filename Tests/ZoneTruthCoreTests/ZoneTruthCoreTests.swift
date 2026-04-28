@@ -65,8 +65,26 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(result.reasons.contains { $0.contains("general activity") })
     }
 
+    func testVO2IntervalAnalysis() {
+        for testCase in SampleWorkoutCases.vo2IntervalValidationCases() {
+            let result = WorkoutIntentAnalyzer.analyze(testCase.workout)
+            XCTAssertEqual(result.verdict, testCase.expectedVerdict, "Case \(testCase.name) failed")
+        }
+    }
+
+    func testStrengthAnalysis() {
+        for testCase in SampleWorkoutCases.strengthValidationCases() {
+            let result = WorkoutIntentAnalyzer.analyze(testCase.workout)
+            XCTAssertEqual(result.verdict, testCase.expectedVerdict, "Case \(testCase.name) failed")
+        }
+    }
+
     func testValidationDatasetMatchesExpectedVerdicts() {
-        for testCase in SampleWorkoutCases.zone2ValidationCases() {
+        let allCases = SampleWorkoutCases.zone2ValidationCases() +
+                      SampleWorkoutCases.vo2IntervalValidationCases() +
+                      SampleWorkoutCases.strengthValidationCases()
+
+        for testCase in allCases {
             let result = WorkoutIntentAnalyzer.analyze(testCase.workout)
 
             XCTAssertEqual(
