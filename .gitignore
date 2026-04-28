@@ -1,5 +1,4 @@
 .build/
-artifacts/
 governance_backup_*
 .claude/
 .vscode/

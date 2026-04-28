@@ -69,7 +69,7 @@ swift build
 swift test
 ```
 
-All 31 tests should pass. No credentials are required to run tests.
+All 38 tests should pass. No credentials are required to run tests.
 
 ### Apple Health
 
