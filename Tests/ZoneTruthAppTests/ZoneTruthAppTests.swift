@@ -438,6 +438,7 @@ final class ZoneTruthAppTests: XCTestCase {
         let stravaURL = URL(string: "https://www.strava.com/oauth/mobile/authorize?client_id=1")!
         let viewModel = WorkoutListViewModel(
             repository: MockWorkoutRepository(),
+            settingsManager: SettingsManager(),
             stravaAuthorizationURL: stravaURL
         )
 
@@ -449,6 +450,7 @@ final class ZoneTruthAppTests: XCTestCase {
     func testViewModelCannotConnectStravaWhenURLNotSet() {
         let viewModel = WorkoutListViewModel(
             repository: MockWorkoutRepository(),
+            settingsManager: SettingsManager(),
             stravaAuthorizationURL: nil
         )
 
@@ -470,7 +472,8 @@ final class ZoneTruthAppTests: XCTestCase {
                     ),
                     MockWorkoutRepository(),
                 ]
-            )
+            ),
+            settingsManager: SettingsManager()
         )
 
         XCTAssertTrue(viewModel.canRequestHealthAccess)

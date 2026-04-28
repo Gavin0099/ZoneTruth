@@ -10,8 +10,10 @@ I have implemented the real analysis logic for VO2/Interval and Strength intents
 - **Strength**: Judges based on average heart rate during the session.
     - **Pass**: Average HR between 90–115 bpm.
 
-### Recommendations
-- Added specific intent-based feedback in `RecommendationEngine.swift`.
+### Personalization & Settings
+- **SettingsManager**: Implemented a persistence layer using `UserDefaults` to store user-defined `AnalysisPolicy` and `ZoneBounds`.
+- **Editable UI**: The `SettingsView` now allows users to manually adjust their Zone 2 lower and upper bounds, which immediately affects the analysis of all workouts.
+- **Full Intent Support**: The `IntentPickerView` now supports all four intents defined in the plan: Zone 2, Activity / Skill, VO2 / Interval, and Strength.
 
 ### Validation Dataset
 - Added 4 new test cases to `SampleWorkoutCases.swift`:

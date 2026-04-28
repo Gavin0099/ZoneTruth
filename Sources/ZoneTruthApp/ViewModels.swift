@@ -37,9 +37,11 @@ final class WorkoutListViewModel: ObservableObject {
 
     let stravaAuthorizationURL: URL?
     private let repository: WorkoutRepository
+    private let settingsManager: SettingsManager
 
-    init(repository: WorkoutRepository, stravaAuthorizationURL: URL? = nil) {
+    init(repository: WorkoutRepository, settingsManager: SettingsManager, stravaAuthorizationURL: URL? = nil) {
         self.repository = repository
+        self.settingsManager = settingsManager
         self.stravaAuthorizationURL = stravaAuthorizationURL
         apply(repository.loadResult())
     }
@@ -82,7 +84,7 @@ final class WorkoutListViewModel: ObservableObject {
             heartRateSamples: workout.heartRateSamples,
             intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent
         )
-        return WorkoutIntentAnalyzer.analyze(rewritten)
+        return WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
     }
 
     private func apply(_ result: WorkoutLoadResult) {

@@ -3,6 +3,7 @@ import ZoneTruthCore
 
 struct WorkoutListView: View {
     @ObservedObject var viewModel: WorkoutListViewModel
+    @ObservedObject var settingsManager: SettingsManager
 
     var body: some View {
         NavigationSplitView {
@@ -42,7 +43,8 @@ struct WorkoutListView: View {
                     workout: workout,
                     selectedIntent: viewModel.selectedIntent,
                     result: viewModel.analysisResult(for: workout),
-                    onIntentChanged: viewModel.updateIntent
+                    onIntentChanged: viewModel.updateIntent,
+                    settingsManager: settingsManager
                 )
             } else {
                 ContentUnavailableView("No Workout", systemImage: "heart.text.square")
@@ -152,6 +154,7 @@ struct WorkoutDetailView: View {
     let selectedIntent: TrainingIntent
     let result: AnalysisResult
     let onIntentChanged: (TrainingIntent) -> Void
+    @ObservedObject var settingsManager: SettingsManager
 
     var body: some View {
         ScrollView {
@@ -159,7 +162,7 @@ struct WorkoutDetailView: View {
                 SummaryCardView(workout: workout, selectedIntent: selectedIntent, result: result)
                 IntentPickerView(selectedIntent: selectedIntent, onIntentChanged: onIntentChanged)
                 AnalysisResultView(result: result)
-                SettingsView(policy: .default)
+                SettingsView(settingsManager: settingsManager)
             }
             .padding(24)
         }
@@ -218,8 +221,9 @@ struct IntentPickerView: View {
                     set: { onIntentChanged($0) }
                 )
             ) {
-                Text(TrainingIntent.zone2.rawValue).tag(TrainingIntent.zone2)
-                Text(TrainingIntent.activityReview.rawValue).tag(TrainingIntent.activityReview)
+                ForEach(TrainingIntent.allCases, id: \.self) { intent in
+                    Text(intent.rawValue).tag(intent)
+                }
             }
             .pickerStyle(.segmented)
         }
@@ -271,20 +275,53 @@ struct AnalysisResultView: View {
 }
 
 struct SettingsView: View {
-    let policy: AnalysisPolicy
+    @ObservedObject var settingsManager: SettingsManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Analysis Policy")
-                .font(.headline)
-            Text("Zone 2: \(Int(policy.zoneBounds.zone2LowerBound))-\(Int(policy.zoneBounds.zone2UpperBound)) bpm")
-            Text("Warm-up exclusion: \(Int(policy.warmupExclusionSeconds / 60)) min")
-            Text("Cool-down exclusion: \(Int(policy.cooldownExclusionSeconds / 60)) min")
-            Text("Minimum duration: \(Int(policy.minimumDurationSeconds / 60)) min")
-            Text("Minimum samples: \(policy.minimumSampleCount)")
-            Text("This screen is still driven by defaults. HealthKit and personalization are the next phase.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Analysis Policy Settings")
+                .font(.title3.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Zone 2 Bounds (bpm)")
+                    .font(.headline)
+                
+                HStack(spacing: 20) {
+                    VStack(alignment: .leading) {
+                        Text("Lower")
+                            .font(.caption)
+                        TextField("Lower", value: Binding(
+                            get: { settingsManager.policy.zoneBounds.zone2LowerBound },
+                            set: { settingsManager.updateZone2Bounds(lower: $0, upper: settingsManager.policy.zoneBounds.zone2UpperBound) }
+                        ), format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    }
+
+                    VStack(alignment: .leading) {
+                        Text("Upper")
+                            .font(.caption)
+                        TextField("Upper", value: Binding(
+                            get: { settingsManager.policy.zoneBounds.zone2UpperBound },
+                            set: { settingsManager.updateZone2Bounds(lower: settingsManager.policy.zoneBounds.zone2LowerBound, upper: $0) }
+                        ), format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    }
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Fixed Core Policy")
+                    .font(.headline)
+                Text("Warm-up exclusion: \(Int(settingsManager.policy.warmupExclusionSeconds / 60)) min")
+                Text("Cool-down exclusion: \(Int(settingsManager.policy.cooldownExclusionSeconds / 60)) min")
+                Text("Minimum duration: \(Int(settingsManager.policy.minimumDurationSeconds / 60)) min")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
