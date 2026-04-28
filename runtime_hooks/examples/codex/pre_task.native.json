@@ -1,0 +1,10 @@
+{
+  "workspace": ".",
+  "request": "Implement memory pipeline",
+  "rule_packs": ["common", "python"],
+  "risk": "high",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "event_name": "pre_task",
+  "run_id": "codex-run-01"
+}

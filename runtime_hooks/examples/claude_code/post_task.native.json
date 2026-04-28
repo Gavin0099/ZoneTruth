@@ -1,0 +1,13 @@
+{
+  "cwd": ".",
+  "prompt": "Review generated output",
+  "active_rules": "common,python",
+  "risk_level": "medium",
+  "oversight_mode": "review-required",
+  "memory": "candidate",
+  "assistant_response_path": "runtime_hooks/examples/shared/ai_response.txt",
+  "snapshot": true,
+  "summary": "Candidate memory from Claude Code task output",
+  "hook_event_name": "PostToolUse",
+  "session_id": "2026-03-12-01"
+}

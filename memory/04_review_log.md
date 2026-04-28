@@ -22,3 +22,9 @@
 - 2026-04-24: Implemented real `fetchRecentActivities`: GET `/api/v3/athlete/activities`, then per-activity GET `/api/v3/activities/{id}/streams` for heart-rate. Added `StravaActivitySummary`, `StravaActivityStreams` decoders. Added sport_type → WorkoutType mapping covering Run/Ride/Swim/Walk/Hike/WeightTraining/Crossfit etc. Added README.md. `swift test` passes with 31/31 tests.
 - 2026-04-24: Added "Connect Strava" button to the banner UI. `AppEnvironment` exposes `stravaAuthorizationURL`; `WorkoutListViewModel` gains `stravaAuthorizationURL` + `canConnectStrava`; `WorkoutSourceBannerView` opens the OAuth URL via `@Environment(\.openURL)`. Button hidden when Strava is already the active source. `swift test` passes with 33/33 tests.
 - 2026-04-24: Sparse HR early return in `Zone2QualityAnalyzer` (no misleading stability/drift analysis when sample count too low). Added 3 edge-case labeled samples: sparse_hr_cycling, high_drift_zone2_ride, unstable_zone2_run. Added Info.plist with zonetruth:// URL scheme + HealthKit usage strings; Package.swift excludes it from SPM processing. `swift test` passes with 36/36 tests.
+## Promotion: Refine analyzer logic for sparse HR data and strength training classification.
+- Approved by: governance-auto
+- Candidate: /Users/gavin_wu/Desktop/ZoneTruth/memory/candidates/session_20260428T103604Z.json
+- Risk: low
+- Oversight: auto
+

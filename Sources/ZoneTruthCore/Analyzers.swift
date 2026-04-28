@@ -116,12 +116,16 @@ public enum Zone2QualityAnalyzer {
         }
 
         if preparedSamples.count < policy.minimumSampleCount {
-            // Return early — running stability and drift on too few samples produces misleading reasons.
             let thinDistribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
+            let rawCount = workout.heartRateSamples.count
+            let message = rawCount < policy.minimumSampleCount 
+                ? "Heart rate sample count is too low (\(rawCount) samples). The device may not have recorded heart rate throughout the session."
+                : "Heart rate sample count was sufficient originally (\(rawCount)), but too many were filtered out as abnormal spikes, leaving only \(preparedSamples.count) valid samples."
+            
             return AnalysisResult(
                 verdict: .fail,
-                confidence: 0.4,
-                reasons: reasons + ["Heart rate sample count is too low after filtering. The device may not have recorded heart rate throughout the session."],
+                confidence: 0.3,
+                reasons: reasons + [message],
                 recommendations: RecommendationEngine.recommendations(
                     for: workout.intent, verdict: .fail, distribution: thinDistribution, driftRatio: nil
                 ),
@@ -254,16 +258,16 @@ public enum StrengthAnalyzer {
         
         if averageHR >= 90 && averageHR <= 115 {
             verdict = .pass
-            reasons.append("Average heart rate stayed within the typical range for traditional strength training.")
+            reasons.append("Average heart rate (\(Int(averageHR)) bpm) stayed within the typical range for traditional strength training.")
         } else if averageHR > 115 && averageHR <= 130 {
             verdict = .warning
-            reasons.append("Average heart rate was slightly high, suggesting shorter rest periods or higher metabolic demand.")
+            reasons.append("Average heart rate (\(Int(averageHR)) bpm) was slightly high, suggesting shorter rest periods or higher metabolic demand than pure strength training.")
         } else if averageHR > 130 {
             verdict = .fail
-            reasons.append("Average heart rate was high, indicating this session was more metabolic/cardio focused than pure strength.")
+            reasons.append("Average heart rate (\(Int(averageHR)) bpm) was very high. This session likely functioned as metabolic conditioning or circuit training rather than traditional strength work.")
         } else {
             verdict = .pass
-            reasons.append("Average heart rate was low, which is typical for strength training with long rest periods.")
+            reasons.append("Average heart rate (\(Int(averageHR)) bpm) was low, which is ideal for pure strength training with full recovery between sets.")
         }
 
         return AnalysisResult(

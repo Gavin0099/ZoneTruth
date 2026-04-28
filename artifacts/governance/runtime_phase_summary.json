@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1",
+  "phase_classifications": {
+    "pre_task_check": {},
+    "post_task_check": {
+      "schema_version": "0.1",
+      "hook": "post_task_check",
+      "actions": [],
+      "phase_summary": {},
+      "rules": {
+        "sync_gate_blocks_execution": true,
+        "sync_advisory_hidden_gate_allowed": false,
+        "async_audit_can_retroactively_change_verdict": false
+      },
+      "unknown_actions": []
+    },
+    "session_end": {
+      "schema_version": "0.1",
+      "hook": "session_end",
+      "actions": [
+        {
+          "action": "canonical_closeout",
+          "phase": "async_closeout",
+          "owner": "session_end",
+          "description": "Canonical closeout artifact emission."
+        },
+        {
+          "action": "daily_memory_append",
+          "phase": "async_closeout",
+          "owner": "session_end",
+          "description": "Daily memory append after session closeout."
+        },
+        {
+          "action": "memory_candidate_snapshot",
+          "phase": "async_audit",
+          "owner": "session_end",
+          "description": "Candidate memory snapshot for later curation or audit."
+        },
+        {
+          "action": "memory_promotion_candidate",
+          "phase": "async_audit",
+          "owner": "session_end",
+          "description": "Memory promotion candidate surfacing."
+        }
+      ],
+      "phase_summary": {
+        "async_closeout": [
+          "canonical_closeout",
+          "daily_memory_append"
+        ],
+        "async_audit": [
+          "memory_candidate_snapshot",
+          "memory_promotion_candidate"
+        ]
+      },
+      "rules": {
+        "sync_gate_blocks_execution": true,
+        "sync_advisory_hidden_gate_allowed": false,
+        "async_audit_can_retroactively_change_verdict": false
+      },
+      "unknown_actions": []
+    }
+  },
+  "phase_summary": {
+    "async_closeout": [
+      "canonical_closeout",
+      "daily_memory_append"
+    ],
+    "async_audit": [
+      "memory_candidate_snapshot",
+      "memory_promotion_candidate"
+    ]
+  },
+  "rules": {
+    "sync_gate_blocks_execution": true,
+    "sync_advisory_hidden_gate_allowed": false,
+    "async_audit_can_retroactively_change_verdict": false
+  }
+}

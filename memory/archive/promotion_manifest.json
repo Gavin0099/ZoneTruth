@@ -1,0 +1,10 @@
+{
+  "promotions": [
+    {
+      "promoted_at": "2026-04-28T10:36:04.242504+00:00",
+      "candidate_file": "/Users/gavin_wu/Desktop/ZoneTruth/memory/candidates/session_20260428T103604Z.json",
+      "approved_by": "governance-auto",
+      "title": "Refine analyzer logic for sparse HR data and strength training classification."
+    }
+  ]
+}

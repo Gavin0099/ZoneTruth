@@ -1,0 +1,116 @@
+{
+  "session_id": "session-20260428T103517-86c297",
+  "closed_at": "2026-04-28T10:35:17.402811+00:00",
+  "runtime_contract": {
+    "task": "Refine analyzer logic for sparse HR data and strength training classification.",
+    "rules": [
+      "common"
+    ],
+    "risk": "low",
+    "oversight": "auto",
+    "memory_mode": "stateless"
+  },
+  "checks": {
+    "closeout_status": "content_insufficient",
+    "closeout_file": "/Users/gavin_wu/Desktop/ZoneTruth/artifacts/session-closeout.txt",
+    "closeout_presence": "present",
+    "closeout_schema_validity": "valid",
+    "closeout_content_sufficiency": "insufficient",
+    "closeout_evidence_consistency": "consistent",
+    "closeout_memory_tier": "no_update",
+    "closeout_per_layer_results": {
+      "missing_fields": [],
+      "content_issues": [
+        {
+          "field": "WORK_COMPLETED",
+          "type": "no_observable_anchor",
+          "guidance": "Include at least one filename (e.g. foo.py) or tool name (e.g. pytest, session_end_hook) to allow cross-referencing."
+        },
+        {
+          "field": "CHECKS_RUN",
+          "type": "no_observable_anchor",
+          "guidance": "Include at least one filename (e.g. foo.py) or tool name (e.g. pytest, session_end_hook) to allow cross-referencing."
+        }
+      ],
+      "inconsistencies": [],
+      "cross_reference_results": [
+        {
+          "type": "file_existence",
+          "claimed": "Sources/ZoneTruthCore/Analyzers.swift",
+          "found": true
+        },
+        {
+          "type": "file_existence",
+          "claimed": "walkthrough.md",
+          "found": true
+        }
+      ]
+    },
+    "closeout_failure_signals": [
+      {
+        "type": "no_observable_anchor",
+        "affects": [
+          "content_sufficiency",
+          "evidence_consistency"
+        ],
+        "field": "WORK_COMPLETED",
+        "guidance": "Include at least one filename (e.g. foo.py) or tool name (e.g. pytest, session_end_hook) to allow cross-referencing."
+      },
+      {
+        "type": "no_observable_anchor",
+        "affects": [
+          "content_sufficiency",
+          "evidence_consistency"
+        ],
+        "field": "CHECKS_RUN",
+        "guidance": "Include at least one filename (e.g. foo.py) or tool name (e.g. pytest, session_end_hook) to allow cross-referencing."
+      }
+    ],
+    "repo_readiness_level": 0,
+    "repo_readiness_limiting_factor": "schema_doc_present",
+    "repo_closeout_activation_state": "unknown",
+    "repo_activation_recency": null,
+    "repo_activation_gap": "structural_prerequisites_missing"
+  },
+  "architecture_impact_preview": {},
+  "proposal_summary": {},
+  "contract_resolution": {
+    "risk_tier": "unknown"
+  },
+  "domain_contract": {},
+  "public_api_diff": null,
+  "event_log": [],
+  "snapshot": null,
+  "policy": {
+    "decision": "DO_NOT_PROMOTE",
+    "reasons": [
+      "Session is stateless; durable memory is not allowed."
+    ]
+  },
+  "promotion": null,
+  "warnings": [],
+  "errors": [],
+  "phase_classification": {
+    "schema_version": "0.1",
+    "hook": "session_end",
+    "actions": [
+      {
+        "action": "canonical_closeout",
+        "phase": "async_closeout",
+        "owner": "session_end",
+        "description": "Canonical closeout artifact emission."
+      }
+    ],
+    "phase_summary": {
+      "async_closeout": [
+        "canonical_closeout"
+      ]
+    },
+    "rules": {
+      "sync_gate_blocks_execution": true,
+      "sync_advisory_hidden_gate_allowed": false,
+      "async_audit_can_retroactively_change_verdict": false
+    },
+    "unknown_actions": []
+  }
+}

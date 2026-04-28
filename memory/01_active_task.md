@@ -33,3 +33,4 @@
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
+- [x] Promoted memory: Refine analyzer logic for sparse HR data and strength training classification.

@@ -1,0 +1,13 @@
+{
+  "repo_root": ".",
+  "plan": "PLAN.md",
+  "title": "Refactor Avalonia boundary",
+  "rules": ["common"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "impact_before": ["runtime_hooks/examples/shared/before.cs"],
+  "impact_after": ["runtime_hooks/examples/shared/after.cs"],
+  "event": "session_start",
+  "conversation_id": "gemini-session-start-01"
+}

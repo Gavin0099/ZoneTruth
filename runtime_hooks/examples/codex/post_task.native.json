@@ -1,0 +1,13 @@
+{
+  "workspace": ".",
+  "task": "Validate task output",
+  "rules": ["common", "python"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "output_file": "runtime_hooks/examples/shared/ai_response.txt",
+  "emit_snapshot": true,
+  "summary": "Candidate memory from Codex output",
+  "event_name": "post_task",
+  "run_id": "codex-run-01"
+}

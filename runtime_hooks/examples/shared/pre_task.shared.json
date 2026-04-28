@@ -1,0 +1,20 @@
+{
+  "event_type": "pre_task",
+  "project_root": ".",
+  "task": "Add runtime governance hooks",
+  "plan_path": "PLAN.md",
+  "rules": ["common", "python"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "response_file": null,
+  "impact_before_files": [],
+  "impact_after_files": [],
+  "create_snapshot": false,
+  "snapshot_summary": null,
+  "metadata": {
+    "harness": "claude_code",
+    "session_id": "2026-03-12-01",
+    "native_event_type": "PreToolUse"
+  }
+}

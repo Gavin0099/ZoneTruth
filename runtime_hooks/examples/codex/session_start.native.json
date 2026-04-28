@@ -1,0 +1,13 @@
+{
+  "workspace": ".",
+  "plan": "PLAN.md",
+  "request": "Refactor Avalonia boundary",
+  "rule_packs": ["common"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "impact_before": ["runtime_hooks/examples/shared/before.cs"],
+  "impact_after": ["runtime_hooks/examples/shared/after.cs"],
+  "event_name": "session_start",
+  "run_id": "codex-session-start-01"
+}

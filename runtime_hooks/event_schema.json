@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimeHookEvent",
+  "type": "object",
+  "required": [
+    "event_type",
+    "project_root",
+    "risk",
+    "oversight",
+    "memory_mode"
+  ],
+  "properties": {
+    "event_type": {
+      "type": "string",
+        "enum": ["session_start", "pre_task", "post_task"]
+    },
+    "project_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task": {
+      "type": ["string", "null"]
+    },
+    "plan_path": {
+      "type": ["string", "null"]
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": []
+    },
+    "impact_before_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": []
+    },
+    "impact_after_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": []
+    },
+    "risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "oversight": {
+      "type": "string",
+      "enum": ["auto", "review-required", "human-approval"]
+    },
+    "memory_mode": {
+      "type": "string",
+      "enum": ["stateless", "candidate", "durable"]
+    },
+    "response_file": {
+      "type": ["string", "null"]
+    },
+    "checks_file": {
+      "type": ["string", "null"]
+    },
+    "create_snapshot": {
+      "type": "boolean"
+    },
+    "snapshot_summary": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      },
+      "default": {}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "post_task"
+          }
+        }
+      },
+      "then": {
+        "required": ["response_file"]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,12 @@
+[Governance Contract]
+LANG = C++
+LEVEL = L2
+SCOPE = feature
+PLAN = Runtime governance / smoke test
+LOADED = SYSTEM_PROMPT, HUMAN-OVERSIGHT
+CONTEXT = runtime-layer -> smoke validation; NOT: platform rewrite
+PRESSURE = SAFE (20/200)
+RULES = common,python
+RISK = medium
+OVERSIGHT = review-required
+MEMORY_MODE = candidate

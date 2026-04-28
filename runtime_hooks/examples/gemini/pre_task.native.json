@@ -1,0 +1,10 @@
+{
+  "repo_root": ".",
+  "title": "Prepare runtime checks",
+  "rules": ["common", "python"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "event": "pre_task",
+  "conversation_id": "gemini-01"
+}

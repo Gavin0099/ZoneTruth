@@ -1,0 +1,13 @@
+{
+  "repo_root": ".",
+  "goal": "Capture final output",
+  "rules": ["common", "python"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "result_file": "runtime_hooks/examples/shared/ai_response.txt",
+  "create_snapshot": true,
+  "snapshot_summary": "Candidate memory from Gemini output",
+  "event": "post_task",
+  "conversation_id": "gemini-01"
+}

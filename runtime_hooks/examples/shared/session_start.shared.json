@@ -1,0 +1,20 @@
+{
+  "event_type": "session_start",
+  "project_root": ".",
+  "plan_path": "PLAN.md",
+  "task": "Refactor Avalonia boundary",
+  "rules": ["common"],
+  "risk": "medium",
+  "oversight": "review-required",
+  "memory_mode": "candidate",
+  "response_file": null,
+  "impact_before_files": ["runtime_hooks/examples/shared/before.cs"],
+  "impact_after_files": ["runtime_hooks/examples/shared/after.cs"],
+  "create_snapshot": false,
+  "snapshot_summary": null,
+  "metadata": {
+    "harness": "claude_code",
+    "session_id": "2026-03-13-02",
+    "native_event_type": "session_start"
+  }
+}
