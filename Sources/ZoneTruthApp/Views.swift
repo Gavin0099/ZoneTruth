@@ -274,6 +274,61 @@ struct AnalysisResultView: View {
     }
 }
 
+struct CalibrationSuggestionView: View {
+    let suggestion: CalibrationSuggestion
+    let onApply: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Personalized Calibration", systemImage: "sparkles")
+                    .font(.headline)
+                    .foregroundStyle(.purple)
+                Spacer()
+                Text("\(Int(suggestion.confidence * 100))% Confidence")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(suggestion.reason)
+                .font(.subheadline)
+
+            HStack(spacing: 12) {
+                VStack(alignment: .leading) {
+                    Text("Current")
+                        .font(.caption2)
+                    Text("\(Int(suggestion.currentBounds.zone2UpperBound)) bpm")
+                        .font(.headline)
+                }
+                
+                Image(systemName: "arrow.right")
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading) {
+                    Text("Suggested")
+                        .font(.caption2)
+                    Text("\(Int(suggestion.suggestedBounds.zone2UpperBound)) bpm")
+                        .font(.headline)
+                        .foregroundStyle(.purple)
+                }
+                
+                Spacer()
+                
+                Button("Apply Adjustment", action: onApply)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.purple)
+                    .controlSize(.small)
+            }
+        }
+        .padding(16)
+        .background(Color.purple.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
 
@@ -281,6 +336,12 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Analysis Policy Settings")
                 .font(.title3.weight(.semibold))
+
+            if let suggestion = settingsManager.pendingSuggestion {
+                CalibrationSuggestionView(suggestion: suggestion) {
+                    settingsManager.applySuggestion()
+                }
+            }
 
             VStack(alignment: .leading, spacing: 12) {
                 Text("Zone 2 Bounds (bpm)")

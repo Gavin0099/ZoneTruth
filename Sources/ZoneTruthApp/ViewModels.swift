@@ -64,6 +64,7 @@ final class WorkoutListViewModel: ObservableObject {
         let refreshed = await repository.refreshResult()
         apply(refreshed)
         isRefreshing = false
+        triggerCalibrationCheck()
     }
 
     func requestHealthAccess() async {
@@ -95,6 +96,12 @@ final class WorkoutListViewModel: ObservableObject {
         if let intent = result.workouts.first?.intent {
             selectedIntent = intent
         }
+        triggerCalibrationCheck()
+    }
+
+    private func triggerCalibrationCheck() {
+        let analyses = workouts.map { ($0, analysisResult(for: $0)) }
+        settingsManager.updateCalibrationSuggestion(analyses: analyses)
     }
 
     var canRequestHealthAccess: Bool {

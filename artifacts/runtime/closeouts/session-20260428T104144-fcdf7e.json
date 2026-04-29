@@ -1,0 +1,12 @@
+{
+  "session_id": "session-20260428T104144-fcdf7e",
+  "closed_at": "2026-04-28T10:41:44.153635+00:00",
+  "closeout_status": "missing",
+  "task_intent": null,
+  "work_summary": null,
+  "evidence_summary": {
+    "tools_used": [],
+    "artifacts_referenced": []
+  },
+  "open_risks": []
+}

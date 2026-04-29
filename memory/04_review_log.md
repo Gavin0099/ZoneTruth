@@ -28,3 +28,21 @@
 - Risk: low
 - Oversight: auto
 
+## Promotion: Refine analyzer logic for sparse HR data and strength training classification.
+- Approved by: governance-auto
+- Candidate: /Users/gavin_wu/Desktop/ZoneTruth/memory/candidates/session_20260428T104109Z.json
+- Risk: low
+- Oversight: auto
+
+## Promotion: Refine analyzer logic for sparse HR data and strength training classification.
+- Approved by: governance-auto
+- Candidate: /Users/gavin_wu/Desktop/ZoneTruth/memory/candidates/session_20260428T104144Z.json
+- Risk: low
+- Oversight: auto
+
+## Promotion: Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.
+- Approved by: governance-auto
+- Candidate: /Users/gavin_wu/Desktop/ZoneTruth/memory/candidates/session_20260429T030835Z.json
+- Risk: low
+- Oversight: auto
+

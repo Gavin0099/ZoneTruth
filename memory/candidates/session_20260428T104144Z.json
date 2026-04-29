@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-04-28T10:41:44.148848+00:00",
+  "task": "Refine analyzer logic for sparse HR data and strength training classification.",
+  "summary": "Refine analyzer logic for sparse HR data and strength training classification.",
+  "risk": "low",
+  "oversight": "auto",
+  "source_text": "TASK_INTENT: Refine analyzer logic for sparse HR data and strength training classification.\nWORK_COMPLETED: Improved Sparse HR error messages in Sources/ZoneTruthCore/Analyzers.swift to distinguish between recording gaps and filtering. Refined Strength training logic in Sources/ZoneTruthCore/Analyzers.swift to provide specific feedback on metabolic vs traditional intensity. Verified all 38 test cases in Sources/ZoneTruthCore/SampleWorkoutCases.swift pass.\nFILES_TOUCHED: Sources/ZoneTruthCore/Analyzers.swift, walkthrough.md, artifacts/session-closeout.txt\nCHECKS_RUN: swift test, python3 governance_tools/governance_drift_checker.py, python3 governance_tools/memory_janitor.py\nOPEN_RISKS: NONE\nNOT_DONE: Automatic threshold adjustment via drift analysis (future milestone).\nRECOMMENDED_MEMORY_UPDATE: verified_state_update",
+  "status": "promoted"
+}

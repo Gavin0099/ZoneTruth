@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "runtime-verdict",
+  "session_id": "session-20260428T104109-821e6f",
+  "generated_at": "2026-04-28T10:41:09.168049+00:00",
+  "policy_ref": {
+    "governance_runtime_decision_model": "2.6",
+    "artifact_schema_version": "1.0",
+    "runtime_version": "v2.6-draft-runtime"
+  },
+  "verdict": {
+    "decision": "AUTO_PROMOTE",
+    "ok": true,
+    "risk": "low",
+    "oversight": "auto",
+    "memory_mode": "candidate"
+  },
+  "contract_identity": {
+    "source": null,
+    "path": null,
+    "name": null,
+    "domain": null,
+    "plugin_version": null,
+    "risk_tier": "unknown"
+  },
+  "decision_governance": {
+    "decision_source": "single decision computation source",
+    "decision_owner": "runtime",
+    "policy_source": "memory_pipeline.promotion_policy.classify_promotion_policy"
+  },
+  "decision_context": {
+    "surface_validity": "partial",
+    "coverage_completeness": "complete",
+    "memory_integrity": "complete",
+    "classification_evidence": {
+      "has_file_access": {
+        "value": true,
+        "source": "observed"
+      },
+      "instruction_loaded": {
+        "value": "true",
+        "source": "observed"
+      },
+      "context_integrity": {
+        "value": "unknown",
+        "source": "assumed"
+      },
+      "tool_gate": {
+        "value": "active",
+        "source": "observed"
+      }
+    },
+    "initial_agent_class": null,
+    "effective_agent_class": "instruction_capable",
+    "classification_changed": null,
+    "reclassification_reason": null,
+    "governance_strategy": "injection+enforcement",
+    "injection_reliance": "none"
+  },
+  "evidence_summary": {
+    "check_keys": [
+      "closeout_content_sufficiency",
+      "closeout_evidence_consistency",
+      "closeout_failure_signals",
+      "closeout_file",
+      "closeout_memory_tier",
+      "closeout_per_layer_results",
+      "closeout_presence",
+      "closeout_schema_validity",
+      "closeout_status",
+      "repo_activation_gap",
+      "repo_activation_recency",
+      "repo_closeout_activation_state",
+      "repo_readiness_level",
+      "repo_readiness_limiting_factor"
+    ],
+    "public_api_diff_present": false,
+    "error_count": 0,
+    "warning_count": 0
+  },
+  "override_or_escalation": {
+    "override_present": false,
+    "escalation_present": false,
+    "governance_escalation_present": false,
+    "governance_escalation_type": null
+  }
+}

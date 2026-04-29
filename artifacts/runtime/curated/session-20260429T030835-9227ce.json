@@ -1,0 +1,36 @@
+{
+  "session_id": "session-20260429T030835-9227ce",
+  "curation_status": "CURATED",
+  "raw_candidate_count": 3,
+  "kept_count": 3,
+  "dropped_count": 0,
+  "items": [
+    {
+      "type": "fact",
+      "title": "Fact: active governance rules",
+      "content": "Active governance rules: common",
+      "reason": "governance context",
+      "confidence": "high",
+      "source": "runtime_contract.rules"
+    },
+    {
+      "type": "fact",
+      "title": "Fact: Low-risk candidate memory may be auto-promoted.",
+      "content": "Low-risk candidate memory may be auto-promoted.",
+      "reason": "promotion policy rationale",
+      "confidence": "high",
+      "source": "policy.reasons"
+    },
+    {
+      "type": "fact",
+      "title": "Fact: domain contract context",
+      "content": "Domain contract context: risk_tier=unknown",
+      "reason": "session domain governance context",
+      "confidence": "high",
+      "source": "contract_resolution"
+    }
+  ],
+  "dropped": [],
+  "promotion_hint": "PROMOTE_CANDIDATE",
+  "needs_review_reason": []
+}

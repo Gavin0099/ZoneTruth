@@ -1,0 +1,128 @@
+{
+  "session_id": "session-20260428T104109-821e6f",
+  "closed_at": "2026-04-28T10:41:09.168049+00:00",
+  "task": "Refine analyzer logic for sparse HR data and strength training classification.",
+  "decision": "AUTO_PROMOTE",
+  "risk": "low",
+  "oversight": "auto",
+  "memory_mode": "candidate",
+  "rules": [
+    "common"
+  ],
+  "architecture_impact_present": false,
+  "architecture_impact_concern_count": 0,
+  "architecture_impact_boundary_risk": null,
+  "architecture_impact_recommended_risk": null,
+  "architecture_impact_recommended_oversight": null,
+  "proposal_summary_present": false,
+  "proposal_summary_recommended_risk": null,
+  "proposal_summary_recommended_oversight": null,
+  "proposal_summary_concern_count": 0,
+  "proposal_summary_expected_validator_count": 0,
+  "contract_resolution_present": true,
+  "contract_source": null,
+  "contract_path": null,
+  "contract_name": null,
+  "contract_domain": null,
+  "contract_plugin_version": null,
+  "contract_risk_tier": "unknown",
+  "public_api_diff_present": false,
+  "public_api_removed_count": 0,
+  "public_api_added_count": 0,
+  "snapshot_created": true,
+  "promoted": true,
+  "daily_memory_path": null,
+  "daily_memory_record": {
+    "what_changed": "session_end auto-closeout recorded for `Refine analyzer logic for sparse HR data and strength training classification.` (session=session-20260428T104109-821e6f, decision=AUTO_PROMOTE, snapshot_created=True, promoted=True). Summary: Refine analyzer logic for sparse HR data and strength training classification.",
+    "commit": "68d212a",
+    "test_evidence": "`session_end` => canonical_closeout_status=missing, snapshot_created=True, promoted=True, open_risk_count=0",
+    "next_step": "Resume from the latest canonical closeout state (status=missing)."
+  },
+  "memory_closeout": {
+    "candidate_detected": false,
+    "candidate_signals": [],
+    "promotion_considered": true,
+    "snapshot_created": true,
+    "decision": "AUTO_PROMOTE",
+    "promoted": true,
+    "reason": "Low-risk candidate memory may be auto-promoted."
+  },
+  "phase_classification": {
+    "schema_version": "0.1",
+    "hook": "session_end",
+    "actions": [
+      {
+        "action": "canonical_closeout",
+        "phase": "async_closeout",
+        "owner": "session_end",
+        "description": "Canonical closeout artifact emission."
+      },
+      {
+        "action": "daily_memory_append",
+        "phase": "async_closeout",
+        "owner": "session_end",
+        "description": "Daily memory append after session closeout."
+      },
+      {
+        "action": "memory_candidate_snapshot",
+        "phase": "async_audit",
+        "owner": "session_end",
+        "description": "Candidate memory snapshot for later curation or audit."
+      },
+      {
+        "action": "memory_promotion_candidate",
+        "phase": "async_audit",
+        "owner": "session_end",
+        "description": "Memory promotion candidate surfacing."
+      }
+    ],
+    "phase_summary": {
+      "async_closeout": [
+        "canonical_closeout",
+        "daily_memory_append"
+      ],
+      "async_audit": [
+        "memory_candidate_snapshot",
+        "memory_promotion_candidate"
+      ]
+    },
+    "rules": {
+      "sync_gate_blocks_execution": true,
+      "sync_advisory_hidden_gate_allowed": false,
+      "async_audit_can_retroactively_change_verdict": false
+    },
+    "unknown_actions": []
+  },
+  "runtime_phase_summary_path": "/Users/gavin_wu/Desktop/ZoneTruth/artifacts/governance/runtime_phase_summary.json",
+  "warning_count": 0,
+  "error_count": 0,
+  "decision_context": {
+    "surface_validity": "partial",
+    "coverage_completeness": "complete",
+    "memory_integrity": "complete",
+    "classification_evidence": {
+      "has_file_access": {
+        "value": true,
+        "source": "observed"
+      },
+      "instruction_loaded": {
+        "value": "true",
+        "source": "observed"
+      },
+      "context_integrity": {
+        "value": "unknown",
+        "source": "assumed"
+      },
+      "tool_gate": {
+        "value": "active",
+        "source": "observed"
+      }
+    },
+    "initial_agent_class": null,
+    "effective_agent_class": "instruction_capable",
+    "classification_changed": null,
+    "reclassification_reason": null,
+    "governance_strategy": "injection+enforcement",
+    "injection_reliance": "none"
+  }
+}

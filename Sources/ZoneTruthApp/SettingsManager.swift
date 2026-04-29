@@ -4,6 +4,7 @@ import ZoneTruthCore
 @MainActor
 final class SettingsManager: ObservableObject {
     @Published var policy: AnalysisPolicy
+    @Published var pendingSuggestion: CalibrationSuggestion?
 
     private let userDefaults: UserDefaults
     private let policyKey = "com.zonetruth.analysisPolicy"
@@ -42,6 +43,29 @@ final class SettingsManager: ObservableObject {
             zoneBounds: newBounds
         )
         updatePolicy(newPolicy)
+        
+        // Clear suggestion if manually updated
+        pendingSuggestion = nil
+    }
+
+    func updateCalibrationSuggestion(analyses: [(WorkoutInput, AnalysisResult)]) {
+        pendingSuggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
+    }
+
+    func applySuggestion() {
+        guard let suggestion = pendingSuggestion else { return }
+        let newPolicy = AnalysisPolicy(
+            warmupExclusionSeconds: policy.warmupExclusionSeconds,
+            cooldownExclusionSeconds: policy.cooldownExclusionSeconds,
+            minimumDurationSeconds: policy.minimumDurationSeconds,
+            minimumSampleCount: policy.minimumSampleCount,
+            abnormalSpikeDeltaBPM: policy.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: policy.lowStabilityStdDev,
+            mediumStabilityStdDev: policy.mediumStabilityStdDev,
+            zoneBounds: suggestion.suggestedBounds
+        )
+        updatePolicy(newPolicy)
+        pendingSuggestion = nil
     }
 
     private func save() {

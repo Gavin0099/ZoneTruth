@@ -211,3 +211,25 @@ public typealias WorkoutIntent = TrainingIntent
 public typealias WorkoutKind = WorkoutType
 public typealias AnalysisStatus = AnalysisVerdict
 public typealias WorkoutSummary = WorkoutInput
+
+public struct CalibrationSuggestion: Equatable, Sendable {
+    public let currentBounds: ZoneBounds
+    public let suggestedBounds: ZoneBounds
+    public let reason: String
+    public let confidence: Double
+    public let sourceSessionIDs: [UUID]
+
+    public init(
+        currentBounds: ZoneBounds,
+        suggestedBounds: ZoneBounds,
+        reason: String,
+        confidence: Double,
+        sourceSessionIDs: [UUID]
+    ) {
+        self.currentBounds = currentBounds
+        self.suggestedBounds = suggestedBounds
+        self.reason = reason
+        self.confidence = confidence
+        self.sourceSessionIDs = sourceSessionIDs
+    }
+}

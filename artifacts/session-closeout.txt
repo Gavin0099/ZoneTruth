@@ -1,7 +1,7 @@
-TASK_INTENT: Refine analyzer logic for sparse HR data and strength training classification.
-WORK_COMPLETED: Improved Sparse HR error messages in Sources/ZoneTruthCore/Analyzers.swift to distinguish between recording gaps and filtering. Refined Strength training logic in Sources/ZoneTruthCore/Analyzers.swift to provide specific feedback on metabolic vs traditional intensity. Verified all 38 test cases in Sources/ZoneTruthCore/SampleWorkoutCases.swift pass.
-FILES_TOUCHED: Sources/ZoneTruthCore/Analyzers.swift, walkthrough.md, artifacts/session-closeout.txt
-CHECKS_RUN: swift test, python3 governance_tools/governance_drift_checker.py, python3 governance_tools/memory_janitor.py
+TASK_INTENT: Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.
+WORK_COMPLETED: Created CalibrationEngine.swift for drift trend analysis. Integrated calibration suggestions into SettingsManager.swift and added CalibrationSuggestionView in Views.swift. Added CalibrationEngineTests.swift with 3 new test cases. Verified all 41 tests pass.
+FILES_TOUCHED: Sources/ZoneTruthCore/CalibrationEngine.swift, Sources/ZoneTruthCore/Models.swift, Sources/ZoneTruthApp/SettingsManager.swift, Sources/ZoneTruthApp/ViewModels.swift, Sources/ZoneTruthApp/Views.swift, Tests/ZoneTruthCoreTests/CalibrationEngineTests.swift, walkthrough.md, artifacts/session-closeout.txt
+CHECKS_RUN: swift test, python3 governance_tools/governance_drift_checker.py, python3 governance_tools/session_end_hook.py
 OPEN_RISKS: NONE
-NOT_DONE: Automatic threshold adjustment via drift analysis (future milestone).
+NOT_DONE: Automatic application of calibration (currently requires user approval).
 RECOMMENDED_MEMORY_UPDATE: verified_state_update

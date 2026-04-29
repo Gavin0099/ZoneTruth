@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-04-29T03:08:35.926045+00:00",
+  "task": "Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.",
+  "summary": "Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.",
+  "risk": "low",
+  "oversight": "auto",
+  "source_text": "TASK_INTENT: Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.\nWORK_COMPLETED: Created CalibrationEngine.swift for drift trend analysis. Integrated calibration suggestions into SettingsManager.swift and added CalibrationSuggestionView in Views.swift. Added CalibrationEngineTests.swift with 3 new test cases. Verified all 41 tests pass.\nFILES_TOUCHED: Sources/ZoneTruthCore/CalibrationEngine.swift, Sources/ZoneTruthCore/Models.swift, Sources/ZoneTruthApp/SettingsManager.swift, Sources/ZoneTruthApp/ViewModels.swift, Sources/ZoneTruthApp/Views.swift, Tests/ZoneTruthCoreTests/CalibrationEngineTests.swift, walkthrough.md, artifacts/session-closeout.txt\nCHECKS_RUN: swift test, python3 governance_tools/governance_drift_checker.py, python3 governance_tools/session_end_hook.py\nOPEN_RISKS: NONE\nNOT_DONE: Automatic application of calibration (currently requires user approval).\nRECOMMENDED_MEMORY_UPDATE: verified_state_update",
+  "status": "promoted"
+}

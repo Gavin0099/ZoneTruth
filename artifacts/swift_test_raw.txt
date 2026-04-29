@@ -1,20 +1,37 @@
-[0/1] Planning build
 Building for debugging...
-[0/4] Write swift-version--58304C5D6DBC2206.txt
-Build complete! (0.34s)
-Test Suite 'All tests' started at 2026-04-28 18:35:50.401.
-Test Suite 'ZoneTruthPackageTests.xctest' started at 2026-04-28 18:35:50.402.
-Test Suite 'ZoneTruthAppTests' started at 2026-04-28 18:35:50.402.
+[0/5] Write sources
+[1/5] Write swift-version--58304C5D6DBC2206.txt
+[3/7] Emitting module ZoneTruthCore
+[4/7] Compiling ZoneTruthCore Analyzers.swift
+[5/17] Compiling ZoneTruthCoreTests ZoneTruthCoreTests.swift
+[6/17] Emitting module ZoneTruthCoreTests
+[7/17] Compiling ZoneTruthApp ZoneTruthApp.swift
+[8/17] Compiling ZoneTruthApp StravaAdapter.swift
+[9/17] Compiling ZoneTruthApp ViewModels.swift
+[10/17] Compiling ZoneTruthApp SettingsManager.swift
+[11/17] Compiling ZoneTruthApp HealthKitAdapter.swift
+[12/17] Emitting module ZoneTruthApp
+[13/17] Compiling ZoneTruthApp Views.swift
+[14/17] Compiling ZoneTruthApp DataImport.swift
+[14/19] Write Objects.LinkFileList
+[15/19] Linking ZoneTruthApp
+[16/19] Applying ZoneTruthApp
+[17/19] Write Objects.LinkFileList
+[18/19] Linking ZoneTruthPackageTests
+Build complete! (5.45s)
+Test Suite 'All tests' started at 2026-04-28 18:43:41.713.
+Test Suite 'ZoneTruthPackageTests.xctest' started at 2026-04-28 18:43:41.715.
+Test Suite 'ZoneTruthAppTests' started at 2026-04-28 18:43:41.715.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testCompositeWorkoutRepositoryRequestsHealthAccessBeforeFallback]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testCompositeWorkoutRepositoryRequestsHealthAccessBeforeFallback]' passed (0.006 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testCompositeWorkoutRepositoryRequestsHealthAccessBeforeFallback]' passed (0.002 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testFallbackWorkoutRepositoryUsesFallbackWhenImportMissing]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testFallbackWorkoutRepositoryUsesFallbackWhenImportMissing]' passed (0.004 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testFallbackWorkoutRepositoryUsesFallbackWhenImportMissing]' passed (0.002 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testFileStravaSessionStoreRoundTrips]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testFileStravaSessionStoreRoundTrips]' passed (0.004 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testFileStravaSessionStoreRoundTrips]' passed (0.002 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryMapsAuthorizedSnapshotsAfterRefresh]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryMapsAuthorizedSnapshotsAfterRefresh]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryRequestHealthAccessReturnsAuthorizedRefreshResult]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryRequestHealthAccessReturnsAuthorizedRefreshResult]' passed (0.000 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryRequestHealthAccessReturnsAuthorizedRefreshResult]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryRequestsAuthorizationWhenNeeded]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryRequestsAuthorizationWhenNeeded]' passed (0.000 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testHealthKitWorkoutRepositoryReturnsEmptyWhenUnauthorized]' started.
@@ -34,9 +51,9 @@ Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaAuthorizationParserPa
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerExchangesTokenAndSavesSession]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerExchangesTokenAndSavesSession]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerHandlesDeniedCallback]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerHandlesDeniedCallback]' passed (0.000 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerHandlesDeniedCallback]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerIgnoresUnrelatedURLScheme]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerIgnoresUnrelatedURLScheme]' passed (0.000 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaCallbackHandlerIgnoresUnrelatedURLScheme]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaOAuthConfigurationBuildsMobileAuthorizationURL]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaOAuthConfigurationBuildsMobileAuthorizationURL]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaTokenExchangeResponseMapsToSession]' started.
@@ -46,28 +63,28 @@ Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaTokenExchangeResponse
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaTokenRefreshResponseDecodesWithoutAthlete]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testStravaTokenRefreshResponseDecodesWithoutAthlete]' passed (0.000 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientAutoRefreshesExpiredToken]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientAutoRefreshesExpiredToken]' passed (0.689 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientAutoRefreshesExpiredToken]' passed (0.776 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientThrowsExpiredWhenNoConfiguration]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientThrowsExpiredWhenNoConfiguration]' passed (0.002 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientThrowsExpiredWhenNoConfiguration]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientThrowsExpiredWhenNoRefreshToken]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testSystemStravaClientThrowsExpiredWhenNoRefreshToken]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCanConnectStravaWhenURLSetAndSourceIsNotStrava]' started.
-Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCanConnectStravaWhenURLSetAndSourceIsNotStrava]' passed (0.004 seconds).
+Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCanConnectStravaWhenURLSetAndSourceIsNotStrava]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCannotConnectStravaWhenURLNotSet]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCannotConnectStravaWhenURLNotSet]' passed (0.001 seconds).
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCanRequestHealthAccessWhenFallbackDataIsActive]' started.
 Test Case '-[ZoneTruthAppTests.ZoneTruthAppTests testViewModelCanRequestHealthAccessWhenFallbackDataIsActive]' passed (0.001 seconds).
-Test Suite 'ZoneTruthAppTests' passed at 2026-04-28 18:35:51.128.
-	 Executed 26 tests, with 0 failures (0 unexpected) in 0.723 (0.726) seconds
-Test Suite 'ZoneTruthCoreTests' started at 2026-04-28 18:35:51.128.
+Test Suite 'ZoneTruthAppTests' passed at 2026-04-28 18:43:42.514.
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.797 (0.799) seconds
+Test Suite 'ZoneTruthCoreTests' started at 2026-04-28 18:43:42.514.
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testActivityReviewReturnsDescriptivePass]' started.
-Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testActivityReviewReturnsDescriptivePass]' passed (0.002 seconds).
+Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testActivityReviewReturnsDescriptivePass]' passed (0.001 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testSanitizerRemovesWarmupCooldownAndSpikes]' started.
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testSanitizerRemovesWarmupCooldownAndSpikes]' passed (0.001 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testStrengthAnalysis]' started.
-Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testStrengthAnalysis]' passed (0.001 seconds).
+Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testStrengthAnalysis]' passed (0.000 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testValidationDatasetMatchesExpectedVerdicts]' started.
-Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testValidationDatasetMatchesExpectedVerdicts]' passed (0.004 seconds).
+Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testValidationDatasetMatchesExpectedVerdicts]' passed (0.003 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testVO2IntervalAnalysis]' started.
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testVO2IntervalAnalysis]' passed (0.001 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerFailsForHeavyLeakageAndHighDrift]' started.
@@ -79,17 +96,17 @@ Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerFailsForSpar
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerPassesForSteadyAerobicSession]' started.
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerPassesForSteadyAerobicSession]' passed (0.001 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerWarnsForHighVariabilityWithGoodZones]' started.
-Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerWarnsForHighVariabilityWithGoodZones]' passed (0.002 seconds).
+Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerWarnsForHighVariabilityWithGoodZones]' passed (0.001 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerWarnsForModerateLeakageAndDrift]' started.
-Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerWarnsForModerateLeakageAndDrift]' passed (0.002 seconds).
+Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZone2AnalyzerWarnsForModerateLeakageAndDrift]' passed (0.001 seconds).
 Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZoneDistributionCountsSamplesIntoExpectedZones]' started.
-Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZoneDistributionCountsSamplesIntoExpectedZones]' passed (0.001 seconds).
-Test Suite 'ZoneTruthCoreTests' passed at 2026-04-28 18:35:51.146.
-	 Executed 12 tests, with 0 failures (0 unexpected) in 0.016 (0.018) seconds
-Test Suite 'ZoneTruthPackageTests.xctest' passed at 2026-04-28 18:35:51.147.
-	 Executed 38 tests, with 0 failures (0 unexpected) in 0.739 (0.744) seconds
-Test Suite 'All tests' passed at 2026-04-28 18:35:51.147.
-	 Executed 38 tests, with 0 failures (0 unexpected) in 0.739 (0.746) seconds
+Test Case '-[ZoneTruthCoreTests.ZoneTruthCoreTests testZoneDistributionCountsSamplesIntoExpectedZones]' passed (0.000 seconds).
+Test Suite 'ZoneTruthCoreTests' passed at 2026-04-28 18:43:42.526.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.010 (0.011) seconds
+Test Suite 'ZoneTruthPackageTests.xctest' passed at 2026-04-28 18:43:42.526.
+	 Executed 38 tests, with 0 failures (0 unexpected) in 0.807 (0.810) seconds
+Test Suite 'All tests' passed at 2026-04-28 18:43:42.526.
+	 Executed 38 tests, with 0 failures (0 unexpected) in 0.807 (0.812) seconds
 ◇ Test run started.
 ↳ Testing Library Version: 124.4
 ↳ Target Platform: x86_64-apple-macos14.0

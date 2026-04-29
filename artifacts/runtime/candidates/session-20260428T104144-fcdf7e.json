@@ -1,0 +1,125 @@
+{
+  "session_id": "session-20260428T104144-fcdf7e",
+  "closed_at": "2026-04-28T10:41:44.153635+00:00",
+  "runtime_contract": {
+    "task": "Refine analyzer logic for sparse HR data and strength training classification.",
+    "rules": [
+      "common"
+    ],
+    "risk": "low",
+    "oversight": "auto",
+    "memory_mode": "candidate"
+  },
+  "checks": {
+    "closeout_status": "valid",
+    "closeout_file": "/Users/gavin_wu/Desktop/ZoneTruth/artifacts/session-closeout.txt",
+    "closeout_presence": "present",
+    "closeout_schema_validity": "valid",
+    "closeout_content_sufficiency": "sufficient",
+    "closeout_evidence_consistency": "consistent",
+    "closeout_memory_tier": "verified_state_update",
+    "closeout_per_layer_results": {
+      "missing_fields": [],
+      "content_issues": [],
+      "inconsistencies": [],
+      "cross_reference_results": [
+        {
+          "type": "file_existence",
+          "claimed": "Sources/ZoneTruthCore/Analyzers.swift",
+          "found": true
+        },
+        {
+          "type": "file_existence",
+          "claimed": "walkthrough.md",
+          "found": true
+        },
+        {
+          "type": "file_existence",
+          "claimed": "artifacts/session-closeout.txt",
+          "found": true
+        }
+      ]
+    },
+    "closeout_failure_signals": [],
+    "repo_readiness_level": 0,
+    "repo_readiness_limiting_factor": "schema_doc_present",
+    "repo_closeout_activation_state": "unknown",
+    "repo_activation_recency": null,
+    "repo_activation_gap": "structural_prerequisites_missing"
+  },
+  "architecture_impact_preview": {},
+  "proposal_summary": {},
+  "contract_resolution": {
+    "risk_tier": "unknown"
+  },
+  "domain_contract": {},
+  "public_api_diff": null,
+  "event_log": [],
+  "snapshot": {
+    "snapshot_path": "/Users/gavin_wu/Desktop/ZoneTruth/memory/candidates/session_20260428T104144Z.json",
+    "status": "candidate",
+    "task": "Refine analyzer logic for sparse HR data and strength training classification."
+  },
+  "policy": {
+    "decision": "AUTO_PROMOTE",
+    "reasons": [
+      "Low-risk candidate memory may be auto-promoted."
+    ]
+  },
+  "promotion": {
+    "active_task": "/Users/gavin_wu/Desktop/ZoneTruth/memory/01_active_task.md",
+    "knowledge_base": "/Users/gavin_wu/Desktop/ZoneTruth/memory/03_knowledge_base.md",
+    "review_log": "/Users/gavin_wu/Desktop/ZoneTruth/memory/04_review_log.md",
+    "manifest_path": "/Users/gavin_wu/Desktop/ZoneTruth/memory/archive/promotion_manifest.json",
+    "title": "Refine analyzer logic for sparse HR data and strength training classification.",
+    "status": "promoted"
+  },
+  "warnings": [],
+  "errors": [],
+  "phase_classification": {
+    "schema_version": "0.1",
+    "hook": "session_end",
+    "actions": [
+      {
+        "action": "canonical_closeout",
+        "phase": "async_closeout",
+        "owner": "session_end",
+        "description": "Canonical closeout artifact emission."
+      },
+      {
+        "action": "daily_memory_append",
+        "phase": "async_closeout",
+        "owner": "session_end",
+        "description": "Daily memory append after session closeout."
+      },
+      {
+        "action": "memory_candidate_snapshot",
+        "phase": "async_audit",
+        "owner": "session_end",
+        "description": "Candidate memory snapshot for later curation or audit."
+      },
+      {
+        "action": "memory_promotion_candidate",
+        "phase": "async_audit",
+        "owner": "session_end",
+        "description": "Memory promotion candidate surfacing."
+      }
+    ],
+    "phase_summary": {
+      "async_closeout": [
+        "canonical_closeout",
+        "daily_memory_append"
+      ],
+      "async_audit": [
+        "memory_candidate_snapshot",
+        "memory_promotion_candidate"
+      ]
+    },
+    "rules": {
+      "sync_gate_blocks_execution": true,
+      "sync_advisory_hidden_gate_allowed": false,
+      "async_audit_can_retroactively_change_verdict": false
+    },
+    "unknown_actions": []
+  }
+}

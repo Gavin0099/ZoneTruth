@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 import sys
 import re
-import json
 
 def main():
     text = sys.stdin.read()
-    # Executed 38 tests, with 0 failures
-    match = re.search(r"Executed (\d+) tests, with (\d+) failures", text)
-    if match:
-        passed = int(match.group(1)) - int(match.group(2))
-        failed = int(match.group(2))
+    
+    # Extract summary
+    matches = re.findall(r"Executed (\d+) tests, with (\d+) failures", text)
+    if matches:
+        sorted_matches = sorted(matches, key=lambda x: int(x[0]), reverse=True)
+        total, failed = sorted_matches[0]
+        passed = int(total) - int(failed)
         print(f"{passed} passed, {failed} failed")
-    else:
-        print("0 passed, 0 failed")
+    
+    # Extract individual failures
+    # /Users/.../ZoneTruthCoreTests.swift:78: error: -[ZoneTruthCoreTests.ZoneTruthCoreTests testStrengthAnalysis] : XCTAssertEqual failed...
+    failures = re.findall(r"error: -\[(.*?)\]", text)
+    for f in failures:
+        # Format as FAILED <test_id>
+        print(f"FAILED {f}")
 
 if __name__ == "__main__":
     main()
