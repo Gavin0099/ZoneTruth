@@ -1,8 +1,8 @@
 # ZoneTruth
 
-A macOS/iOS workout analysis app that answers one question: **was this actually a Zone 2 session?**
+A macOS/iOS workout analysis app that answers one question: **was this actually a Zone 2 session?** (Or VO2 max, or Strength?)
 
-It reads workout data from Apple Health or Strava, applies a policy-based heart-rate analyzer, and returns a plain-language verdict — pass, warning, or fail — with the reasons why.
+It reads workout data from Apple Health or Strava, applies a multi-intent heart-rate analyzer, and returns a plain-language verdict — pass, warning, or fail — with the reasons why.
 
 ---
 
@@ -11,6 +11,8 @@ It reads workout data from Apple Health or Strava, applies a policy-based heart-
 ZoneTruth analyzes a workout session's heart-rate data against a configurable Zone 2 policy. For each session it produces:
 
 - **Verdict** — pass / warning / fail
+- **Intent Support** — Zone 2, VO2/Interval, Strength, Activity Review
+- **Automatic Calibration** — personalized heart rate zone suggestions based on observed drift
 - **Zone distribution** — what percentage of time was spent in each zone
 - **HR stability** — standard deviation of the sanitized sample set
 - **HR drift** — how much heart rate climbed from the first quarter to the last quarter of the session
@@ -27,6 +29,7 @@ The analyzer sanitizes data before judging: warm-up, cool-down, and abnormal spi
 ZoneTruthCore          (pure domain logic, no Apple frameworks)
 ├── Models.swift       WorkoutInput, HeartRateSample, AnalysisResult, …
 ├── Analyzers.swift    WorkoutIntentAnalyzer, zone math, sanitization
+├── CalibrationEngine.swift  drift trend analysis and zone suggestions
 └── SampleWorkoutCases.swift  labeled validation dataset
 
 ZoneTruthApp           (platform adapters and SwiftUI shell)
@@ -69,7 +72,7 @@ swift build
 swift test
 ```
 
-All 38 tests should pass. No credentials are required to run tests.
+All 41 tests should pass. No credentials are required to run tests.
 
 ### Apple Health
 
