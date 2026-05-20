@@ -1,0 +1,13 @@
+{
+  "change_id": "SEM-YYYY-MM-DD-NNN",
+  "reason": "One-line description of why this semantic change is intentional",
+  "affected_fixtures": [
+    "zone2_deviation_stable_drift"
+  ],
+  "expected_behavior_change": [
+    "goalFitScore changes by N",
+    "trainingTendency changes from X to Y"
+  ],
+  "reviewed_by": "manual",
+  "admissibility": "intentional_semantic_change"
+}

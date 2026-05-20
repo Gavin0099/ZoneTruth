@@ -68,6 +68,12 @@
 - Completed P1k dual-run report review contract:
   - Added per-diff/report `reviewStatus` classification.
   - Closeout gate fails on `blocking_drift` or `invalid_report`.
+- Completed P1m semantic change annotation gate:
+  - Added `SemanticChangeAnnotation` struct + `AnnotationAdmissibility` enum + `AnnotationGate.validate()` in `SemanticAnnotation.swift`.
+  - Admissibility rules: snapshot changed + no annotation → `requiresAnnotation`; `blocking_drift` without `intentional_semantic_change` → `blockedByAdmissibility`.
+  - Updated closeout script: annotation gate check fires when any fixture diff detected; blocks on missing or invalid annotation.
+  - Created `artifacts/semantic_changes/` with `SEM-TEMPLATE.json` as canonical annotation format.
+  - Added 6 guard tests covering all admissibility branches.
 - Completed P1l observation-to-policy bridge rewiring:
   - Added `ObservationBridge` (primitives → `WorkoutObservation`, `TrainingIntent` → `PrimaryIntent`).
   - Rewired `ObservationPolicyShadowEvaluator` to use `ObservationBridge` + `WorkoutEvaluationPolicyFactory`; removed hand-coded inline scoring.

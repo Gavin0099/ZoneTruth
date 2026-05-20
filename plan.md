@@ -414,7 +414,39 @@ Migration Gate（需同時滿足）：
 - 形成可執行 migration checklist（可用於 PR gate / closeout gate）。
 - 在不破壞現有語意穩定性的前提下，允許有意圖的 policy 切換。
 
-14. P1l：ObservationBridge + Shadow Evaluator Rewiring（完成）
+14. P1m：Semantic Change Annotation Gate（完成）
+
+定位：
+
+- 解決「合理 drift」與「偷改產品語意」混在一起的治理風險。
+- 任何 evaluation snapshot 更新都必須伴隨結構化 `SemanticChangeAnnotation`。
+
+Annotation schema：
+
+```json
+{
+  "change_id": "SEM-YYYY-MM-DD-NNN",
+  "reason": "...",
+  "affected_fixtures": ["..."],
+  "expected_behavior_change": ["..."],
+  "reviewed_by": "manual",
+  "admissibility": "intentional_semantic_change | observation_refinement | bug_fix"
+}
+```
+
+Admissibility 規則：
+
+- snapshot changed + 無 annotation → `requiresAnnotation`（closeout fail）
+- `blocking_drift` + admissibility ≠ `intentional_semantic_change` → `blockedByAdmissibility`（closeout fail）
+- `review_required` 或 `minor_drift` + 任意有效 annotation → `admissible`
+
+完成標準：
+
+- `AnnotationGate.validate()` 覆蓋所有 admissibility 分支，guard tests 全通過。
+- Closeout script 在 `snapshot_fixture=changed` 時自動觸發 annotation gate。
+- `artifacts/semantic_changes/SEM-TEMPLATE.json` 為規範格式。
+
+15. P1l：ObservationBridge + Shadow Evaluator Rewiring（完成）
 
 定位：
 

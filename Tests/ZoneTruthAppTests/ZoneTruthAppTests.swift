@@ -820,6 +820,97 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(status, .invalidReport)
     }
 
+    // MARK: P1m – Semantic Change Annotation Gate
+
+    func testAnnotationGatePassesWhenSnapshotUnchanged() {
+        let result = AnnotationGate.validate(
+            annotation: nil,
+            driftStatus: .minorDrift,
+            snapshotChanged: false
+        )
+        XCTAssertEqual(result, .admissible)
+    }
+
+    func testAnnotationGateRequiresAnnotationWhenSnapshotChanged() {
+        let result = AnnotationGate.validate(
+            annotation: nil,
+            driftStatus: .minorDrift,
+            snapshotChanged: true
+        )
+        XCTAssertEqual(result, .requiresAnnotation)
+    }
+
+    func testAnnotationGateAdmitsMinorDriftWithAnyAnnotation() {
+        let annotation = SemanticChangeAnnotation(
+            changeID: "SEM-2026-05-20-001",
+            reason: "Zone2 drift threshold refinement",
+            affectedFixtures: ["zone2_deviation_stable_drift"],
+            expectedBehaviorChange: ["goalFitScore decreases by 3"],
+            reviewedBy: "manual",
+            admissibility: .observationRefinement
+        )
+        let result = AnnotationGate.validate(
+            annotation: annotation,
+            driftStatus: .minorDrift,
+            snapshotChanged: true
+        )
+        XCTAssertEqual(result, .admissible)
+    }
+
+    func testAnnotationGateBlocksBlockingDriftWithoutIntentionalAnnotation() {
+        let annotation = SemanticChangeAnnotation(
+            changeID: "SEM-2026-05-20-002",
+            reason: "Fixing drift ratio off-by-one",
+            affectedFixtures: ["zone2_deviation_stable_drift"],
+            expectedBehaviorChange: ["goalFitScore changes by 18"],
+            reviewedBy: "manual",
+            admissibility: .bugFix
+        )
+        let result = AnnotationGate.validate(
+            annotation: annotation,
+            driftStatus: .blockingDrift,
+            snapshotChanged: true
+        )
+        XCTAssertEqual(result, .blockedByAdmissibility,
+            "blocking_drift requires admissibility == intentional_semantic_change.")
+    }
+
+    func testAnnotationGateAdmitsBlockingDriftWithIntentionalAnnotation() {
+        let annotation = SemanticChangeAnnotation(
+            changeID: "SEM-2026-05-20-003",
+            reason: "Intentional policy rewrite for Zone2 evaluation",
+            affectedFixtures: ["zone2_deviation_stable_drift", "vo2_pass"],
+            expectedBehaviorChange: ["goalFitScore changes by 20", "trainingTendency reworded"],
+            reviewedBy: "manual",
+            admissibility: .intentionalSemanticChange
+        )
+        let result = AnnotationGate.validate(
+            annotation: annotation,
+            driftStatus: .blockingDrift,
+            snapshotChanged: true
+        )
+        XCTAssertEqual(result, .admissible)
+    }
+
+    func testAnnotationGateAdmitsReviewRequiredWithAnyAnnotation() {
+        let annotation = SemanticChangeAnnotation(
+            changeID: "SEM-2026-05-20-004",
+            reason: "Observation bridge confidence calibration",
+            affectedFixtures: ["sparse_hr_samples"],
+            expectedBehaviorChange: ["goalFitScore changes by 8"],
+            reviewedBy: "manual",
+            admissibility: .observationRefinement
+        )
+        let result = AnnotationGate.validate(
+            annotation: annotation,
+            driftStatus: .reviewRequired,
+            snapshotChanged: true
+        )
+        XCTAssertEqual(result, .admissible)
+    }
+
+    // MARK: P1l – ObservationBridge / shadow evaluator
+
     func testObservationShadowEvaluatorRoutesThroughPolicyFactory() {
         let workout = SampleWorkoutCases
             .zone2ValidationCases()
