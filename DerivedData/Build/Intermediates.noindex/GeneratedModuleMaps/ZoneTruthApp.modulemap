@@ -1,4 +1,0 @@
-module ZoneTruthApp {
-header "ZoneTruthApp-Swift.h"
-export *
-}

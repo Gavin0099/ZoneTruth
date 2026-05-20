@@ -1,4 +1,0 @@
-module ZoneTruthCore {
-header "ZoneTruthCore-Swift.h"
-export *
-}
