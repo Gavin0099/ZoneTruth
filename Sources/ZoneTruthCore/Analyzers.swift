@@ -111,7 +111,7 @@ public enum Zone2QualityAnalyzer {
         var severityScores: [Int] = []
 
         if workout.durationSeconds < policy.minimumDurationSeconds {
-            reasons.append("Session duration is shorter than the minimum needed for reliable Zone 2 judgment.")
+            reasons.append("訓練時間過短，無法進行可靠的 Zone 2 分析。")
             severityScores.append(2)
         }
 
@@ -119,8 +119,8 @@ public enum Zone2QualityAnalyzer {
             let thinDistribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
             let rawCount = workout.heartRateSamples.count
             let message = rawCount < policy.minimumSampleCount 
-                ? "Heart rate sample count is too low (\(rawCount) samples). The device may not have recorded heart rate throughout the session."
-                : "Heart rate sample count was sufficient originally (\(rawCount)), but too many were filtered out as abnormal spikes, leaving only \(preparedSamples.count) valid samples."
+                ? "心率樣本數過低（僅 \(rawCount) 筆）。您的裝置可能沒有完整記錄整個運動過程的心率。"
+                : "原本的心率樣本數足夠（\(rawCount) 筆），但過多異常的心率突波被過濾掉，僅剩 \(preparedSamples.count) 筆有效樣本，無法分析。"
             
             return AnalysisResult(
                 verdict: .fail,
@@ -138,13 +138,13 @@ public enum Zone2QualityAnalyzer {
         let leakageVerdict = Zone3LeakageAnalyzer.verdict(for: distribution)
         switch leakageVerdict {
         case .pass:
-            reasons.append("Zone 3 time stayed below 10%.")
+            reasons.append("Zone 3 區間的時間比例維持在 10% 以下，控制得非常好。")
             severityScores.append(0)
         case .warning:
-            reasons.append("Zone 3 time was between 10% and 20%, higher than ideal for Zone 2.")
+            reasons.append("Zone 3 區間的時間比例介於 10% 到 20% 之間，對 Zone 2 訓練來說稍微偏高。")
             severityScores.append(1)
         case .fail:
-            reasons.append("Zone 3 time exceeded 20%, which is too high for a Zone 2 session.")
+            reasons.append("Zone 3 區間的時間比例超過 20%，對於 Zone 2 訓練來說強度太高了。")
             severityScores.append(2)
         }
 
@@ -152,13 +152,13 @@ public enum Zone2QualityAnalyzer {
         let stabilityVerdict = HeartRateStabilityAnalyzer.verdict(for: preparedSamples, policy: policy)
         switch stabilityVerdict {
         case .pass:
-            reasons.append("Heart rate stayed stable throughout the analyzed portion of the session.")
+            reasons.append("在整個分析區間內，您的心率保持得非常穩定。")
             severityScores.append(0)
         case .warning:
-            reasons.append("Heart rate variability was moderate, so pacing may have been uneven.")
+            reasons.append("心率變異度為中等，這表示您的配速或阻力可能不太均勻。")
             severityScores.append(1)
         case .fail:
-            reasons.append("Heart rate variability was high, which weakens the Zone 2 interpretation.")
+            reasons.append("心率波動過大，這削弱了維持在 Zone 2 狀態的效果。")
             severityScores.append(2)
         }
 
@@ -166,13 +166,13 @@ public enum Zone2QualityAnalyzer {
         let driftVerdict = HeartRateDriftAnalyzer.verdict(for: preparedSamples)
         switch driftVerdict {
         case .pass:
-            reasons.append("Heart rate drift stayed below 5% between the first and second half.")
+            reasons.append("前半段與後半段的心率飄移維持在 5% 以下，耐力表現優秀。")
             severityScores.append(0)
         case .warning:
-            reasons.append("Heart rate drift was between 5% and 8%, suggesting mild decoupling.")
+            reasons.append("心率飄移介於 5% 到 8% 之間，顯示有輕微的心率脫鉤現象 (Cardiac Drift)。")
             severityScores.append(1)
         case .fail:
-            reasons.append("Heart rate drift exceeded 8%, suggesting the session drifted out of steady aerobic work.")
+            reasons.append("心率飄移超過 8%，顯示後段訓練已經偏離了穩定的有氧狀態。")
             severityScores.append(2)
         }
 
@@ -214,13 +214,13 @@ public enum VO2IntervalAnalyzer {
         
         if highIntensityRatio > 0.10 {
             verdict = .pass
-            reasons.append("Sufficient time spent in high-intensity zones (Zone 4/5) for a VO2/Interval session.")
+            reasons.append("在高強度區間 (Zone 4/5) 停留的時間充足，這是一次達標的間歇訓練。")
         } else if highIntensityRatio >= 0.05 {
             verdict = .warning
-            reasons.append("Moderate time in high-intensity zones; consider increasing effort for VO2/Interval work.")
+            reasons.append("在高強度區間的時間適中；建議下次間歇訓練時可以試著拉高一點強度。")
         } else {
             verdict = .fail
-            reasons.append("Minimal time in high-intensity zones, which is usually required for VO2/Interval training.")
+            reasons.append("在高強度區間的時間過少，而這通常是間歇訓練所必備的。")
         }
 
         return AnalysisResult(
@@ -258,16 +258,16 @@ public enum StrengthAnalyzer {
         
         if averageHR >= 90 && averageHR <= 115 {
             verdict = .pass
-            reasons.append("Average heart rate (\(Int(averageHR)) bpm) stayed within the typical range for traditional strength training.")
+            reasons.append("平均心率 (\(Int(averageHR)) bpm) 落在傳統肌力訓練的典型範圍內。")
         } else if averageHR > 115 && averageHR <= 130 {
             verdict = .warning
-            reasons.append("Average heart rate (\(Int(averageHR)) bpm) was slightly high, suggesting shorter rest periods or higher metabolic demand than pure strength training.")
+            reasons.append("平均心率 (\(Int(averageHR)) bpm) 稍微偏高，這暗示了組間休息較短，或是這項訓練的代謝需求高於純肌力訓練。")
         } else if averageHR > 130 {
             verdict = .fail
-            reasons.append("Average heart rate (\(Int(averageHR)) bpm) was very high. This session likely functioned as metabolic conditioning or circuit training rather than traditional strength work.")
+            reasons.append("平均心率 (\(Int(averageHR)) bpm) 非常高。這次訓練的實質效果比較像是體能代謝循環訓練，而不是傳統肌力訓練。")
         } else {
             verdict = .pass
-            reasons.append("Average heart rate (\(Int(averageHR)) bpm) was low, which is ideal for pure strength training with full recovery between sets.")
+            reasons.append("平均心率 (\(Int(averageHR)) bpm) 偏低，這對於組間完全恢復的純肌力訓練來說是非常理想的。")
         }
 
         return AnalysisResult(
@@ -313,8 +313,8 @@ public enum WorkoutIntentAnalyzer {
         return AnalysisResult(
             verdict: .pass,
             confidence: 0.5,
-            reasons: ["This session is reviewed as general activity rather than strict Zone 2 compliance."],
-            recommendations: ["Use this mode when you want a descriptive review instead of a strict training-quality judgment."],
+            reasons: ["本次紀錄是以一般活動的方式進行檢視，並非進行嚴格的 Zone 2 指標分析。"],
+            recommendations: ["如果您需要的是純粹的摘要而非嚴格的訓練品質判定，就可以使用這個目標模式。"],
             zoneDistribution: distribution,
             stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: samples),
             driftRatio: HeartRateDriftAnalyzer.driftRatio(for: samples)

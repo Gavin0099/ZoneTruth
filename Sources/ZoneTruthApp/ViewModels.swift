@@ -4,9 +4,9 @@ import ZoneTruthCore
 enum WorkoutDataSource: String, Equatable, Sendable {
     case healthKit = "Apple Health"
     case strava = "Strava"
-    case jsonImport = "Imported JSON"
-    case mockSamples = "Preview Samples"
-    case none = "No Data"
+    case jsonImport = "匯入的 JSON"
+    case mockSamples = "預覽樣本"
+    case none = "沒有資料"
 }
 
 struct WorkoutLoadResult: Equatable, Sendable {
@@ -141,7 +141,7 @@ struct MockWorkoutRepository: WorkoutRepository {
         WorkoutLoadResult(
             workouts: SampleWorkoutCases.previewWorkouts(),
             source: .mockSamples,
-            statusMessage: "Showing preview samples until imported or Apple Health data is available."
+            statusMessage: "在連接 Apple Health 或匯入資料之前，暫時顯示預覽樣本。"
         )
     }
 }

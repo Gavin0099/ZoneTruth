@@ -36,22 +36,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9DF4915B2FBD7D5300F87063 /* ZoneTruthHost */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ZoneTruthHost;
 			sourceTree = "<group>";
 		};
 		9DF491692FBD7D5700F87063 /* ZoneTruthHostTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ZoneTruthHostTests;
 			sourceTree = "<group>";
 		};
 		9DF491732FBD7D5700F87063 /* ZoneTruthHostUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ZoneTruthHostUITests;
 			sourceTree = "<group>";
 		};
@@ -411,11 +405,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ZoneTruthHost/ZoneTruthHost.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P358EB3X9H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\"CFBundleURLName\"=>\"com.gavin.ZoneTruth.strava-callback\", \"CFBundleURLSchemes\"=>[\"zonetruth\"]}";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "ZoneTruth needs to read your workout history and heart rate samples to analyze training quality.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "ZoneTruth does not write to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -439,11 +437,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ZoneTruthHost/ZoneTruthHost.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P358EB3X9H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\"CFBundleURLName\"=>\"com.gavin.ZoneTruth.strava-callback\", \"CFBundleURLSchemes\"=>[\"zonetruth\"]}";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "ZoneTruth needs to read your workout history and heart rate samples to analyze training quality.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "ZoneTruth does not write to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

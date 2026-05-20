@@ -2,3 +2,5 @@
 governance_backup_*
 .claude/
 .vscode/
+DerivedData/
+ZoneTruthHost/DerivedData/

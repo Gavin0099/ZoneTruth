@@ -93,29 +93,21 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
     }
 
     func requestHealthAccess() async -> WorkoutLoadResult {
-        let status = await requestAuthorizationIfNeeded()
-        guard status == .sharingAuthorized else {
-            cachedWorkouts = []
-            return WorkoutLoadResult(
-                workouts: [],
-                source: .healthKit,
-                statusMessage: statusMessage(for: status, workoutCount: 0)
-            )
-        }
+        _ = await requestAuthorizationIfNeeded()
 
         do {
             cachedWorkouts = try await store.fetchRecentWorkouts(limit: workoutLimit).map(\.toDomainWorkout)
             return WorkoutLoadResult(
                 workouts: cachedWorkouts,
                 source: .healthKit,
-                statusMessage: statusMessage(for: status, workoutCount: cachedWorkouts.count)
+                statusMessage: cachedWorkouts.isEmpty ? "Apple Health 已授權，但找不到近期的運動紀錄。" : "已從 Apple Health 載入運動紀錄。"
             )
         } catch {
             cachedWorkouts = []
             return WorkoutLoadResult(
                 workouts: [],
                 source: .healthKit,
-                statusMessage: "Apple Health permission was granted, but workout data could not be loaded."
+                statusMessage: "Apple Health 授權成功，但無法載入運動資料。"
             )
         }
     }
@@ -126,17 +118,7 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
             return WorkoutLoadResult(
                 workouts: [],
                 source: .healthKit,
-                statusMessage: "Apple Health is not available on this device."
-            )
-        }
-
-        let authorizationStatus = store.authorizationStatus
-        guard authorizationStatus == .sharingAuthorized else {
-            cachedWorkouts = []
-            return WorkoutLoadResult(
-                workouts: [],
-                source: .healthKit,
-                statusMessage: statusMessage(for: authorizationStatus, workoutCount: 0)
+                statusMessage: "此裝置不支援 Apple Health。"
             )
         }
 
@@ -147,29 +129,29 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
             return WorkoutLoadResult(
                 workouts: [],
                 source: .healthKit,
-                statusMessage: "Apple Health was authorized, but workout data could not be loaded."
+                statusMessage: "Apple Health 已授權，但無法載入運動資料。"
             )
         }
 
         return WorkoutLoadResult(
             workouts: cachedWorkouts,
             source: .healthKit,
-            statusMessage: statusMessage(for: authorizationStatus, workoutCount: cachedWorkouts.count)
+            statusMessage: cachedWorkouts.isEmpty ? "尚未取得 Apple Health 授權，或找不到運動紀錄。" : "已從 Apple Health 載入運動紀錄。"
         )
     }
 
     private func statusMessage(for authorizationStatus: HealthAuthorizationStatus, workoutCount: Int) -> String {
         switch authorizationStatus {
         case .unavailable:
-            return "Apple Health is not available on this device."
+            return "此裝置不支援 Apple Health。"
         case .notDetermined:
-            return "Apple Health permission has not been granted yet."
+            return "尚未取得 Apple Health 授權。"
         case .sharingDenied:
-            return "Apple Health access is denied, so a fallback data source will be used."
+            return "Apple Health 存取被拒絕，將使用備用資料。"
         case .sharingAuthorized:
             return workoutCount > 0
-                ? "Loaded workouts from Apple Health."
-                : "Apple Health is authorized, but no recent workouts were found."
+                ? "已從 Apple Health 載入運動紀錄。"
+                : "Apple Health 已授權，但找不到近期的運動紀錄。"
         }
     }
 }
@@ -243,7 +225,6 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
 
     func fetchRecentWorkouts(limit: Int) async throws -> [HealthKitWorkoutSnapshot] {
         guard isAvailable else { throw HealthKitStoreError.unavailable }
-        guard authorizationStatus == .sharingAuthorized else { throw HealthKitStoreError.unauthorized }
 
         #if canImport(HealthKit)
         if #available(iOS 17.0, macOS 14.0, *) {
