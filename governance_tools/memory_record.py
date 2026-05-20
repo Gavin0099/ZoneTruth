@@ -63,7 +63,7 @@ def append_session_derived_entry(*, project_root: Path, record: dict[str, str]) 
         daily_path.write_text(f"# {_current_local_date()}\n\n", encoding="utf-8")
 
     entry = render_session_derived_entry(record)
-    if _has_equivalent_session_derived_entry(daily_path=daily_path, record=record):
+    if _has_session_id_entry(daily_path=daily_path, record=record):
         return daily_path
     with daily_path.open("a", encoding="utf-8") as fh:
         if daily_path.stat().st_size > 0:
@@ -72,26 +72,21 @@ def append_session_derived_entry(*, project_root: Path, record: dict[str, str]) 
     return daily_path
 
 
-def _has_equivalent_session_derived_entry(*, daily_path: Path, record: dict[str, str]) -> bool:
+def _has_session_id_entry(*, daily_path: Path, record: dict[str, str]) -> bool:
     """
-    Deduplicate same-day session-derived noise.
+    Deduplicate only exact session replays.
 
-    Equivalence is intentionally strict on commit/test/next_step identity, while
-    allowing session_id differences for repeated auto-closeout retries.
+    Governance closeout should preserve a trace for each distinct session_id.
+    We only suppress duplicate writes when the same session_id is already present.
     """
     try:
         text = daily_path.read_text(encoding="utf-8")
     except Exception:
         return False
 
-    required_lines = (
-        f"- memory_type: {record.get('memory_type', '')}",
-        f"  writer: {record.get('writer', '')}",
-        f"  commit_hash: {record.get('commit_hash', '')}",
-        f"  test_evidence: {record.get('test_evidence', '')}",
-        f"  next_step: {record.get('next_step', '')}",
-    )
-    return all(line in text for line in required_lines)
+    session_line = f"  session_id: {record.get('session_id', '')}"
+    writer_line = f"  writer: {record.get('writer', '')}"
+    return session_line in text and writer_line in text
 
 
 def _auto_detect_commit(project_root: Path) -> str:

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "badminton_activity_review",
+    "observation": {
+      "duration": 1680,
+      "movementType": "steady",
+      "sampleQuality": "sufficient",
+      "zoneDistribution": {
+        "counts": {
+          "zone1": 0,
+          "zone2": 24,
+          "zone3": 0,
+          "zone4": 0,
+          "zone5": 0
+        },
+        "ratios": {
+          "zone1": 0,
+          "zone2": 1,
+          "zone3": 0,
+          "zone4": 0,
+          "zone5": 0
+        }
+      }
+    }
+  }
+]

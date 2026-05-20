@@ -201,27 +201,16 @@ public enum Zone2ObservationAnalyzer {
         workout: WorkoutInput,
         policy: AnalysisPolicy = .default
     ) -> Zone2Observation {
-        let rawCount = workout.heartRateSamples.count
-        let preparedSamples = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy)
-        let preparedCount = preparedSamples.count
-        let distribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
-        let drift = HeartRateDriftAnalyzer.driftRatio(for: preparedSamples)
-        let stability = HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples)
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy)
+        return analyze(primitives: primitives)
+    }
 
-        let quality: SampleQuality
-        if rawCount < policy.minimumSampleCount {
-            quality = .sparse
-        } else if preparedCount < policy.minimumSampleCount {
-            quality = .heavilyFiltered
-        } else {
-            quality = .sufficient
-        }
-
-        return Zone2Observation(
-            zoneDistribution: distribution,
-            driftRatio: drift,
-            stabilityStandardDeviation: stability,
-            sampleQuality: quality
+    static func analyze(primitives: WorkoutObservationPrimitives) -> Zone2Observation {
+        Zone2Observation(
+            zoneDistribution: primitives.zoneDistribution,
+            driftRatio: primitives.driftRatio,
+            stabilityStandardDeviation: primitives.stabilityStandardDeviation,
+            sampleQuality: primitives.sampleQuality
         )
     }
 }
@@ -275,12 +264,43 @@ public enum VO2ObservationAnalyzer {
         workout: WorkoutInput,
         policy: AnalysisPolicy = .default
     ) -> VO2Observation {
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy)
+        return analyze(primitives: primitives)
+    }
+
+    static func analyze(primitives: WorkoutObservationPrimitives) -> VO2Observation {
+        let intervalPatternHint: IntervalPatternHint
+        if primitives.sampleQuality != .sufficient {
+            intervalPatternHint = .possible
+        } else if primitives.highIntensityRatio >= 0.20 && primitives.peakZoneRatio >= 0.05 {
+            intervalPatternHint = .repeatedPeaks
+        } else if primitives.highIntensityRatio < 0.05 {
+            intervalPatternHint = .none
+        } else {
+            intervalPatternHint = .possible
+        }
+
+        return VO2Observation(
+            zoneDistribution: primitives.zoneDistribution,
+            highIntensityRatio: primitives.highIntensityRatio,
+            peakZoneRatio: primitives.peakZoneRatio,
+            intervalPatternHint: intervalPatternHint,
+            sampleQuality: primitives.sampleQuality
+        )
+    }
+}
+
+public enum WorkoutObservationPrimitiveBuilder {
+    public static func build(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> WorkoutObservationPrimitives {
         let rawCount = workout.heartRateSamples.count
         let preparedSamples = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy)
         let preparedCount = preparedSamples.count
         let distribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
-        let highIntensityRatio = distribution.ratio(for: .zone4) + distribution.ratio(for: .zone5)
-        let peakZoneRatio = distribution.ratio(for: .zone5)
+        let drift = HeartRateDriftAnalyzer.driftRatio(for: preparedSamples)
+        let stability = HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples)
 
         let quality: SampleQuality
         if rawCount < policy.minimumSampleCount {
@@ -291,23 +311,96 @@ public enum VO2ObservationAnalyzer {
             quality = .sufficient
         }
 
-        let intervalPatternHint: IntervalPatternHint
-        if quality != .sufficient {
-            intervalPatternHint = .mixedEffort
-        } else if highIntensityRatio >= 0.20 && peakZoneRatio >= 0.05 {
-            intervalPatternHint = .clearIntervals
-        } else if highIntensityRatio < 0.05 {
-            intervalPatternHint = .steadyEffort
-        } else {
-            intervalPatternHint = .mixedEffort
-        }
+        let highIntensityRatio = distribution.ratio(for: .zone4) + distribution.ratio(for: .zone5)
+        let peakZoneRatio = distribution.ratio(for: .zone5)
+        let averageHeartRate = preparedSamples.isEmpty
+            ? nil
+            : preparedSamples.map(\.bpm).reduce(0, +) / Double(preparedSamples.count)
+        let highHrSustainedRatio = preparedSamples.isEmpty
+            ? 0
+            : Double(preparedSamples.filter { $0.bpm >= policy.zoneBounds.zone4Threshold }.count) / Double(preparedSamples.count)
 
-        return VO2Observation(
+        return WorkoutObservationPrimitives(
             zoneDistribution: distribution,
+            sampleQuality: quality,
+            driftRatio: drift,
+            stabilityStandardDeviation: stability,
             highIntensityRatio: highIntensityRatio,
             peakZoneRatio: peakZoneRatio,
-            intervalPatternHint: intervalPatternHint,
-            sampleQuality: quality
+            averageHeartRate: averageHeartRate,
+            highHrSustainedRatio: highHrSustainedRatio,
+        )
+    }
+}
+
+private enum ObservationComputationGuard {
+    // Shared primitive math authority:
+    // observation analyzers should consume WorkoutObservationPrimitives and avoid recomputing
+    // distribution/drift/ratio directly.
+    static let authority = "WorkoutObservationPrimitiveBuilder"
+}
+
+public enum StrengthObservationAnalyzer {
+    public static func analyze(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> StrengthObservation {
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy)
+        return analyze(primitives: primitives)
+    }
+
+    static func analyze(primitives: WorkoutObservationPrimitives) -> StrengthObservation {
+        let hint: RecoveryDropHint
+        if primitives.sampleQuality != .sufficient {
+            hint = .possible
+        } else if primitives.highHrSustainedRatio < 0.25 {
+            hint = .visibleDrops
+        } else if primitives.highHrSustainedRatio > 0.50 {
+            hint = .none
+        } else {
+            hint = .possible
+        }
+
+        return StrengthObservation(
+            avgHeartRate: primitives.averageHeartRate,
+            highHrSustainedRatio: primitives.highHrSustainedRatio,
+            recoveryDropHint: hint,
+            sampleQuality: primitives.sampleQuality
+        )
+    }
+}
+
+public enum ActivityObservationAnalyzer {
+    public static func analyze(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> ActivityObservation {
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy)
+        return analyze(workout: workout, primitives: primitives)
+    }
+
+    static func analyze(
+        workout: WorkoutInput,
+        primitives: WorkoutObservationPrimitives
+    ) -> ActivityObservation {
+        let z2 = primitives.zoneDistribution.ratio(for: .zone2)
+        let z3 = primitives.zoneDistribution.ratio(for: .zone3)
+        let z4plus = primitives.zoneDistribution.ratio(for: .zone4) + primitives.zoneDistribution.ratio(for: .zone5)
+
+        let movementType: ActivityMovementType
+        if z4plus >= 0.20 && z2 <= 0.40 {
+            movementType = .intermittent
+        } else if z3 >= 0.20 && z2 >= 0.30 {
+            movementType = .mixed
+        } else {
+            movementType = .steady
+        }
+
+        return ActivityObservation(
+            zoneDistribution: primitives.zoneDistribution,
+            movementType: movementType,
+            duration: workout.durationSeconds,
+            sampleQuality: primitives.sampleQuality
         )
     }
 }

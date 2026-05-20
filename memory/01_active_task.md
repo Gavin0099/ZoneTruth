@@ -41,6 +41,24 @@
   - Added `VO2ObservationAnalyzer` with observation-only output (`zoneDistribution`, `highIntensityRatio`, `peakZoneRatio`, `intervalPatternHint`, `sampleQuality`).
   - Added `Tests/ZoneTruthCoreTests/Fixtures/vo2_observation_snapshot.json`.
   - Added independent update flag `UPDATE_VO2_OBSERVATION_FIXTURE=1`.
+- Completed P1e primitive consistency slice:
+  - Added shared `WorkoutObservationPrimitives` and `WorkoutObservationPrimitiveBuilder`.
+  - Rewired Zone2/VO2 observation analyzers to consume shared primitives.
+  - Added primitive-level consistency guards and bounded-ratio checks.
+- Completed P1f strength observation parallel path:
+  - Added `StrengthObservationAnalyzer` (observation-only) and `strength_observation_snapshot.json`.
+  - Added independent update flag `UPDATE_STRENGTH_OBSERVATION_FIXTURE=1`.
+- Completed P1g activity observation parallel path:
+  - Added `ActivityObservationAnalyzer` (observation-only) and `activity_observation_snapshot.json`.
+  - Added independent update flag `UPDATE_ACTIVITY_OBSERVATION_FIXTURE=1`.
+- Completed P1h observation registry / coverage guard:
+  - Added intent-to-analyzer/fixture/update-flag registry checks.
+  - Added global guard that observation outputs exclude user-facing semantic fields.
+  - Expanded closeout sequence coverage in `scripts/closeout_workout_evaluation.sh`.
+- Governance fix:
+  - Updated memory append dedup to use `session_id` identity so each distinct run is recorded.
+- Added P1i migration planning artifact:
+  - `docs/P1I_MIGRATION_GATE_CHECKLIST.md` as migration gate contract for intentional semantic changes.
 
 ## Next Steps
 

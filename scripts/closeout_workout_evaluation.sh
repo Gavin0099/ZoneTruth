@@ -20,6 +20,51 @@ if ! swift test; then
   exit 1
 fi
 
+if ! swift test --filter PrimitiveBuilder; then
+  semantic_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! swift test --filter Zone2Observation; then
+  semantic_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! swift test --filter VO2Observation; then
+  semantic_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! swift test --filter StrengthObservation; then
+  semantic_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! swift test --filter ActivityObservation; then
+  semantic_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
 if ! swift test --filter testWorkoutEvaluationSnapshotFixture; then
   snapshot_fixture="changed"
   echo "semantic_guard: ${semantic_guard}"
@@ -30,6 +75,10 @@ if ! swift test --filter testWorkoutEvaluationSnapshotFixture; then
 fi
 
 if ! git diff --quiet -- "$FIXTURE_PATH" || ! git diff --quiet --cached -- "$FIXTURE_PATH"; then
+  snapshot_fixture="changed"
+fi
+
+if ! git diff --quiet -- Tests/ZoneTruthCoreTests/Fixtures || ! git diff --quiet --cached -- Tests/ZoneTruthCoreTests/Fixtures; then
   snapshot_fixture="changed"
 fi
 

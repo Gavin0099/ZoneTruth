@@ -386,6 +386,34 @@ Phase D：UI 首屏重排（語意層穩後才做）
 - `WorkoutEvaluationAdapter` 輸出欄位穩定，且有 snapshot fixture 保護。
 - 關鍵案例（Zone2 偏離、VO2 達標、Strength 代謝循環、Activity、Sparse HR）可重現且可比對。
 
+13. P1i：Observation-to-Policy Migration Gate（下一步）
+
+定位：
+
+- Observation layer 已具備 coverage discipline，但尚未成為 production authority。
+- 本階段不直接切換執行路徑，先定義「何時允許有意圖地改變」。
+
+Migration Gate（需同時滿足）：
+
+1. Primitive snapshots 穩定（無非預期 diff）。
+2. 四種 observation snapshots 穩定（Zone2 / VO2 / Strength / Activity）。
+3. Evaluation snapshot 無 drift（`workout_evaluation_snapshot.json` 無非預期 diff）。
+4. Policy 可直接 consume observation（不再依賴 legacy `AnalysisResult`）。
+5. Fallback path 明確保留，且可在一次變更內回退。
+
+治理附加條件：
+
+6. 所有 snapshot 更新需帶 `change-intent annotation`（說明預期變更與影響面）。
+7. 採用 migration mode 三段切換：
+   - `observe_only`
+   - `dual_run`
+   - `policy_primary`
+
+完成標準：
+
+- 形成可執行 migration checklist（可用於 PR gate / closeout gate）。
+- 在不破壞現有語意穩定性的前提下，允許有意圖的 policy 切換。
+
 
 Project name：**ZoneTruth**  
 副標可以用：**Train with intent. Verify with data.**

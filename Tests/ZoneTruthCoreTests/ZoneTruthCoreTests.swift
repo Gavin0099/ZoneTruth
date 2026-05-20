@@ -33,6 +33,37 @@ final class ZoneTruthCoreTests: XCTestCase {
         let sampleQuality: String
     }
 
+    private struct StrengthObservationFixtureRecord: Codable, Equatable {
+        let id: String
+        let observation: StrengthObservationSnapshot
+    }
+
+    private struct StrengthObservationSnapshot: Codable, Equatable {
+        let avgHeartRate: Double?
+        let highHrSustainedRatio: Double
+        let recoveryDropHint: String
+        let sampleQuality: String
+    }
+
+    private struct ActivityObservationFixtureRecord: Codable, Equatable {
+        let id: String
+        let observation: ActivityObservationSnapshot
+    }
+
+    private struct ActivityObservationSnapshot: Codable, Equatable {
+        let zoneDistribution: ZoneDistributionSnapshot
+        let movementType: String
+        let duration: Double
+        let sampleQuality: String
+    }
+
+    private struct ObservationRegistryEntry: Equatable {
+        let intent: TrainingIntent
+        let analyzerName: String
+        let fixtureFile: String
+        let updateFlag: String
+    }
+
     func testZoneDistributionCountsSamplesIntoExpectedZones() {
         let distribution = ZoneDistributionAnalyzer.analyze(
             samples: makeSamples([100, 115, 130, 145, 160]),
@@ -301,6 +332,98 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertFalse(fieldNames.contains("goalFitScore"))
     }
 
+    func testVO2ObservationAnalyzerUsesDescriptiveIntervalPatternEnum() {
+        let workout = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let observation = VO2ObservationAnalyzer.analyze(workout: workout)
+
+        XCTAssertTrue([IntervalPatternHint.none, .possible, .repeatedPeaks].contains(observation.intervalPatternHint))
+        XCTAssertNotEqual(observation.intervalPatternHint.rawValue, "goodInterval")
+        XCTAssertNotEqual(observation.intervalPatternHint.rawValue, "badInterval")
+    }
+
+    func testVO2ObservationRatiosRemainPureNumericSignals() {
+        let workout = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "low_intensity_intervals" }!
+            .workout
+        let observation = VO2ObservationAnalyzer.analyze(workout: workout)
+
+        XCTAssertGreaterThanOrEqual(observation.highIntensityRatio, 0)
+        XCTAssertLessThanOrEqual(observation.highIntensityRatio, 1)
+        XCTAssertGreaterThanOrEqual(observation.peakZoneRatio, 0)
+        XCTAssertLessThanOrEqual(observation.peakZoneRatio, 1)
+    }
+
+    func testPrimitiveBuilderZoneDistributionMatchesDirectComputation() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout)
+        let sanitized = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: .default)
+        let expected = ZoneDistributionAnalyzer.analyze(samples: sanitized, zoneBounds: AnalysisPolicy.default.zoneBounds)
+
+        XCTAssertEqual(primitives.zoneDistribution, expected)
+    }
+
+    func testPrimitiveBuilderSampleQualityMatchesZone2ObservationOutput() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "sparse_hr_cycling" }!
+            .workout
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout)
+        let observation = Zone2ObservationAnalyzer.analyze(workout: workout)
+
+        XCTAssertEqual(primitives.sampleQuality, observation.sampleQuality)
+    }
+
+    func testPrimitiveBuilderDriftRatioMatchesZone2ObservationOutput() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "leaky_zone2_run" }!
+            .workout
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout)
+        let observation = Zone2ObservationAnalyzer.analyze(workout: workout)
+
+        XCTAssertEqual(primitives.driftRatio, observation.driftRatio)
+    }
+
+    func testPrimitiveBuilderVO2RatiosBounded() {
+        let workout = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout)
+
+        XCTAssertGreaterThanOrEqual(primitives.highIntensityRatio, 0)
+        XCTAssertLessThanOrEqual(primitives.highIntensityRatio, 1)
+        XCTAssertGreaterThanOrEqual(primitives.peakZoneRatio, 0)
+        XCTAssertLessThanOrEqual(primitives.peakZoneRatio, 1)
+    }
+
+    func testObservationAnalyzersDoNotDirectlyComputeDistributionOrDrift() throws {
+        let analyzersPath = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources")
+            .appendingPathComponent("ZoneTruthCore")
+            .appendingPathComponent("Analyzers.swift")
+        let source = try String(contentsOf: analyzersPath, encoding: .utf8)
+
+        let zone2Block = extractSourceBlock(source: source, marker: "public enum Zone2ObservationAnalyzer")
+        let vo2Block = extractSourceBlock(source: source, marker: "public enum VO2ObservationAnalyzer")
+
+        for block in [zone2Block, vo2Block] {
+            XCTAssertFalse(block.contains("ZoneDistributionAnalyzer.analyze("))
+            XCTAssertFalse(block.contains("HeartRateDriftAnalyzer.driftRatio("))
+            XCTAssertFalse(block.contains("HeartRateStabilityAnalyzer.standardDeviation("))
+        }
+    }
+
     func testVO2ObservationSnapshotFixture() throws {
         let records = buildVO2ObservationFixtureRecords()
         let fixtureURL = try vo2ObservationFixtureURL()
@@ -320,6 +443,133 @@ final class ZoneTruthCoreTests: XCTestCase {
             String(decoding: expected, as: UTF8.self),
             "VO2 observation snapshot mismatch. Use UPDATE_VO2_OBSERVATION_FIXTURE=1 only after intentional observation-layer changes."
         )
+    }
+
+    func testStrengthObservationAnalyzerProducesObservationOnlyOutput() {
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+        let observation = StrengthObservationAnalyzer.analyze(workout: workout)
+        let fieldNames = Set(Mirror(reflecting: observation).children.compactMap(\.label))
+
+        XCTAssertTrue(fieldNames.contains("avgHeartRate"))
+        XCTAssertTrue(fieldNames.contains("highHrSustainedRatio"))
+        XCTAssertTrue(fieldNames.contains("recoveryDropHint"))
+        XCTAssertTrue(fieldNames.contains("sampleQuality"))
+
+        XCTAssertFalse(fieldNames.contains("verdict"))
+        XCTAssertFalse(fieldNames.contains("reasons"))
+        XCTAssertFalse(fieldNames.contains("recommendations"))
+        XCTAssertFalse(fieldNames.contains("trainingTendency"))
+        XCTAssertFalse(fieldNames.contains("goalFitScore"))
+    }
+
+    func testStrengthObservationSnapshotFixture() throws {
+        let records = buildStrengthObservationFixtureRecords()
+        let fixtureURL = try strengthObservationFixtureURL()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.escapeSlashes = false
+        let rendered = try encoder.encode(records)
+
+        if ProcessInfo.processInfo.environment["UPDATE_STRENGTH_OBSERVATION_FIXTURE"] == "1" {
+            try rendered.write(to: fixtureURL)
+            return
+        }
+
+        let expected = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            String(decoding: rendered, as: UTF8.self),
+            String(decoding: expected, as: UTF8.self),
+            "Strength observation snapshot mismatch. Use UPDATE_STRENGTH_OBSERVATION_FIXTURE=1 only after intentional observation-layer changes."
+        )
+    }
+
+    func testActivityObservationAnalyzerProducesObservationOnlyOutput() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "badminton_activity_review" }!
+            .workout
+        let observation = ActivityObservationAnalyzer.analyze(workout: workout)
+        let fieldNames = Set(Mirror(reflecting: observation).children.compactMap(\.label))
+
+        XCTAssertTrue(fieldNames.contains("zoneDistribution"))
+        XCTAssertTrue(fieldNames.contains("movementType"))
+        XCTAssertTrue(fieldNames.contains("duration"))
+        XCTAssertTrue(fieldNames.contains("sampleQuality"))
+
+        XCTAssertFalse(fieldNames.contains("verdict"))
+        XCTAssertFalse(fieldNames.contains("reasons"))
+        XCTAssertFalse(fieldNames.contains("recommendations"))
+        XCTAssertFalse(fieldNames.contains("trainingTendency"))
+        XCTAssertFalse(fieldNames.contains("goalFitScore"))
+    }
+
+    func testActivityObservationSnapshotFixture() throws {
+        let records = buildActivityObservationFixtureRecords()
+        let fixtureURL = try activityObservationFixtureURL()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.escapeSlashes = false
+        let rendered = try encoder.encode(records)
+
+        if ProcessInfo.processInfo.environment["UPDATE_ACTIVITY_OBSERVATION_FIXTURE"] == "1" {
+            try rendered.write(to: fixtureURL)
+            return
+        }
+
+        let expected = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            String(decoding: rendered, as: UTF8.self),
+            String(decoding: expected, as: UTF8.self),
+            "Activity observation snapshot mismatch. Use UPDATE_ACTIVITY_OBSERVATION_FIXTURE=1 only after intentional observation-layer changes."
+        )
+    }
+
+    func testObservationRegistryCoversAllIntentsAndFixtures() {
+        let registry = observationRegistryEntries()
+        XCTAssertEqual(Set(registry.map(\.intent)), Set(TrainingIntent.allCases))
+
+        let fixturesDir = fixturesDirectoryURL()
+        for entry in registry {
+            let fixture = fixturesDir.appendingPathComponent(entry.fixtureFile, isDirectory: false)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.path), "Missing fixture: \(entry.fixtureFile)")
+            XCTAssertFalse(entry.analyzerName.isEmpty)
+            XCTAssertFalse(entry.updateFlag.isEmpty)
+        }
+    }
+
+    func testObservationRegistryUpdateFlagsAreReferencedInSnapshotTests() throws {
+        let source = try String(contentsOf: URL(fileURLWithPath: #filePath), encoding: .utf8)
+        for entry in observationRegistryEntries() {
+            XCTAssertTrue(
+                source.contains(entry.updateFlag),
+                "Snapshot tests should reference update flag \(entry.updateFlag)"
+            )
+        }
+    }
+
+    func testAllObservationOutputsExcludeUserFacingSemanticFields() {
+        let zone2Workout = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        let vo2Workout = SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout
+        let strengthWorkout = SampleWorkoutCases.strengthValidationCases().first { $0.name == "traditional_strength_training" }!.workout
+        let activityWorkout = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "badminton_activity_review" }!.workout
+
+        let observations: [Any] = [
+            Zone2ObservationAnalyzer.analyze(workout: zone2Workout),
+            VO2ObservationAnalyzer.analyze(workout: vo2Workout),
+            StrengthObservationAnalyzer.analyze(workout: strengthWorkout),
+            ActivityObservationAnalyzer.analyze(workout: activityWorkout),
+        ]
+
+        let forbidden = ["verdict", "reasons", "recommendations", "trainingTendency", "goalFitScore", "nextAction"]
+        for observation in observations {
+            let fieldNames = Set(Mirror(reflecting: observation).children.compactMap(\.label))
+            for key in forbidden {
+                XCTAssertFalse(fieldNames.contains(key), "Observation output contains forbidden semantic field: \(key)")
+            }
+        }
     }
 
     private func makeWorkout(intent: TrainingIntent, samples: [Double]) -> WorkoutInput {
@@ -434,5 +684,107 @@ final class ZoneTruthCoreTests: XCTestCase {
             throw XCTSkip("Fixture file not found at \(url.path)")
         }
         return url
+    }
+
+    private func buildStrengthObservationFixtureRecords() -> [StrengthObservationFixtureRecord] {
+        let ids = ["traditional_strength_training", "metabolic_strength_circuit"]
+        return ids.compactMap { id in
+            guard let workout = SampleWorkoutCases.strengthValidationCases().first(where: { $0.name == id })?.workout else {
+                return nil
+            }
+            let observation = StrengthObservationAnalyzer.analyze(workout: workout)
+            return StrengthObservationFixtureRecord(
+                id: id,
+                observation: StrengthObservationSnapshot(
+                    avgHeartRate: observation.avgHeartRate,
+                    highHrSustainedRatio: observation.highHrSustainedRatio,
+                    recoveryDropHint: observation.recoveryDropHint.rawValue,
+                    sampleQuality: observation.sampleQuality.rawValue
+                )
+            )
+        }
+    }
+
+    private func strengthObservationFixtureURL() throws -> URL {
+        let testFileDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let url = testFileDirectory
+            .appendingPathComponent("Fixtures", isDirectory: true)
+            .appendingPathComponent("strength_observation_snapshot.json", isDirectory: false)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw XCTSkip("Fixture file not found at \(url.path)")
+        }
+        return url
+    }
+
+    private func buildActivityObservationFixtureRecords() -> [ActivityObservationFixtureRecord] {
+        let ids = ["badminton_activity_review"]
+        return ids.compactMap { id in
+            guard let workout = SampleWorkoutCases.zone2ValidationCases().first(where: { $0.name == id })?.workout else {
+                return nil
+            }
+            let observation = ActivityObservationAnalyzer.analyze(workout: workout)
+            return ActivityObservationFixtureRecord(
+                id: id,
+                observation: ActivityObservationSnapshot(
+                    zoneDistribution: snapshot(of: observation.zoneDistribution),
+                    movementType: observation.movementType.rawValue,
+                    duration: observation.duration,
+                    sampleQuality: observation.sampleQuality.rawValue
+                )
+            )
+        }
+    }
+
+    private func activityObservationFixtureURL() throws -> URL {
+        let url = fixturesDirectoryURL()
+            .appendingPathComponent("activity_observation_snapshot.json", isDirectory: false)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw XCTSkip("Fixture file not found at \(url.path)")
+        }
+        return url
+    }
+
+    private func fixturesDirectoryURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures", isDirectory: true)
+    }
+
+    private func observationRegistryEntries() -> [ObservationRegistryEntry] {
+        [
+            ObservationRegistryEntry(
+                intent: .zone2,
+                analyzerName: "Zone2ObservationAnalyzer",
+                fixtureFile: "zone2_observation_snapshot.json",
+                updateFlag: "UPDATE_ZONE2_OBSERVATION_FIXTURE"
+            ),
+            ObservationRegistryEntry(
+                intent: .vo2Interval,
+                analyzerName: "VO2ObservationAnalyzer",
+                fixtureFile: "vo2_observation_snapshot.json",
+                updateFlag: "UPDATE_VO2_OBSERVATION_FIXTURE"
+            ),
+            ObservationRegistryEntry(
+                intent: .strength,
+                analyzerName: "StrengthObservationAnalyzer",
+                fixtureFile: "strength_observation_snapshot.json",
+                updateFlag: "UPDATE_STRENGTH_OBSERVATION_FIXTURE"
+            ),
+            ObservationRegistryEntry(
+                intent: .activityReview,
+                analyzerName: "ActivityObservationAnalyzer",
+                fixtureFile: "activity_observation_snapshot.json",
+                updateFlag: "UPDATE_ACTIVITY_OBSERVATION_FIXTURE"
+            )
+        ]
+    }
+
+    private func extractSourceBlock(source: String, marker: String) -> String {
+        guard let markerRange = source.range(of: marker) else { return "" }
+        let tail = source[markerRange.lowerBound...]
+        guard let nextEnumRange = tail.dropFirst(marker.count).range(of: "public enum ") else {
+            return String(tail)
+        }
+        return String(tail[..<nextEnumRange.lowerBound])
     }
 }

@@ -3,7 +3,7 @@
     "id": "solid_vo2_max_intervals",
     "observation": {
       "highIntensityRatio": 0.5333333333333333,
-      "intervalPatternHint": "clearIntervals",
+      "intervalPatternHint": "repeatedPeaks",
       "peakZoneRatio": 0.26666666666666666,
       "sampleQuality": "sufficient",
       "zoneDistribution": {
@@ -28,7 +28,7 @@
     "id": "low_intensity_intervals",
     "observation": {
       "highIntensityRatio": 0,
-      "intervalPatternHint": "steadyEffort",
+      "intervalPatternHint": "none",
       "peakZoneRatio": 0,
       "sampleQuality": "sufficient",
       "zoneDistribution": {

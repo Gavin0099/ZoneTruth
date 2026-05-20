@@ -211,9 +211,9 @@ public struct Zone2Observation: Equatable, Sendable {
 }
 
 public enum IntervalPatternHint: String, Codable, Equatable, Sendable {
-    case clearIntervals
-    case mixedEffort
-    case steadyEffort
+    case none
+    case possible
+    case repeatedPeaks
 }
 
 public struct VO2Observation: Equatable, Sendable {
@@ -234,6 +234,87 @@ public struct VO2Observation: Equatable, Sendable {
         self.highIntensityRatio = highIntensityRatio
         self.peakZoneRatio = peakZoneRatio
         self.intervalPatternHint = intervalPatternHint
+        self.sampleQuality = sampleQuality
+    }
+}
+
+public struct WorkoutObservationPrimitives: Equatable, Sendable {
+    public let zoneDistribution: ZoneDistribution
+    public let sampleQuality: SampleQuality
+    public let driftRatio: Double?
+    public let stabilityStandardDeviation: Double?
+    public let highIntensityRatio: Double
+    public let peakZoneRatio: Double
+    public let averageHeartRate: Double?
+    public let highHrSustainedRatio: Double
+
+    public init(
+        zoneDistribution: ZoneDistribution,
+        sampleQuality: SampleQuality,
+        driftRatio: Double?,
+        stabilityStandardDeviation: Double?,
+        highIntensityRatio: Double,
+        peakZoneRatio: Double,
+        averageHeartRate: Double?,
+        highHrSustainedRatio: Double
+    ) {
+        self.zoneDistribution = zoneDistribution
+        self.sampleQuality = sampleQuality
+        self.driftRatio = driftRatio
+        self.stabilityStandardDeviation = stabilityStandardDeviation
+        self.highIntensityRatio = highIntensityRatio
+        self.peakZoneRatio = peakZoneRatio
+        self.averageHeartRate = averageHeartRate
+        self.highHrSustainedRatio = highHrSustainedRatio
+    }
+}
+
+public enum RecoveryDropHint: String, Codable, Equatable, Sendable {
+    case none
+    case possible
+    case visibleDrops
+}
+
+public struct StrengthObservation: Equatable, Sendable {
+    public let avgHeartRate: Double?
+    public let highHrSustainedRatio: Double
+    public let recoveryDropHint: RecoveryDropHint
+    public let sampleQuality: SampleQuality
+
+    public init(
+        avgHeartRate: Double?,
+        highHrSustainedRatio: Double,
+        recoveryDropHint: RecoveryDropHint,
+        sampleQuality: SampleQuality
+    ) {
+        self.avgHeartRate = avgHeartRate
+        self.highHrSustainedRatio = highHrSustainedRatio
+        self.recoveryDropHint = recoveryDropHint
+        self.sampleQuality = sampleQuality
+    }
+}
+
+public enum ActivityMovementType: String, Codable, Equatable, Sendable {
+    case steady
+    case intermittent
+    case mixed
+}
+
+public struct ActivityObservation: Equatable, Sendable {
+    public let zoneDistribution: ZoneDistribution
+    public let movementType: ActivityMovementType
+    public let duration: TimeInterval
+    public let sampleQuality: SampleQuality
+
+    public init(
+        zoneDistribution: ZoneDistribution,
+        movementType: ActivityMovementType,
+        duration: TimeInterval,
+        sampleQuality: SampleQuality
+    ) {
+        self.zoneDistribution = zoneDistribution
+        self.movementType = movementType
+        self.duration = duration
         self.sampleQuality = sampleQuality
     }
 }
