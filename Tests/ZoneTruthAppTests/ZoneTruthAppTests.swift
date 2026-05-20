@@ -618,6 +618,82 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(evaluation.secondarySignals.allSatisfy { !$0.localizedCaseInsensitiveContains("推翻") })
     }
 
+    func testArchitectureGuardPolicyFactoryCoversAllPrimaryIntents() {
+        for intent in [PrimaryIntent.zone2, .vo2Max, .strength, .activity] {
+            let policy = WorkoutEvaluationPolicyFactory.make(for: intent)
+            let observation = WorkoutObservation(
+                primaryIntent: intent,
+                classificationConfidence: 70,
+                evaluationConfidence: 70,
+                zoneDistribution: ZoneDistribution(
+                    counts: [.zone1: 0, .zone2: 100, .zone3: 0, .zone4: 0, .zone5: 0],
+                    ratios: [.zone1: 0, .zone2: 1, .zone3: 0, .zone4: 0, .zone5: 0]
+                ),
+                stabilityStandardDeviation: 5,
+                driftRatio: 0.02
+            )
+            let evaluation = policy.evaluate(observation)
+            XCTAssertFalse(evaluation.trainingTendency.isEmpty)
+            XCTAssertFalse(evaluation.nextAction.isEmpty)
+        }
+    }
+
+    func testArchitectureGuardAdapterDoesNotDirectlyForwardLegacyRecommendationText() {
+        let legacy = AnalysisResult(
+            verdict: .fail,
+            confidence: 0.8,
+            reasons: ["legacy reason marker"],
+            recommendations: ["SENTINEL_DIRECT_RECOMMENDATION_TEXT"],
+            zoneDistribution: ZoneDistribution(
+                counts: [.zone1: 0, .zone2: 60, .zone3: 40, .zone4: 0, .zone5: 0],
+                ratios: [.zone1: 0, .zone2: 0.6, .zone3: 0.4, .zone4: 0, .zone5: 0]
+            ),
+            stabilityStandardDeviation: 6,
+            driftRatio: 0.03
+        )
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertFalse(evaluation.nextAction.contains("SENTINEL_DIRECT_RECOMMENDATION_TEXT"))
+    }
+
+    func testArchitectureGuardObservationShapeHasNoVerdictOrRecommendationFields() {
+        let observation = WorkoutObservation(
+            primaryIntent: .zone2,
+            classificationConfidence: 70,
+            evaluationConfidence: 65,
+            zoneDistribution: ZoneDistribution(
+                counts: [.zone1: 0, .zone2: 80, .zone3: 20, .zone4: 0, .zone5: 0],
+                ratios: [.zone1: 0, .zone2: 0.8, .zone3: 0.2, .zone4: 0, .zone5: 0]
+            ),
+            stabilityStandardDeviation: nil,
+            driftRatio: nil
+        )
+        let fieldNames = Set(Mirror(reflecting: observation).children.compactMap(\.label))
+        XCTAssertFalse(fieldNames.contains("legacyVerdict"))
+        XCTAssertFalse(fieldNames.contains("reasons"))
+        XCTAssertFalse(fieldNames.contains("recommendations"))
+        XCTAssertFalse(fieldNames.contains("verdict"))
+    }
+
+    func testArchitectureGuardNoHarshFailureWordingInEvaluationOutput() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "drifting_swim" }!
+            .workout
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: WorkoutIntentAnalyzer.analyze(workout)
+        )
+        let combinedText = ([evaluation.trainingTendency, evaluation.nextAction] + evaluation.keyFindings).joined(separator: " ")
+        XCTAssertFalse(combinedText.contains("失敗"))
+        XCTAssertFalse(combinedText.contains("不及格"))
+    }
+
     func testWorkoutEvaluationSnapshotFixture() throws {
         let records = buildEvaluationFixtureRecords()
         let fixtureURL = try fixtureFileURL()

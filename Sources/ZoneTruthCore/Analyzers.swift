@@ -196,6 +196,36 @@ public enum Zone2QualityAnalyzer {
     }
 }
 
+public enum Zone2ObservationAnalyzer {
+    public static func analyze(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> Zone2Observation {
+        let rawCount = workout.heartRateSamples.count
+        let preparedSamples = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy)
+        let preparedCount = preparedSamples.count
+        let distribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
+        let drift = HeartRateDriftAnalyzer.driftRatio(for: preparedSamples)
+        let stability = HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples)
+
+        let quality: SampleQuality
+        if rawCount < policy.minimumSampleCount {
+            quality = .sparse
+        } else if preparedCount < policy.minimumSampleCount {
+            quality = .heavilyFiltered
+        } else {
+            quality = .sufficient
+        }
+
+        return Zone2Observation(
+            zoneDistribution: distribution,
+            driftRatio: drift,
+            stabilityStandardDeviation: stability,
+            sampleQuality: quality
+        )
+    }
+}
+
 public enum VO2IntervalAnalyzer {
     public static func analyze(
         workout: WorkoutInput,
@@ -236,6 +266,48 @@ public enum VO2IntervalAnalyzer {
             zoneDistribution: distribution,
             stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples),
             driftRatio: nil
+        )
+    }
+}
+
+public enum VO2ObservationAnalyzer {
+    public static func analyze(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default
+    ) -> VO2Observation {
+        let rawCount = workout.heartRateSamples.count
+        let preparedSamples = HeartRateSampleSanitizer.sanitize(workout.heartRateSamples, policy: policy)
+        let preparedCount = preparedSamples.count
+        let distribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
+        let highIntensityRatio = distribution.ratio(for: .zone4) + distribution.ratio(for: .zone5)
+        let peakZoneRatio = distribution.ratio(for: .zone5)
+
+        let quality: SampleQuality
+        if rawCount < policy.minimumSampleCount {
+            quality = .sparse
+        } else if preparedCount < policy.minimumSampleCount {
+            quality = .heavilyFiltered
+        } else {
+            quality = .sufficient
+        }
+
+        let intervalPatternHint: IntervalPatternHint
+        if quality != .sufficient {
+            intervalPatternHint = .mixedEffort
+        } else if highIntensityRatio >= 0.20 && peakZoneRatio >= 0.05 {
+            intervalPatternHint = .clearIntervals
+        } else if highIntensityRatio < 0.05 {
+            intervalPatternHint = .steadyEffort
+        } else {
+            intervalPatternHint = .mixedEffort
+        }
+
+        return VO2Observation(
+            zoneDistribution: distribution,
+            highIntensityRatio: highIntensityRatio,
+            peakZoneRatio: peakZoneRatio,
+            intervalPatternHint: intervalPatternHint,
+            sampleQuality: quality
         )
     }
 }

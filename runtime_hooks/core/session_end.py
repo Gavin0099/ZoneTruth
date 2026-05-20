@@ -156,18 +156,18 @@ def _build_post_task_phase_classification_from_checks(checks: dict[str, Any]) ->
 
 def _build_session_end_phase_classification(
     *,
-    memory_mode: str,
-    snapshot_result: dict[str, Any] | None,
-    promotion_result: dict[str, Any] | None,
+    daily_memory_appended: bool,
+    snapshot_created: bool,
+    promotion_created: bool,
     decision: str,
     checks: dict[str, Any],
 ) -> dict[str, Any]:
     action_ids = ["canonical_closeout"]
-    if memory_mode != "stateless":
+    if daily_memory_appended:
         action_ids.append("daily_memory_append")
-    if snapshot_result is not None:
+    if snapshot_created:
         action_ids.append("memory_candidate_snapshot")
-    if snapshot_result is not None or promotion_result is not None:
+    if snapshot_created or promotion_created:
         action_ids.append("memory_promotion_candidate")
     if decision == "REVIEW_REQUIRED":
         action_ids.append("reviewer_promotion_decision")
@@ -962,9 +962,9 @@ def run_session_end(
     pre_task_phase_classification = session_start_phase_classification or {}
     post_task_phase_classification = _build_post_task_phase_classification_from_checks(checks)
     session_end_phase_classification = _build_session_end_phase_classification(
-        memory_mode=contract["memory_mode"],
-        snapshot_result=snapshot_result,
-        promotion_result=promotion_result,
+        daily_memory_appended=False,
+        snapshot_created=snapshot_result is not None,
+        promotion_created=promotion_result is not None,
         decision=decision,
         checks=checks,
     )
@@ -1010,6 +1010,27 @@ def run_session_end(
                 snapshot_created=snapshot_result is not None,
                 canonical_closeout=canonical_closeout,
             )
+        daily_memory_appended = daily_memory_path is not None
+        session_end_phase_classification = _build_session_end_phase_classification(
+            daily_memory_appended=daily_memory_appended,
+            snapshot_created=snapshot_result is not None,
+            promotion_created=promotion_result is not None,
+            decision=decision,
+            checks=checks,
+        )
+        runtime_phase_summary = aggregate_phase_classifications(
+            phase_classifications={
+                "pre_task_check": pre_task_phase_classification,
+                "post_task_check": post_task_phase_classification,
+                "session_end": session_end_phase_classification,
+            }
+        )
+        candidate_payload["phase_classification"] = session_end_phase_classification
+        daily_memory_write_status = "written" if daily_memory_appended else (
+            "skipped_stateless" if contract["memory_mode"] == "stateless" else "missing_expected_write"
+        )
+        if contract["memory_mode"] != "stateless" and not daily_memory_appended:
+            warnings.append("daily_memory_append_missing: memory_mode is not stateless but no daily memory path was recorded.")
 
         summary_payload = {
             "session_id": session_id,
@@ -1043,6 +1064,7 @@ def run_session_end(
             "snapshot_created": snapshot_result is not None,
             "promoted": promotion_result is not None,
             "daily_memory_path": str(daily_memory_path) if daily_memory_path else None,
+            "daily_memory_write_status": daily_memory_write_status,
             "daily_memory_record": daily_memory_record,
             "memory_closeout": memory_closeout,
             "phase_classification": session_end_phase_classification,

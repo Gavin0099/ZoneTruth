@@ -185,6 +185,59 @@ public struct AnalysisResult: Equatable, Sendable {
     }
 }
 
+public enum SampleQuality: String, Codable, Equatable, Sendable {
+    case sufficient
+    case sparse
+    case heavilyFiltered
+}
+
+public struct Zone2Observation: Equatable, Sendable {
+    public let zoneDistribution: ZoneDistribution
+    public let driftRatio: Double?
+    public let stabilityStandardDeviation: Double?
+    public let sampleQuality: SampleQuality
+
+    public init(
+        zoneDistribution: ZoneDistribution,
+        driftRatio: Double?,
+        stabilityStandardDeviation: Double?,
+        sampleQuality: SampleQuality
+    ) {
+        self.zoneDistribution = zoneDistribution
+        self.driftRatio = driftRatio
+        self.stabilityStandardDeviation = stabilityStandardDeviation
+        self.sampleQuality = sampleQuality
+    }
+}
+
+public enum IntervalPatternHint: String, Codable, Equatable, Sendable {
+    case clearIntervals
+    case mixedEffort
+    case steadyEffort
+}
+
+public struct VO2Observation: Equatable, Sendable {
+    public let zoneDistribution: ZoneDistribution
+    public let highIntensityRatio: Double
+    public let peakZoneRatio: Double
+    public let intervalPatternHint: IntervalPatternHint
+    public let sampleQuality: SampleQuality
+
+    public init(
+        zoneDistribution: ZoneDistribution,
+        highIntensityRatio: Double,
+        peakZoneRatio: Double,
+        intervalPatternHint: IntervalPatternHint,
+        sampleQuality: SampleQuality
+    ) {
+        self.zoneDistribution = zoneDistribution
+        self.highIntensityRatio = highIntensityRatio
+        self.peakZoneRatio = peakZoneRatio
+        self.intervalPatternHint = intervalPatternHint
+        self.sampleQuality = sampleQuality
+    }
+}
+
 public struct LabeledWorkoutCase: Equatable, Sendable {
     public let name: String
     public let summary: String

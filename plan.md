@@ -3,13 +3,35 @@
 > **Owner**: Gavin
 > **Freshness**: Sprint (7d)
 
+## 0. 實作現況對齊（2026-05-20）
+
+本節用於對齊「計畫」與「目前 repo 真實狀態」，避免後續決策依賴過時假設。
+
+### 已完成（MVP 基礎能力）
+
+- 已有核心 Intent 分析流程：Zone 2 / VO2-Interval / Strength / Activity。
+- 已有 Explainable output（理由 + 建議），並開始導入語意層 `WorkoutEvaluation`（tendency / goal fit / split confidence）。
+- 已完成資料來源骨幹：HealthKit、Strava、JSON import（含 fallback 流程）。
+- 已有 edge-case 測試擴充（Zone3 leakage、drift、sparse HR）與 semantic consistency guard。
+
+### 未完成（仍在 roadmap）
+
+- 尚未把 active calories、distance、swim/cycle distance、avg/max HR 納入核心判斷。
+- 尚未完成「單一官方輸出語意」收斂（legacy pass/fail 與新語意層仍共存）。
+- 尚未完成全場景真機驗證閉環（特別是 sparse/missing HR 與多運動型態資料品質差異）。
+- 尚未將 plan 內舊架構描述全面更新為目前 Adapter + Host 實作形態。
+
+### Deferred（暫緩）
+
+- Garmin 尚未導入，目前不在本期交付範圍。
+
 ## 1. 專案定位
 
 ZoneTruth 是一個 iOS 運動分析工具。
 
 核心目的不是排課，也不是一般健身紀錄，而是：
 
-> 匯入 Apple Health 運動資料，判斷「這堂運動的實際刺激」是否符合使用者原本設定的訓練目的。
+> 匯入 Apple Health 運動資料，推定「這堂運動較偏向的訓練刺激」是否符合使用者設定的訓練目的。
 
 ---
 
@@ -235,20 +257,19 @@ Zone 4+ 有明顯區段：Pass
 
 這堂課有活動與協調價值，但不應作為主要 Zone 2 或 VO2 訓練判斷。
 
-8. 結果輸出格式
+8. 結果輸出格式（語意層）
 Summary Card
 Workout: Swimming
-Target: Zone 2
-Result: Fail
+Primary Intent Baseline: Zone 2
+Training Tendency: Mixed aerobic session
+Goal Fit: 42%
 
-Reason:
-- Average HR 134 bpm, above Zone 2 upper bound
-- Zone 3 leakage too high
-- Session intensity stayed in gray zone
+Primary Findings:
+- Zone 3 leakage elevated
+- HR drift remained stable
 
-Suggestion:
-- Next Zone 2 swim: keep HR below 120 bpm
-- Or change this session into interval swim
+Next Action:
+- Reduce swim pace to remain below Zone 2 upper bound
 9. App 架構
 ZoneTruth
 ├── App
@@ -287,51 +308,58 @@ ZoneTruth
     ├── ZoneDistributionAnalyzerTests.swift
     ├── Zone2QualityAnalyzerTests.swift
     └── FakeHIITAnalyzerTests.swift
-10. 第一階段開發順序
-Phase 1: HealthKit 匯入
+
+註：
+以上為初版概念架構。實際 repo 已演進為 `ZoneTruthCore` + `ZoneTruthApp` + `ZoneTruthHost`（adapter 邊界 + host app capability wrapper）模式，後續需以實作結構回寫本節。
+10. 近期開發順序（Next Sprint）
+
+Phase A：語意層穩定化（最高優先）
 
 目標：
 
-授權 HealthKit
-取得 workout list
-取得 heart rate samples
-顯示基本運動資料
+- 穩定 `WorkoutEvaluationAdapter` 輸出語意，避免前後矛盾。
+- 固化 semantic guard 與 fixture snapshot，讓 UI 與語意層解耦。
 
 完成標準：
 
-可看到近期運動列表
-可點進單一 workout
-可看到心率資料
-Phase 2: Zone 分析
+- 關鍵案例 fixture 全通過（Zone2 偏離、VO2 達標、Strength 代謝循環、Activity、Sparse HR）。
+- `keyFindings`、`nextAction`、confidence 雙軸輸出行為穩定且可回歸驗證。
+
+Phase B：資料品質與裝置驗證閉環
 
 目標：
 
-建立個人 zone 設定
-計算 zone distribution
-顯示每個 zone 時間
+- 在真機驗證 HealthKit/Strava 匯入流程與 sparse/missing HR 處理。
+- 針對不同 workout type 進行資料品質分層檢查。
 
 完成標準：
 
-每堂運動能顯示 Zone 1–5 時間分布
-Phase 3: Intent Match
+- 可穩定讀取近期運動與 HR 樣本。
+- 資料不足時有一致的 fail-closed 與可解釋輸出。
+
+Phase C：分析訊號擴充（從 HR-only 走向多訊號）
 
 目標：
 
-使用者選擇該堂目的
-App 根據目的判斷 Pass / Warning / Fail
+- 將 active calories、distance、swim/cycle distance、avg/max HR 導入判斷輔助層。
+- 維持 `ZoneTruthCore` 與平台 adapter 邊界清晰。
 
 完成標準：
 
-Zone 2 / VO2 / Strength / Activity 都有基本判斷
-Phase 4: Recommendation
+- 新增訊號不破壞既有判定回歸。
+- 新訊號在理由/建議中可被解釋，不只是內部分數加權。
+
+Phase D：UI 首屏重排（語意層穩後才做）
 
 目標：
 
-依據失敗原因給建議
+- 以「主結論 + 目標符合度 + 下一步動作」取代 metrics-first 讀取路徑。
+- 將技術細節下沉到可收合區塊。
 
 完成標準：
 
-不只顯示結果，也能說明「為什麼」與「下次怎麼修」
+- 第一屏可在 3 秒內回答「這次像什麼」「我下次怎麼做」。
+- 進階指標保留但不干擾主決策流程。
 11. 第一版不做的事
 不做 AI 教練
 不自動排課
@@ -344,6 +372,19 @@ Phase 4: Recommendation
 原因：
 
 第一版只做「運動目的與實際刺激是否一致」。
+
+12. Phase 5：Semantic Consistency & Evaluation Layer（進行中）
+
+目標：
+
+- 將 legacy analyzer 輸出穩定映射到語意層（`PrimaryIntent baseline`、`trainingTendency`、`goalFitScore`）。
+- 將 `classificationConfidence` 與 `evaluationConfidence` 分離，避免語意誤導。
+- 建立 fixture snapshot + semantic guard，防止輸出語意漂移。
+
+完成標準：
+
+- `WorkoutEvaluationAdapter` 輸出欄位穩定，且有 snapshot fixture 保護。
+- 關鍵案例（Zone2 偏離、VO2 達標、Strength 代謝循環、Activity、Sparse HR）可重現且可比對。
 
 
 Project name：**ZoneTruth**  

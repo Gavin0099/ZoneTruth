@@ -27,6 +27,20 @@
 - Wired `WorkoutEvaluation` into ViewModel/UI with legacy pass/fail downgraded to secondary detail.
 - Added semantic consistency guard tests to ensure tendency/action coherence, non-harsh failure tone, confidence separation, and finding priority.
 - Added `WorkoutEvaluation` snapshot fixture coverage for five canonical scenarios and fixture refresh path via `UPDATE_WORKOUT_EVAL_FIXTURE=1`.
+- Completed P1a Observation/Policy boundary guard:
+  - Observation shape now excludes verdict/reason/recommendation fields.
+  - Policy layer owns tendency/goal-fit/next-action generation.
+  - Added boundary guard tests to prevent semantic backsliding.
+- Completed P1b minimum parallel path:
+  - Added `Zone2ObservationAnalyzer` with observation-only output (`zoneDistribution`, `driftRatio`, `stabilityStandardDeviation`, `sampleQuality`).
+  - Analyzer explicitly avoids pass/fail, recommendation, and user-facing judgment fields.
+- Completed P1c observation fixture baseline:
+  - Added `Tests/ZoneTruthCoreTests/Fixtures/zone2_observation_snapshot.json`.
+  - Added independent update flag `UPDATE_ZONE2_OBSERVATION_FIXTURE=1`.
+- Completed P1d VO2 observation parallel path:
+  - Added `VO2ObservationAnalyzer` with observation-only output (`zoneDistribution`, `highIntensityRatio`, `peakZoneRatio`, `intervalPatternHint`, `sampleQuality`).
+  - Added `Tests/ZoneTruthCoreTests/Fixtures/vo2_observation_snapshot.json`.
+  - Added independent update flag `UPDATE_VO2_OBSERVATION_FIXTURE=1`.
 
 ## Next Steps
 

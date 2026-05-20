@@ -1,0 +1,52 @@
+[
+  {
+    "id": "solid_vo2_max_intervals",
+    "observation": {
+      "highIntensityRatio": 0.5333333333333333,
+      "intervalPatternHint": "clearIntervals",
+      "peakZoneRatio": 0.26666666666666666,
+      "sampleQuality": "sufficient",
+      "zoneDistribution": {
+        "counts": {
+          "zone1": 2,
+          "zone2": 3,
+          "zone3": 2,
+          "zone4": 4,
+          "zone5": 4
+        },
+        "ratios": {
+          "zone1": 0.13333333333333333,
+          "zone2": 0.2,
+          "zone3": 0.13333333333333333,
+          "zone4": 0.26666666666666666,
+          "zone5": 0.26666666666666666
+        }
+      }
+    }
+  },
+  {
+    "id": "low_intensity_intervals",
+    "observation": {
+      "highIntensityRatio": 0,
+      "intervalPatternHint": "steadyEffort",
+      "peakZoneRatio": 0,
+      "sampleQuality": "sufficient",
+      "zoneDistribution": {
+        "counts": {
+          "zone1": 2,
+          "zone2": 3,
+          "zone3": 8,
+          "zone4": 0,
+          "zone5": 0
+        },
+        "ratios": {
+          "zone1": 0.15384615384615385,
+          "zone2": 0.23076923076923078,
+          "zone3": 0.6153846153846154,
+          "zone4": 0,
+          "zone5": 0
+        }
+      }
+    }
+  }
+]

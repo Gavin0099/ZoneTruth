@@ -1,0 +1,68 @@
+[
+  {
+    "id": "steady_zone2_run",
+    "observation": {
+      "driftRatio": 0.006947890818858545,
+      "sampleQuality": "sufficient",
+      "stabilityStandardDeviation": 1.1621585635262943,
+      "zoneDistribution": {
+        "counts": {
+          "zone1": 0,
+          "zone2": 24,
+          "zone3": 0,
+          "zone4": 0,
+          "zone5": 0
+        },
+        "ratios": {
+          "zone1": 0,
+          "zone2": 1,
+          "zone3": 0,
+          "zone4": 0,
+          "zone5": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "leaky_zone2_run",
+    "observation": {
+      "driftRatio": 0.05862068965517242,
+      "sampleQuality": "sufficient",
+      "stabilityStandardDeviation": 5.856474365293856,
+      "zoneDistribution": {
+        "counts": {
+          "zone1": 0,
+          "zone2": 20,
+          "zone3": 4,
+          "zone4": 0,
+          "zone5": 0
+        },
+        "ratios": {
+          "zone1": 0,
+          "zone2": 0.8333333333333334,
+          "zone3": 0.16666666666666666,
+          "zone4": 0,
+          "zone5": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "sparse_hr_cycling",
+    "observation": {
+      "driftRatio": null,
+      "sampleQuality": "sparse",
+      "stabilityStandardDeviation": null,
+      "zoneDistribution": {
+        "counts": {
+          "zone1": 0,
+          "zone2": 0,
+          "zone3": 0,
+          "zone4": 0,
+          "zone5": 0
+        },
+        "ratios": {}
+      }
+    }
+  }
+]
