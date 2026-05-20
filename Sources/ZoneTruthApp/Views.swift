@@ -143,7 +143,8 @@ struct WorkoutListView: View {
                                 } label: {
                                     WorkoutRowView(
                                         workout: workout,
-                                        result: viewModel.analysisResult(for: workout)
+                                        result: viewModel.analysisResult(for: workout),
+                                        evaluation: viewModel.evaluationResult(for: workout)
                                     )
                                 }
                                 .listRowBackground(PremiumColor.bgDark)
@@ -167,6 +168,7 @@ struct WorkoutListView: View {
                         workout: workout,
                         selectedIntent: viewModel.selectedIntent,
                         result: viewModel.analysisResult(for: workout),
+                        evaluation: viewModel.evaluationResult(for: workout),
                         onIntentChanged: viewModel.updateIntent,
                         settingsManager: settingsManager
                     )
@@ -282,6 +284,7 @@ struct WorkoutSourceBannerView: View {
 struct WorkoutRowView: View {
     let workout: WorkoutInput
     let result: AnalysisResult
+    let evaluation: WorkoutEvaluation
 
     var body: some View {
         HStack(spacing: 16) {
@@ -309,17 +312,17 @@ struct WorkoutRowView: View {
             
             // Verdict status capsule
             HStack(spacing: 4) {
-                Image(systemName: statusSymbol)
+                Image(systemName: "scope")
                     .font(.caption.bold())
-                Text(result.verdict.localizedName)
+                Text("\(evaluation.goalFitScore)%")
                     .font(.caption2.bold())
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
-            .background(statusColor.opacity(0.12))
-            .foregroundStyle(statusColor)
+            .background(statusColor.opacity(0.15))
+            .foregroundStyle(.white)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(statusColor.opacity(0.3), lineWidth: 1))
+            .overlay(Capsule().stroke(statusColor.opacity(0.45), lineWidth: 1))
         }
         .padding(12)
         .background(
@@ -354,17 +357,18 @@ struct WorkoutDetailView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
     let result: AnalysisResult
+    let evaluation: WorkoutEvaluation
     let onIntentChanged: (TrainingIntent) -> Void
     @ObservedObject var settingsManager: SettingsManager
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SummaryCardView(workout: workout, selectedIntent: selectedIntent, result: result)
+                SummaryCardView(workout: workout, selectedIntent: selectedIntent, result: result, evaluation: evaluation)
                 
                 IntentPickerView(selectedIntent: selectedIntent, onIntentChanged: onIntentChanged)
                 
-                AnalysisResultView(result: result)
+                AnalysisResultView(result: result, evaluation: evaluation)
                 
                 SettingsView(settingsManager: settingsManager)
             }
@@ -408,6 +412,7 @@ struct SummaryCardView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
     let result: AnalysisResult
+    let evaluation: WorkoutEvaluation
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -436,24 +441,36 @@ struct SummaryCardView: View {
                 
                 Spacer()
                 
-                ConfidenceRingView(confidence: result.confidence, color: colorForVerdict(result.verdict))
+                ConfidenceRingView(
+                    confidence: Double(evaluation.evaluationConfidence) / 100.0,
+                    color: colorForVerdict(result.verdict)
+                )
             }
             
             Divider()
                 .background(Color.white.opacity(0.15))
             
-            // Verdict banner
+            // Coach summary banner
             HStack(spacing: 8) {
-                Image(systemName: iconForVerdict(result.verdict))
+                Image(systemName: "figure.run.square.stack")
                     .font(.subheadline.bold())
-                Text("分析判定：\(result.verdict.localizedName)")
+                Text(evaluation.trainingTendency)
                     .font(.subheadline.bold())
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .background(colorForVerdict(result.verdict).opacity(0.15))
-            .foregroundStyle(colorForVerdict(result.verdict))
+            .background(PremiumColor.skyBlue.opacity(0.15))
+            .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            Text(evaluation.goalFitLabel)
+                .font(.system(.title3, design: .rounded).bold())
+                .foregroundStyle(.white)
+
+            Text("建議：\(evaluation.nextAction)")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.85))
+                .lineSpacing(3)
             
             // Grid of Metrics
             LazyVGrid(columns: columns, spacing: 12) {
@@ -509,13 +526,6 @@ struct SummaryCardView: View {
         }
     }
     
-    private func iconForVerdict(_ verdict: AnalysisVerdict) -> String {
-        switch verdict {
-        case .pass: return "checkmark.seal.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .fail: return "xmark.octagon.fill"
-        }
-    }
 }
 
 struct MetricGridCell: View {
@@ -634,12 +644,35 @@ struct ZoneDistributionChartView: View {
 
 struct AnalysisResultView: View {
     let result: AnalysisResult
+    let evaluation: WorkoutEvaluation
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("核心分析報告")
                 .font(.title3.bold())
                 .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("主要發現", systemImage: "lightbulb.fill")
+                    .font(.headline)
+                    .foregroundStyle(PremiumColor.gold)
+                ForEach(evaluation.keyFindings, id: \.self) { finding in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("•")
+                            .foregroundStyle(PremiumColor.gold)
+                        Text(finding)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+                }
+            }
+            .padding(14)
+            .background(PremiumColor.gold.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(PremiumColor.gold.opacity(0.2), lineWidth: 1)
+            )
 
             // Zone distribution chart
             VStack(alignment: .leading, spacing: 10) {
@@ -715,6 +748,23 @@ struct AnalysisResultView: View {
                         .stroke(PremiumColor.emerald.opacity(0.15), lineWidth: 1)
                 )
             }
+
+            DisclosureGroup("進階分析（技術細節）") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("分類信心：\(evaluation.classificationConfidence)%")
+                    Text("評估信心：\(evaluation.evaluationConfidence)%")
+                    ForEach(evaluation.secondarySignals, id: \.self) { signal in
+                        Text("• \(signal)")
+                    }
+                    Text("舊版判定：\(result.verdict.localizedName)")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.85))
+                .padding(.top, 8)
+            }
+            .font(.subheadline.bold())
+            .foregroundStyle(.white)
         }
         .padding(18)
         .background(PremiumColor.cardBg)

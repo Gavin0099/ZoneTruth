@@ -68,6 +68,18 @@ ZoneTruth 要解決的是：
 - 社群功能
 - 自動排課
 
+### Garmin（目前狀態）
+
+- 目前 **未導入 Garmin Connect API**，也沒有 Garmin adapter 實作。
+- 現階段資料來源以 Apple Health、Strava、JSON 匯入為主。
+- Garmin 先列為後續擴充項目，不放在第一版關鍵路徑。
+
+未在本期導入 Garmin 的主要原因：
+
+1. 第一版優先驗證「分析語意與判定可解釋性」，避免同時擴大資料來源與規則複雜度。
+2. 既有 HealthKit + Strava 已可覆蓋多數目標使用情境，先完成品質穩定與語意一致性。
+3. Garmin 串接需要額外 OAuth / API 契約與資料映射維護，會拉長 MVP 交付時間。
+
 ---
 
 ## 5. 使用流程

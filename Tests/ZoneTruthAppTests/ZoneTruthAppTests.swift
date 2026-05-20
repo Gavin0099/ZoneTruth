@@ -4,6 +4,11 @@ import XCTest
 @testable import ZoneTruthCore
 
 final class ZoneTruthAppTests: XCTestCase {
+    private struct EvaluationFixtureRecord: Codable, Equatable {
+        let id: String
+        let evaluation: WorkoutEvaluation
+    }
+
     func testJSONWorkoutRepositoryLoadsImportedWorkouts() throws {
         let fileManager = FileManager.default
         let directoryURL = try makeTemporaryDirectory()
@@ -479,11 +484,211 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(viewModel.canRequestHealthAccess)
     }
 
+    func testWorkoutEvaluationAdapterCapsKeyFindingsAndProvidesSingleNextAction() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "leaky_zone2_run" }!
+            .workout
+        let legacy = WorkoutIntentAnalyzer.analyze(workout)
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertEqual(evaluation.primaryIntent, .zone2)
+        XCTAssertLessThanOrEqual(evaluation.keyFindings.count, 2)
+        XCTAssertFalse(evaluation.nextAction.isEmpty)
+        XCTAssertTrue((0...100).contains(evaluation.goalFitScore))
+        XCTAssertTrue((0...100).contains(evaluation.classificationConfidence))
+        XCTAssertTrue((0...100).contains(evaluation.evaluationConfidence))
+    }
+
+    func testWorkoutEvaluationAdapterKeepsLegacyPassFailAsDerivedField() {
+        let passWorkout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let failWorkout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "drifting_swim" }!
+            .workout
+
+        let passEvaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: WorkoutIntentAnalyzer.analyze(passWorkout)
+        )
+        let failEvaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: WorkoutIntentAnalyzer.analyze(failWorkout)
+        )
+
+        XCTAssertTrue(passEvaluation.legacyPassFail)
+        XCTAssertFalse(failEvaluation.legacyPassFail)
+    }
+
+    func testSemanticGuardZone2DeviationWithStableDriftUsesNuancedTendency() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "leaky_zone2_run" }!
+            .workout
+        let legacy = WorkoutIntentAnalyzer.analyze(workout)
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertEqual(evaluation.primaryIntent, .zone2)
+        XCTAssertFalse(evaluation.legacyPassFail)
+        XCTAssertTrue(evaluation.trainingTendency.contains("Zone 2") || evaluation.trainingTendency.contains("混合有氧"))
+        XCTAssertTrue(evaluation.nextAction.contains("降低") || evaluation.nextAction.contains("放慢") || evaluation.nextAction.contains("強度"))
+    }
+
+    func testSemanticGuardNoHarshFailureToneWhenLegacyPassFailFalse() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "drifting_swim" }!
+            .workout
+        let legacy = WorkoutIntentAnalyzer.analyze(workout)
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertFalse(evaluation.legacyPassFail)
+        let combinedText = ([evaluation.trainingTendency, evaluation.nextAction] + evaluation.keyFindings).joined(separator: " ")
+        XCTAssertFalse(combinedText.contains("失敗"))
+        XCTAssertFalse(combinedText.contains("不及格"))
+    }
+
+    func testSemanticGuardClassificationAndEvaluationConfidenceAreNotCollapsed() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "sparse_hr_cycling" }!
+            .workout
+        let legacy = WorkoutIntentAnalyzer.analyze(workout)
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertEqual(evaluation.primaryIntent, .zone2)
+        XCTAssertLessThan(evaluation.evaluationConfidence, evaluation.classificationConfidence)
+    }
+
+    func testSemanticGuardKeyFindingsContainPrimaryDeviationReason() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "drifting_swim" }!
+            .workout
+        let legacy = WorkoutIntentAnalyzer.analyze(workout)
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertLessThanOrEqual(evaluation.keyFindings.count, 2)
+        XCTAssertTrue(
+            evaluation.keyFindings.contains {
+                $0.localizedCaseInsensitiveContains("Zone 3") ||
+                $0.localizedCaseInsensitiveContains("飄移")
+            }
+        )
+    }
+
+    func testSemanticGuardSecondarySignalsDoNotOverridePrimaryIntent() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "high_drift_zone2_ride" }!
+            .workout
+        let legacy = WorkoutIntentAnalyzer.analyze(workout)
+
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .zone2,
+            legacy: legacy
+        )
+
+        XCTAssertEqual(evaluation.primaryIntent, .zone2)
+        XCTAssertFalse(evaluation.secondarySignals.isEmpty)
+        XCTAssertTrue(evaluation.secondarySignals.allSatisfy { !$0.localizedCaseInsensitiveContains("改判") })
+        XCTAssertTrue(evaluation.secondarySignals.allSatisfy { !$0.localizedCaseInsensitiveContains("推翻") })
+    }
+
+    func testWorkoutEvaluationSnapshotFixture() throws {
+        let records = buildEvaluationFixtureRecords()
+        let fixtureURL = try fixtureFileURL()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.escapeSlashes = false
+        let rendered = try encoder.encode(records)
+
+        if ProcessInfo.processInfo.environment["UPDATE_WORKOUT_EVAL_FIXTURE"] == "1" {
+            try rendered.write(to: fixtureURL)
+            return
+        }
+
+        let expected = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            String(decoding: rendered, as: UTF8.self),
+            String(decoding: expected, as: UTF8.self),
+            "WorkoutEvaluation snapshot mismatch. Run with UPDATE_WORKOUT_EVAL_FIXTURE=1 to refresh fixture after intentional semantic changes."
+        )
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         return directoryURL
+    }
+
+    private func buildEvaluationFixtureRecords() -> [EvaluationFixtureRecord] {
+        let zone2Case = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "leaky_zone2_run" }!.workout
+        let vo2Case = SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout
+        let strengthCase = SampleWorkoutCases.strengthValidationCases().first { $0.name == "metabolic_strength_circuit" }!.workout
+        let activityCase = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "badminton_activity_review" }!.workout
+        let sparseCase = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "sparse_hr_cycling" }!.workout
+
+        let inputs: [(String, TrainingIntent, WorkoutInput)] = [
+            ("zone2_deviation_stable_drift", .zone2, zone2Case),
+            ("vo2_pass", .vo2Interval, vo2Case),
+            ("strength_metabolic_circuit", .strength, strengthCase),
+            ("activity_general", .activityReview, activityCase),
+            ("sparse_hr_samples", .zone2, sparseCase)
+        ]
+
+        return inputs.map { id, intent, workout in
+            let rewritten = WorkoutInput(
+                id: workout.id,
+                workoutType: workout.workoutType,
+                startDate: workout.startDate,
+                endDate: workout.endDate,
+                durationSeconds: workout.durationSeconds,
+                heartRateSamples: workout.heartRateSamples,
+                intent: intent
+            )
+            let legacy = WorkoutIntentAnalyzer.analyze(rewritten)
+            let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+                primaryIntentBaseline: intent,
+                legacy: legacy
+            )
+            return EvaluationFixtureRecord(id: id, evaluation: evaluation)
+        }
+    }
+
+    private func fixtureFileURL() throws -> URL {
+        let testFileDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let url = testFileDirectory
+            .appendingPathComponent("Fixtures", isDirectory: true)
+            .appendingPathComponent("workout_evaluation_snapshot.json", isDirectory: false)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw XCTSkip("Fixture file not found at \(url.path)")
+        }
+        return url
     }
 
     private var samplePayload: String {

@@ -23,6 +23,10 @@
 - Sparse HR early return in `Zone2QualityAnalyzer`: no misleading stability/drift analysis when sample count too low; returns clear "too low" reason instead.
 - Added 3 edge-case labeled samples (sparse HR, high drift low leakage, unstable but Zone 2) and 3 matching core tests.
 - Created `Info.plist` with `zonetruth://` URL scheme and HealthKit usage strings; `Package.swift` excludes it from SPM processing (Xcode picks it up automatically).
+- Added `WorkoutEvaluation` model and adapter mapping from legacy `AnalysisResult` to semantic-first output (`primaryIntent` baseline, `trainingTendency`, `goalFitScore`, split confidences).
+- Wired `WorkoutEvaluation` into ViewModel/UI with legacy pass/fail downgraded to secondary detail.
+- Added semantic consistency guard tests to ensure tendency/action coherence, non-harsh failure tone, confidence separation, and finding priority.
+- Added `WorkoutEvaluation` snapshot fixture coverage for five canonical scenarios and fixture refresh path via `UPDATE_WORKOUT_EVAL_FIXTURE=1`.
 
 ## Next Steps
 
@@ -38,3 +42,4 @@
 - [x] Promoted memory: Refine analyzer logic for sparse HR data and strength training classification.
 - [x] Promoted memory: Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.
 - Refactored `ZoneTruthApp` to a library and created `ZoneTruthHost` Xcode project wrapper to enable proper HealthKit capability signing on physical iOS devices, integrating it into the repository structure.
+- Garmin status: not yet integrated; current sources remain HealthKit + Strava + JSON import. Garmin deferred until post-MVP semantic/model stabilization.

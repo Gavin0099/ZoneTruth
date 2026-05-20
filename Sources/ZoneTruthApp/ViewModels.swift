@@ -88,6 +88,23 @@ final class WorkoutListViewModel: ObservableObject {
         return WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
     }
 
+    func evaluationResult(for workout: WorkoutInput) -> WorkoutEvaluation {
+        let rewritten = WorkoutInput(
+            id: workout.id,
+            workoutType: workout.workoutType,
+            startDate: workout.startDate,
+            endDate: workout.endDate,
+            durationSeconds: workout.durationSeconds,
+            heartRateSamples: workout.heartRateSamples,
+            intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent
+        )
+        let legacy = WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
+        return WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: rewritten.intent,
+            legacy: legacy
+        )
+    }
+
     private func apply(_ result: WorkoutLoadResult) {
         workouts = result.workouts
         currentSource = result.source

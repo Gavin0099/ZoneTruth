@@ -152,6 +152,50 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertFalse(sanitized.contains { $0.bpm == 160 })
     }
 
+    func testZone3LeakageBoundaryAt9PercentPasses() {
+        let distribution = distributionWithZone3Ratio(0.09)
+        XCTAssertEqual(Zone3LeakageAnalyzer.verdict(for: distribution), .pass)
+    }
+
+    func testZone3LeakageBoundaryAt10PercentWarns() {
+        let distribution = distributionWithZone3Ratio(0.10)
+        XCTAssertEqual(Zone3LeakageAnalyzer.verdict(for: distribution), .warning)
+    }
+
+    func testZone3LeakageBoundaryAt20PercentStillWarns() {
+        let distribution = distributionWithZone3Ratio(0.20)
+        XCTAssertEqual(Zone3LeakageAnalyzer.verdict(for: distribution), .warning)
+    }
+
+    func testZone3LeakageBoundaryAbove20PercentFails() {
+        let distribution = distributionWithZone3Ratio(0.201)
+        XCTAssertEqual(Zone3LeakageAnalyzer.verdict(for: distribution), .fail)
+    }
+
+    func testDriftBoundaryAt4Point9PercentPasses() {
+        let samples = driftSamples(firstHalfBPM: 100, secondHalfBPM: 104.9)
+        XCTAssertNotNil(HeartRateDriftAnalyzer.driftRatio(for: samples))
+        XCTAssertEqual(HeartRateDriftAnalyzer.verdict(for: samples), .pass)
+    }
+
+    func testDriftBoundaryAt5PercentWarns() {
+        let samples = driftSamples(firstHalfBPM: 100, secondHalfBPM: 105)
+        XCTAssertNotNil(HeartRateDriftAnalyzer.driftRatio(for: samples))
+        XCTAssertEqual(HeartRateDriftAnalyzer.verdict(for: samples), .warning)
+    }
+
+    func testDriftBoundaryAt8PercentStillWarns() {
+        let samples = driftSamples(firstHalfBPM: 100, secondHalfBPM: 108)
+        XCTAssertNotNil(HeartRateDriftAnalyzer.driftRatio(for: samples))
+        XCTAssertEqual(HeartRateDriftAnalyzer.verdict(for: samples), .warning)
+    }
+
+    func testDriftBoundaryAbove8PercentFails() {
+        let samples = driftSamples(firstHalfBPM: 100, secondHalfBPM: 108.1)
+        XCTAssertNotNil(HeartRateDriftAnalyzer.driftRatio(for: samples))
+        XCTAssertEqual(HeartRateDriftAnalyzer.verdict(for: samples), .fail)
+    }
+
     private func makeWorkout(intent: TrainingIntent, samples: [Double]) -> WorkoutInput {
         let start = Date(timeIntervalSince1970: 0)
         let end = start.addingTimeInterval(TimeInterval((samples.count - 1) * 60))
@@ -169,5 +213,28 @@ final class ZoneTruthCoreTests: XCTestCase {
         return samples.enumerated().map { index, bpm in
             HeartRateSample(timestamp: start.addingTimeInterval(TimeInterval(index * 60)), bpm: bpm)
         }
+    }
+
+    private func distributionWithZone3Ratio(_ zone3Ratio: Double) -> ZoneDistribution {
+        let remaining = max(0.0, 1.0 - zone3Ratio)
+        let counts: [TrainingZone: Int] = [
+            .zone1: 0,
+            .zone2: Int(remaining * 100),
+            .zone3: Int(zone3Ratio * 100),
+            .zone4: 0,
+            .zone5: 0
+        ]
+        let ratios: [TrainingZone: Double] = [
+            .zone1: 0.0,
+            .zone2: remaining,
+            .zone3: zone3Ratio,
+            .zone4: 0.0,
+            .zone5: 0.0
+        ]
+        return ZoneDistribution(counts: counts, ratios: ratios)
+    }
+
+    private func driftSamples(firstHalfBPM: Double, secondHalfBPM: Double) -> [HeartRateSample] {
+        makeSamples([firstHalfBPM, firstHalfBPM, secondHalfBPM, secondHalfBPM])
     }
 }
