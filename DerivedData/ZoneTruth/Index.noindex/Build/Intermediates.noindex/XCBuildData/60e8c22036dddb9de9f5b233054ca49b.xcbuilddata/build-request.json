@@ -1,0 +1,46 @@
+{
+  "buildCommand" : {
+    "command" : "prepareForIndexing",
+    "enableIndexBuildArena" : true,
+    "targets" : null
+  },
+  "configuredTargets" : [
+
+  ],
+  "containerPath" : "/Users/gavin_wu/Desktop/ZoneTruth",
+  "continueBuildingAfterErrors" : true,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "indexbuild",
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/ZoneTruth/Index.noindex/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/ZoneTruth/Index.noindex/Build/Products",
+      "derivedDataPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData",
+      "indexDataStoreFolderPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/ZoneTruth/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/ZoneTruth/Index.noindex/PrecompiledHeaders",
+      "indexRegularBuildIntermediatesPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/Build/Intermediates.noindex",
+      "indexRegularBuildProductsPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/Build/Products",
+      "pchPath" : "/Users/gavin_wu/Desktop/ZoneTruth/DerivedData/ZoneTruth/Index.noindex/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "synthesized" : {
+        "table" : {
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "NO",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "qos" : "utility",
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

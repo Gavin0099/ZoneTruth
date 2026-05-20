@@ -1,0 +1,36 @@
+﻿schema_version: "0.2"
+candidate_id: ""
+repo: ""
+session_id: ""
+run_id: ""
+commit_hash: ""
+generated_at_utc: ""
+
+significance_level: "L1"  # L1|L2|L3
+event_type: ""            # L3 must use closed enum only
+
+# Closed enum for L3 only:
+# - architecture_contract_change
+# - enforcement_semantic_change
+# - external_behavior_change
+# - reviewer_override
+# - incident_root_cause
+
+why_significant: ""
+
+evidence_links:
+  - ""
+
+suggested_memory_target: ""  # e.g. memory/03_decisions.md
+
+promotion_state: "candidate" # candidate|promoted|discarded
+
+authority_flags:
+  canonical_review_required: false
+  canonical_conflict_detected: false
+
+validation:
+  l3_enum_valid: true
+  evidence_linkage_complete: false
+
+notes: ""

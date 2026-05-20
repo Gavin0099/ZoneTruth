@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -41,6 +42,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime_hooks.core.session_end import run_session_end
+from runtime_hooks.core._canonical_closeout import write_candidate
 from governance_tools.gate_policy import (
     load_policy,
     classify_artifact,
@@ -52,6 +54,7 @@ from governance_tools.gate_policy import (
     POLICY_SOURCE_BUILTIN_DEFAULT,
 )
 from governance_tools.taxonomy_expansion_log import append_pending_entry
+from governance_tools.memory_significance import write_candidate_and_advisory
 
 
 CLOSEOUT_FILE = "artifacts/session-closeout.txt"
@@ -363,6 +366,16 @@ def detect_readiness_level(project_root: Path, framework_root: Path) -> dict[str
     """
     checks: dict[str, Any] = {}
 
+    # ── Structural warnings (advisory, never level-blocking) ─────────────────
+    closeout_gitignored = _closeout_file_is_gitignored(project_root)
+    structural_warnings: list[str] = []
+    if closeout_gitignored:
+        structural_warnings.append(
+            "closeout_file_gitignored: artifacts/session-closeout.txt is git-ignored; "
+            "stale closeout content is invisible in git history and CI — "
+            "remove it from .gitignore or add a gitignore negation rule"
+        )
+
     # ── Level 0: hook can run + artifacts writable ────────────────────────────
     artifacts_dir = project_root / "artifacts"
     l0 = {
@@ -379,6 +392,8 @@ def detect_readiness_level(project_root: Path, framework_root: Path) -> dict[str
             "closeout_activation_state": "unknown",
             "activation_recency": None,
             "activation_gap": "structural_prerequisites_missing",
+            "closeout_file_gitignore_risk": closeout_gitignored,
+            "structural_warnings": structural_warnings,
         }
 
     # ── Level 1: schema doc + AGENTS.base.md closeout obligation ─────────────
@@ -404,6 +419,8 @@ def detect_readiness_level(project_root: Path, framework_root: Path) -> dict[str
             "closeout_activation_state": "unknown",
             "activation_recency": None,
             "activation_gap": "structural_prerequisites_missing",
+            "closeout_file_gitignore_risk": closeout_gitignored,
+            "structural_warnings": structural_warnings,
         }
 
     # ── Level 2: content governance aligned ──────────────────────────────────
@@ -423,6 +440,8 @@ def detect_readiness_level(project_root: Path, framework_root: Path) -> dict[str
                 "(re-run to patch anchor guidance)"
             ),
             **activation,
+            "closeout_file_gitignore_risk": closeout_gitignored,
+            "structural_warnings": structural_warnings,
         }
 
     # ── Level 3: cross-reference capability ──────────────────────────────────
@@ -443,6 +462,8 @@ def detect_readiness_level(project_root: Path, framework_root: Path) -> dict[str
         "limiting_factor": None,
         "suggested_next_step": None,
         **activation,
+        "closeout_file_gitignore_risk": closeout_gitignored,
+        "structural_warnings": structural_warnings,
     }
 
 
@@ -544,6 +565,28 @@ def _first_false(d: dict[str, Any]) -> str:
     return next((k for k, v in d.items() if not v), "unknown")
 
 
+def _closeout_file_is_gitignored(
+    project_root: Path,
+    closeout_file: str = "artifacts/session-closeout.txt",
+) -> bool:
+    """Return True if the closeout file is git-ignored in the repo.
+
+    Uses `git check-ignore -q` which exits 0 when the path is ignored,
+    1 when it is tracked or not ignored, 128 when not a git repo.
+    Returns False on any error so the check never blocks the hook.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", closeout_file],
+            capture_output=True,
+            cwd=project_root,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 # ── Memory promotion tier ─────────────────────────────────────────────────────
 
 def _determine_memory_tier(
@@ -569,6 +612,23 @@ def _determine_memory_tier(
         # content is meaningful even if evidence cross-ref failed or was unchecked
         return MEMORY_TIER_WORKING
     return MEMORY_TIER_NONE
+
+
+def _split_csv_field(value: str) -> list[str]:
+    raw = (value or "").strip()
+    if not raw or raw.upper() in {"NONE", "NO_UPDATE"}:
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _build_closeout_candidate_from_fields(fields: dict[str, str]) -> dict[str, Any]:
+    return {
+        "task_intent": fields.get("TASK_INTENT", "").strip(),
+        "work_summary": fields.get("WORK_COMPLETED", "").strip(),
+        "tools_used": _extract_tool_names(fields.get("CHECKS_RUN", "")),
+        "artifacts_referenced": _split_csv_field(fields.get("FILES_TOUCHED", "")),
+        "open_risks": _split_csv_field(fields.get("OPEN_RISKS", "")),
+    }
 
 
 # ── Classification aggregate ──────────────────────────────────────────────────
@@ -1305,6 +1365,7 @@ def _build_canonical_usage_audit(
 
 def run_session_end_hook(project_root: Path) -> dict[str, Any]:
     closeout_path = project_root / CLOSEOUT_FILE
+    closeout_trigger_mode = "manual"
     clf = classify_closeout(closeout_path, project_root)
 
     closeout_status = clf["closeout_status"]
@@ -1345,6 +1406,15 @@ def run_session_end_hook(project_root: Path) -> dict[str, Any]:
         if memory_tier in {MEMORY_TIER_VERIFIED, MEMORY_TIER_WORKING}
         else ""
     )
+
+    if clf["presence"] == PRESENT and clf["schema_validity"] == SCHEMA_VALID:
+        # Bridge session-closeout input into canonical closeout pipeline so
+        # session_end can build non-missing canonical artifacts for this session.
+        write_candidate(
+            session_id=session_id,
+            project_root=project_root,
+            candidate=_build_closeout_candidate_from_fields(fields),
+        )
 
     result = run_session_end(
         project_root=project_root,
@@ -1481,11 +1551,52 @@ def run_session_end_hook(project_root: Path) -> dict[str, Any]:
     # operators (especially Tier B) can interpret the result at a glance.
     gate_verdict = _compute_gate_verdict(base_ok, gate.blocked, gate_warnings, gate_errors)
 
+    memory_closeout = result.get("memory_closeout") or {}
+    memory_closeout_decision = str(memory_closeout.get("decision", "")).strip().lower()
+    memory_update_attempted = closeout_status != STATUS_MISSING
+    memory_update_result = "updated" if result["promotion"] is not None else "skipped"
+    if memory_update_result == "updated":
+        memory_update_skipped_reason = None
+    elif not memory_update_attempted:
+        memory_update_skipped_reason = "missing_session_closeout_artifact"
+    elif memory_closeout_decision in {"no_candidate", "skipped"}:
+        memory_update_skipped_reason = "memory_closeout_no_candidate"
+    elif memory_closeout_decision in {"blocked"}:
+        memory_update_skipped_reason = "memory_closeout_blocked"
+    elif memory_closeout_decision:
+        memory_update_skipped_reason = f"memory_closeout_{memory_closeout_decision}"
+    elif result["promotion"] is None:
+        memory_update_skipped_reason = "promotion_not_performed"
+    else:
+        memory_update_skipped_reason = None
+
+    memory_significance_artifacts: dict[str, str] | None = None
+    try:
+        # v0.2 rollout: candidate + significance classifier + advisory report.
+        # Advisory only; never changes gate outcome.
+        commit_hash = _resolve_head_commit(project_root)
+        memory_significance_artifacts = write_candidate_and_advisory(
+            repo_root=project_root,
+            session_id=session_id,
+            commit_hash=commit_hash,
+            task_intent=fields.get("TASK_INTENT", ""),
+            checks=checks,
+        )
+    except Exception as exc:  # noqa: BLE001
+        gate_warnings.append(
+            f"[memory_significance] advisory generation failed: {exc}"
+        )
+
     return {
         "ok": base_ok,
         "session_id": session_id,
+        "closeout_trigger_mode": closeout_trigger_mode,
         "closeout_status": closeout_status,
         "memory_tier": memory_tier,
+        "memory_update_attempted": memory_update_attempted,
+        "memory_update_result": memory_update_result,
+        "memory_update_skipped_reason": memory_update_skipped_reason,
+        "memory_significance": memory_significance_artifacts,
         "hook_coverage_tier": closeout_eval["hook_coverage_tier"],
         "closeout_evaluation": closeout_eval,
         "repo_readiness_level": readiness["level"],
@@ -1637,14 +1748,19 @@ def format_human_result(result: dict[str, Any]) -> str:
 
     lines += [
         f"session_id={result['session_id']}",
+        f"closeout_trigger_mode={result.get('closeout_trigger_mode', 'manual')}",
         f"closeout_status={result['closeout_status']}",
         f"memory_tier={result['memory_tier']}",
+        f"memory_update_attempted={result.get('memory_update_attempted')}",
+        f"memory_update_result={result.get('memory_update_result')}",
         f"repo_readiness_level={result['repo_readiness_level']}"
         + (f" (limited by: {result['repo_readiness_limiting_factor']})" if result['repo_readiness_limiting_factor'] else "")
         + f"  activation={result.get('repo_closeout_activation_state', 'unknown')}"
         + (f"/{result['repo_activation_recency']}" if result.get('repo_activation_recency') else "")
         + (f" (gap: {result['repo_activation_gap']})" if result.get('repo_activation_gap') else ""),
     ]
+    if result.get("memory_update_skipped_reason"):
+        lines.append(f"memory_update_skipped_reason={result['memory_update_skipped_reason']}")
 
     # Tier-aware closeout evaluation — displayed early so Tier B/C repos see
     # their advisory status before the per-layer detail.

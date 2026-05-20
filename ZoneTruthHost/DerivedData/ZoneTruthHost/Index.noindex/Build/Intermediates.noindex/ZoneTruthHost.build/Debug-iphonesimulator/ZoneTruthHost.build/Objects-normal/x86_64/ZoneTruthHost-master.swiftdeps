@@ -1,0 +1,9 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "e31e8fdcb4764a0cb37598708a4a6c2a35d488d322f0e694d70ba3c78bb2c640"
+build_start_time: [1779254844, 75796000]
+build_end_time: [1779254847, 488092000]
+inputs:
+  ? "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphonesimulator/ZoneTruthHost.build/DerivedSources/GeneratedAssetSymbols.swift"
+  : [1779254753, 646829887]
+  "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/ZoneTruthHost/ContentView.swift": [1779254739, 781563800]
+  "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/ZoneTruthHost/ZoneTruthHostApp.swift": [1779254739, 773387583]

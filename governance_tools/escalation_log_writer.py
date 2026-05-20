@@ -28,6 +28,7 @@ Design intent:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +51,24 @@ def _utc_now() -> str:
 # Slice 1 — Log writer identity
 # ---------------------------------------------------------------------------
 
+def _compute_entry_hash(entry: dict[str, Any]) -> str:
+    """
+    Deterministic fingerprint for a log entry.
+
+    Hashes the identity-stable fields: escalation_id, _writer_id, _written_at.
+    This hash is embedded in both the log entry (_entry_hash) and in any
+    authority artifact that references this entry (log_reference.entry_hash),
+    forming the evidence chain: authority_file → log_entry.
+    """
+    canonical = {
+        "escalation_id": entry.get("escalation_id"),
+        "_writer_id": entry.get("_writer_id"),
+        "_written_at": entry.get("_written_at"),
+    }
+    wire = json.dumps(canonical, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(wire.encode("utf-8")).hexdigest()
+
+
 def append_escalation_log_entry(
     log_path: Path,
     entry: dict[str, Any],
@@ -57,10 +76,10 @@ def append_escalation_log_entry(
     written_at: str | None = None,
 ) -> dict[str, Any]:
     """
-    Append a single escalation log entry with embedded writer identity.
+    Append a single escalation log entry with embedded writer identity and entry hash.
 
     Injected fields (must not be set by caller):
-      _writer_id, _writer_version, _written_at
+      _writer_id, _writer_version, _written_at, _entry_hash
 
     Returns the normalized entry that was written.
     """
@@ -73,12 +92,36 @@ def append_escalation_log_entry(
     normalized["_writer_id"] = LOG_WRITER_ID
     normalized["_writer_version"] = LOG_WRITER_VERSION
     normalized["_written_at"] = written_at or _utc_now()
+    # _entry_hash computed after identity fields are set — enables authority↔log binding
+    normalized["_entry_hash"] = _compute_entry_hash(normalized)
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(normalized, ensure_ascii=False, separators=(",", ":")) + "\n")
 
     return normalized
+
+
+def read_log_entry_hashes(log_path: Path) -> set[str]:
+    """Return the set of all _entry_hash values in the log. Used for authority binding checks."""
+    if not log_path.is_file():
+        return set()
+    hashes: set[str] = set()
+    try:
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                h = entry.get("_entry_hash")
+                if isinstance(h, str) and h:
+                    hashes.add(h)
+            except json.JSONDecodeError:
+                continue
+    except OSError:
+        pass
+    return hashes
 
 
 def assess_log_writer_integrity(log_path: Path) -> dict[str, Any]:

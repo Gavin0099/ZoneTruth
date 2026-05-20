@@ -1,0 +1,58 @@
+{
+  "" : {
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/ZoneTruthCore-master.dia",
+    "emit-module-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/ZoneTruthCore-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/ZoneTruthCore-master-emit-module.dia",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/ZoneTruthCore-master.swiftdeps"
+  },
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthCore/Analyzers.swift" : {
+    "const-values" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.swiftconstvalues",
+    "dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.d",
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.dia",
+    "index-unit-output-path" : "/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.o",
+    "llvm-bc" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.bc",
+    "object" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.o",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers.swiftdeps",
+    "swiftmodule" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Analyzers~partial.swiftmodule"
+  },
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthCore/CalibrationEngine.swift" : {
+    "const-values" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.swiftconstvalues",
+    "dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.d",
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.dia",
+    "index-unit-output-path" : "/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.o",
+    "llvm-bc" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.bc",
+    "object" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.o",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine.swiftdeps",
+    "swiftmodule" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/CalibrationEngine~partial.swiftmodule"
+  },
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthCore/Models.swift" : {
+    "const-values" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.swiftconstvalues",
+    "dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.d",
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.dia",
+    "index-unit-output-path" : "/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.o",
+    "llvm-bc" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.bc",
+    "object" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.o",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models.swiftdeps",
+    "swiftmodule" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/Models~partial.swiftmodule"
+  },
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthCore/RecommendationEngine.swift" : {
+    "const-values" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.swiftconstvalues",
+    "dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.d",
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.dia",
+    "index-unit-output-path" : "/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.o",
+    "llvm-bc" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.bc",
+    "object" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.o",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine.swiftdeps",
+    "swiftmodule" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/RecommendationEngine~partial.swiftmodule"
+  },
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthCore/SampleWorkoutCases.swift" : {
+    "const-values" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.swiftconstvalues",
+    "dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.d",
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.dia",
+    "index-unit-output-path" : "/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.o",
+    "llvm-bc" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.bc",
+    "object" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.o",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases.swiftdeps",
+    "swiftmodule" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/Build/Intermediates.noindex/ZoneTruth.build/Debug-iphonesimulator/ZoneTruthCore.build/Objects-normal/x86_64/SampleWorkoutCases~partial.swiftmodule"
+  }
+}

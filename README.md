@@ -6,6 +6,30 @@ It reads workout data from Apple Health or Strava, applies a multi-intent heart-
 
 ---
 
+## 12. 治理執行 (Governance Enforcement)
+
+本專案採用 **AI Governance Framework**。每次開發任務應遵循以下流程：
+
+1. **Session Start**: `python runtime_hooks/core/session_start.py`
+2. **Pre-task Check**: `python runtime_hooks/core/pre_task_check.py`
+3. **Post-task Check**: `python runtime_hooks/core/post_task_check.py`
+4. **Session End**: `python runtime_hooks/core/session_end.py`
+
+在 CI 環境中，可以透過以下腳本執行統一檢查：
+`bash scripts/run-runtime-governance.sh --mode ci`
+
+更多細節請參考 `governance/` 目錄。
+
+---
+
+## 專案定位
+
+A macOS/iOS workout analysis app that answers one question: **was this actually a Zone 2 session?** (Or VO2 max, or Strength?)
+
+It reads workout data from Apple Health or Strava, applies a multi-intent heart-rate analyzer, and returns a plain-language verdict — pass, warning, or fail — with the reasons why.
+
+---
+
 ## What it does
 
 ZoneTruth analyzes a workout session's heart-rate data against a configurable Zone 2 policy. For each session it produces:

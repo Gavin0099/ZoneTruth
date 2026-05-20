@@ -1,0 +1,13 @@
+Target dependency graph (8 targets)
+Target 'ZoneTruthHostUITests' in project 'ZoneTruthHost' (no dependencies)
+Target 'ZoneTruthHostUITests' in project 'ZoneTruthHost'
+➜ Explicit dependency on target 'ZoneTruthHost' in project 'ZoneTruthHost'
+Target 'ZoneTruthHostUITests' in project 'ZoneTruthHost'
+➜ Explicit dependency on target 'ZoneTruthHost' in project 'ZoneTruthHost'
+Target 'ZoneTruthHostTests' in project 'ZoneTruthHost' (no dependencies)
+Target 'ZoneTruthHostTests' in project 'ZoneTruthHost'
+➜ Explicit dependency on target 'ZoneTruthHost' in project 'ZoneTruthHost'
+Target 'ZoneTruthHostTests' in project 'ZoneTruthHost'
+➜ Explicit dependency on target 'ZoneTruthHost' in project 'ZoneTruthHost'
+Target 'ZoneTruthHost' in project 'ZoneTruthHost' (no dependencies)
+Target 'ZoneTruthHost' in project 'ZoneTruthHost' (no dependencies)

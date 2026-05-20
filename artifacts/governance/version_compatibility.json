@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "checked_at": "2026-05-20T05:15:00.607499Z",
+  "repo_manifest_found": true,
+  "framework_version": "0.4.0",
+  "verdict": "compatible",
+  "checks": [
+    {
+      "key": "contract_schema_version",
+      "required": ">=1.2.0",
+      "actual": "1.2.0",
+      "satisfied": true,
+      "note": ""
+    },
+    {
+      "key": "runtime_entrypoint_version",
+      "required": ">=1.1.0",
+      "actual": "1.1.0",
+      "satisfied": true,
+      "note": ""
+    },
+    {
+      "key": "hook_wiring_version",
+      "required": ">=1.0.0",
+      "actual": "1.0.0",
+      "satisfied": true,
+      "note": ""
+    },
+    {
+      "key": "artifact_layout_version",
+      "required": ">=1.0.0",
+      "actual": "1.0.0",
+      "satisfied": true,
+      "note": ""
+    },
+    {
+      "key": "memory_layout_version",
+      "required": ">=1.0.0",
+      "actual": "1.0.0",
+      "satisfied": true,
+      "note": ""
+    }
+  ],
+  "enabled_runtime_features": [
+    "agents_rule_candidates",
+    "canonical_closeout",
+    "decision_context_bridge",
+    "post_task_check",
+    "pre_task_check",
+    "session_index"
+  ],
+  "disabled_runtime_features": [],
+  "missing_migrations": [],
+  "error": null
+}

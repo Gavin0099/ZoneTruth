@@ -1,0 +1,44 @@
+﻿window_id: "gate-c-window-YYYY-MM-DD"
+decision_contract_version: "gate-c-decision-set-v0.1"
+generated_at_utc: "YYYY-MM-DDTHH:MM:SSZ"
+project_root: "<absolute-or-repo-root>"
+
+inputs:
+  canonical:
+    review_log: "docs/status/gate-c-review-log.ndjson"
+    rework_log: "docs/status/gate-c-rework-log.ndjson"
+    stability_log: "docs/status/gate-c-stability-log.ndjson"
+
+counts:
+  canonical:
+    review: { copilot: 0, claude: 0, chatgpt: 0 }
+    rework: { copilot: 0, claude: 0, chatgpt: 0 }
+    stability: { copilot: 0, claude: 0, chatgpt: 0 }
+  decision_set:
+    review: { copilot: 0, claude: 0, chatgpt: 0 }
+    rework: { copilot: 0, claude: 0, chatgpt: 0 }
+    stability: { copilot: 0, claude: 0, chatgpt: 0 }
+
+filtered_reason_counts:
+  missing_review_start: 0
+  missing_review_end: 0
+  invalid_review_time_order: 0
+  missing_rework_denominator: 0
+  unknown_stability_state: 0
+  empty_stability_note: 0
+
+lane_results:
+  copilot:
+    gate_c_result: "pass|provisional-pass|pause"
+    evidence_gaps: []
+  claude:
+    gate_c_result: "pass|provisional-pass|pause"
+    evidence_gaps: []
+  chatgpt:
+    gate_c_result: "pass|provisional-pass|pause"
+    evidence_gaps: []
+
+cross_lane_result: "pass|provisional-pass|pause"
+interpretation_boundary: >
+  Decision-set result indicates decision-input sufficiency for this window only.
+  It does not prove engineering correctness or long-term reliability.

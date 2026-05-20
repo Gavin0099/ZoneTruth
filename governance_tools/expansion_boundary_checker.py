@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 import sys
+from datetime import date
 from pathlib import Path
 from typing import NamedTuple
 
@@ -35,7 +36,16 @@ BOUNDARY_VIOLATING_IMPORTS = [
 
 # Keys that are known decision outputs. Any new key in the return dict of a
 # core hook that is NOT in this set is flagged for review.
-KNOWN_SESSION_START_KEYS = {
+#
+# Two-tier structure:
+#   _CORE_*_KEYS      — stable, permanently admitted keys
+#   _TRANSITIONAL_*_KEYS — recently admitted keys with provenance metadata
+#                           (status/expected/admitted_date/source_commit)
+#
+# check_transitional_key_staleness() warns when transitional keys age past max_days,
+# signalling they should either be promoted to core or removed.
+
+_CORE_SESSION_START_KEYS: frozenset[str] = frozenset({
     # decision outputs
     "ok",
     "task_level",
@@ -66,41 +76,76 @@ KNOWN_SESSION_START_KEYS = {
     # governance strategy classification admitted 6048f9f / governance-strategy-runtime
     "governance_classification",
     # canonical closeout context injection admitted 2026-04-08 / session-workflow-enhancement
-    # Slice 5: reads prior-session canonical closeout for continuity context.
-    # Informational only — does not affect ok, task_level, risk, or oversight.
     "closeout_context",
     # plan context provenance admitted 2026-04-15 / plan-summary-compression
-    # _detect_plan_context_provenance() returns fidelity/origin/summary_kind;
-    # plan_context_provenance carries the whole provenance dict.
-    # Informational only — does not affect ok, task_level, risk, or oversight.
     "plan_context_provenance",
     "fidelity",
     "origin",
     "summary_kind",
+})
+
+# version compatibility + controlled_refusal surface — admitted 154ad4d / governance-runtime-policy
+# _run_version_compatibility_advisory() and _build_controlled_refusal_result() return these.
+# advisory_only/mode/reason/status/verdict govern session blocking; others are informational.
+_TRANSITIONAL_SESSION_START_KEYS: dict[str, dict] = {
+    "advisory_only":             {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "disabled_runtime_features": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "enabled_runtime_features":  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "error":                     {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "legacy_capability_policy":  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "missing_migrations":        {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "mode":                      {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "reason":                    {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "repo_manifest_found":       {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "status":                    {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "verdict":                   {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "version_compatibility":     {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
 }
+
+KNOWN_SESSION_START_KEYS = _CORE_SESSION_START_KEYS | frozenset(_TRANSITIONAL_SESSION_START_KEYS)
 
 # pre_task_check spreads **active_rules_result so many keys are not literal in
 # the return dict. Only the three literal keys are detectable by AST heuristic.
-KNOWN_PRE_TASK_KEYS = {
+_CORE_PRE_TASK_KEYS: frozenset[str] = frozenset({
     "active_rules",
     "content_stripped",
     "content_tier",
     # DBL first-slice output admitted into pre_task surface
     "decision_boundary",
-    # _evaluate_preconditions() helper returns these keys and the current
-    # AST heuristic scans all return-dict literals in the file, not only the
-    # top-level run_pre_task_check() result.
+    # _evaluate_preconditions() helper return keys — AST scans all return-dict literals
     "boundary_effect",
     "preconditions_checked",
     # runtime injection snapshot slice admitted a9af544 / 2babeaf / 6f0dd34
-    # _evaluate_runtime_injection_snapshot() returns these; AST scans helpers
     "effect",
     "observations",
     "signals_checked",
     "snapshot",
+})
+
+# context signal / evidence quality helpers — admitted 154ad4d / governance-runtime-policy
+# _evaluate_context_signals() and _evaluate_evidence_quality() helper return dicts;
+# AST scans all return-dict literals, not only the top-level run_pre_task_check().
+_TRANSITIONAL_PRE_TASK_KEYS: dict[str, dict] = {
+    "action_decision":       {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "alternative_root_causes": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "destructive_change":    {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "direct_evidence_frozen": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "evidence":              {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "external_side_effect":  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "has_no_evidence_marker": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "has_strong_marker":     {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "partial_context":       {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "reframed_task":         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "shared_interface":      {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "source":                {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "stated_premise":        {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "user_asserts_root_cause": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "valid_request":         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
 }
 
-KNOWN_POST_TASK_KEYS = {
+KNOWN_PRE_TASK_KEYS = _CORE_PRE_TASK_KEYS | frozenset(_TRANSITIONAL_PRE_TASK_KEYS)
+
+_CORE_POST_TASK_KEYS: frozenset[str] = frozenset({
     # decision output
     "ok",
     # informational — established before 2026-03-30 baseline
@@ -125,12 +170,27 @@ KNOWN_POST_TASK_KEYS = {
     "rules",
     "snapshot",
     "warnings",
+})
+
+# assumption check + phase classification — admitted 154ad4d / governance-runtime-policy
+_TRANSITIONAL_POST_TASK_KEYS: dict[str, dict] = {
+    "assumption_advisories": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "assumption_check":      {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "phase_classification":  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
 }
+
+KNOWN_POST_TASK_KEYS = _CORE_POST_TASK_KEYS | frozenset(_TRANSITIONAL_POST_TASK_KEYS)
 
 KNOWN_KEYS_BY_HOOK = {
     "session_start.py": KNOWN_SESSION_START_KEYS,
     "pre_task_check.py": KNOWN_PRE_TASK_KEYS,
     "post_task_check.py": KNOWN_POST_TASK_KEYS,
+}
+
+_TRANSITIONAL_KEYS_BY_HOOK: dict[str, dict[str, dict]] = {
+    "session_start.py":  _TRANSITIONAL_SESSION_START_KEYS,
+    "pre_task_check.py": _TRANSITIONAL_PRE_TASK_KEYS,
+    "post_task_check.py": _TRANSITIONAL_POST_TASK_KEYS,
 }
 
 
@@ -223,6 +283,34 @@ def _check_new_return_keys(path: Path, source: str) -> list[Violation]:
     )]
 
 
+def check_transitional_key_staleness(max_days: int = 90) -> list[Violation]:
+    """Return a Violation for each transitional key older than max_days.
+
+    Stale transitional keys should either be promoted to their _CORE_* set or
+    removed.  This is the automated part of the schema evolution lifecycle.
+    """
+    today = date.today()
+    violations: list[Violation] = []
+    for hook_name, transitional_keys in _TRANSITIONAL_KEYS_BY_HOOK.items():
+        for key, meta in transitional_keys.items():
+            try:
+                admitted = date.fromisoformat(meta["admitted_date"])
+            except (KeyError, ValueError):
+                continue
+            age = (today - admitted).days
+            if age > max_days:
+                violations.append(Violation(
+                    file=f"runtime_hooks/core/{hook_name}",
+                    kind="transitional_key_stale",
+                    detail=(
+                        f"key={key!r} admitted={meta['admitted_date']} age={age}d "
+                        f"(max={max_days}d) expected={meta.get('expected', 'unknown')} — "
+                        f"promote to core or remove"
+                    ),
+                ))
+    return violations
+
+
 def run_checks(project_root: Path | None = None) -> list[Violation]:
     if project_root is None:
         project_root = _find_project_root()
@@ -236,6 +324,8 @@ def run_checks(project_root: Path | None = None) -> list[Violation]:
         source = full_path.read_text(encoding="utf-8")
         all_violations.extend(_check_boundary_violating_imports(full_path, source))
         all_violations.extend(_check_new_return_keys(full_path, source))
+
+    all_violations.extend(check_transitional_key_staleness())
 
     return all_violations
 

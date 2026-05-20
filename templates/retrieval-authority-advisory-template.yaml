@@ -1,0 +1,21 @@
+schema_version: "0.1"
+session_id: ""
+generated_at_utc: ""
+advisory_only: true
+
+observation:
+  used_canonical: false
+  used_candidate: false
+  used_superseded: false
+  explicit_candidate_context: false
+  authority_conflict: false
+  authority_evidence_level: "none" # none|weak|explicit
+  needs_human_review: false
+  missed_active_memory: "unknown"
+
+evidence:
+  memory_refs_count: 0
+  pattern_hits: []
+
+notes: ""
+

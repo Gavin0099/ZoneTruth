@@ -1,0 +1,32 @@
+# .governance/version_manifest.yaml
+#
+# Repo-side governance layout version declaration.
+# Describes which governance component versions are ACTUALLY installed in this repo.
+#
+# ── Update discipline ─────────────────────────────────────────────────────────
+# Update this file manually or via a governance migration script.
+# Do NOT auto-generate from runtime state — this must reflect what has been
+# deliberately adopted, reviewed, and tested.
+#
+# Compared against governance/runtime/required_versions.yaml by
+# governance_tools/governance_version_check.py at session-start time.
+#
+# ── Version semantics ─────────────────────────────────────────────────────────
+# These are NOT semver package versions.  They reflect the layout / schema
+# version of each governance component as defined in the framework spec.
+#
+# contract_schema_version        → domain contract YAML schema (baseline.yaml schema_version)
+# runtime_entrypoint_version     → runtime_hooks/core/ entrypoints (session_start, pre/post task)
+# hook_wiring_version            → hook installation wiring (scripts/hooks/, pre-push, etc.)
+# artifact_layout_version        → artifacts/governance/ directory layout contract
+# memory_layout_version          → memory/ pipeline layout contract
+
+schema_version: "1.0"
+last_updated: "2026-04-24"
+governance_version: "0.4.0"
+
+contract_schema_version: "1.2.0"
+runtime_entrypoint_version: "1.1.0"
+hook_wiring_version: "1.0.0"
+artifact_layout_version: "1.0.0"
+memory_layout_version: "1.0.0"

@@ -1,0 +1,18 @@
+{
+  "" : {
+    "dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphoneos/ZoneTruthHost.build/Objects-normal/arm64/ZoneTruthHost-master.d",
+    "diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphoneos/ZoneTruthHost.build/Objects-normal/arm64/ZoneTruthHost-master.dia",
+    "emit-module-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphoneos/ZoneTruthHost.build/Objects-normal/arm64/ZoneTruthHost-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphoneos/ZoneTruthHost.build/Objects-normal/arm64/ZoneTruthHost-master-emit-module.dia",
+    "swift-dependencies" : "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphoneos/ZoneTruthHost.build/Objects-normal/arm64/ZoneTruthHost-master.swiftdeps"
+  },
+  "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/DerivedData/ZoneTruthHost/Index.noindex/Build/Intermediates.noindex/ZoneTruthHost.build/Debug-iphoneos/ZoneTruthHost.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+
+  },
+  "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/ZoneTruthHost/ContentView.swift" : {
+
+  },
+  "/Users/gavin_wu/Desktop/Genesyslogic/2025/ZoneTruthHost/ZoneTruthHost/ZoneTruthHostApp.swift" : {
+
+  }
+}

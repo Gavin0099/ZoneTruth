@@ -1,5 +1,5 @@
 # ZoneTruth - iOS Workout Intent Analyzer Plan
-> **最後更新**: 2026-04-24
+> **最後更新**: 2026-05-20
 > **Owner**: Gavin
 > **Freshness**: Sprint (7d)
 

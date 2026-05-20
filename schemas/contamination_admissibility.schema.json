@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-governance-framework/schemas/contamination_admissibility.schema.json",
+  "title": "Contamination Admissibility",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "trigger_authority",
+    "causal_self_contamination",
+    "causal_assertion_allowed",
+    "allowed_output_modes",
+    "prohibited_output_modes",
+    "admissibility_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "trigger_authority": {
+      "type": "string",
+      "enum": [
+        "authoritative",
+        "non_authoritative",
+        "contaminated",
+        "unknown"
+      ]
+    },
+    "causal_self_contamination": {
+      "type": "boolean"
+    },
+    "contamination_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "self",
+          "lineage",
+          "temporal",
+          "semantic",
+          "producer"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "causal_assertion_allowed": {
+      "type": "boolean"
+    },
+    "allowed_output_modes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "observation_only",
+          "causal_inference",
+          "phase_transition_assertion",
+          "obligation_satisfaction_assertion"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "prohibited_output_modes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "causal_inference",
+          "phase_transition_assertion",
+          "obligation_satisfaction_assertion"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "admissibility_status": {
+      "type": "string",
+      "enum": [
+        "admissible",
+        "degraded",
+        "blocked"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

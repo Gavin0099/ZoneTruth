@@ -1,0 +1,9 @@
+Target dependency graph (4 targets)
+Target 'ZoneTruthHost' in project 'ZoneTruthHost'
+➜ Explicit dependency on target 'ZoneTruthApp' in project 'ZoneTruth'
+Target 'ZoneTruthApp' in project 'ZoneTruth'
+➜ Explicit dependency on target 'ZoneTruthApp' in project 'ZoneTruth'
+➜ Explicit dependency on target 'ZoneTruthCore' in project 'ZoneTruth'
+Target 'ZoneTruthApp' in project 'ZoneTruth'
+➜ Explicit dependency on target 'ZoneTruthCore' in project 'ZoneTruth'
+Target 'ZoneTruthCore' in project 'ZoneTruth' (no dependencies)

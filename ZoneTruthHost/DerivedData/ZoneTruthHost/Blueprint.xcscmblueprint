@@ -1,0 +1,22 @@
+{
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "CF45DD58889233C4F17C3692349DA9ACBA1A130A" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "0A5BDFFB-B8CE-4AF5-9AF2-ACC17929F20A",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "CF45DD58889233C4F17C3692349DA9ACBA1A130A" : "..\/..\/ZoneTruth"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "ZoneTruthHost",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "ZoneTruthHost.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "git@github.com:Gavin0099\/ZoneTruth.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "CF45DD58889233C4F17C3692349DA9ACBA1A130A"
+    }
+  ]
+}

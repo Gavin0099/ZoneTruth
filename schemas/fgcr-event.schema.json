@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fgcr-event.schema.json",
+  "title": "FGCR Event",
+  "type": "object",
+  "required": [
+    "event_id",
+    "window_id",
+    "lane",
+    "confidence_mark",
+    "later_failure_type",
+    "discovery_scope",
+    "artifact_anchor",
+    "evidence_layer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lane": {
+      "type": "string",
+      "enum": [
+        "chatgpt",
+        "claude",
+        "copilot"
+      ]
+    },
+    "confidence_mark": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "READY",
+        "SAFE",
+        "COMPLETE"
+      ]
+    },
+    "later_failure_type": {
+      "type": "string",
+      "enum": [
+        "hidden_omission",
+        "invalid_projection",
+        "stale_evidence_dependency",
+        "contradictory_runtime_state",
+        "unauthorized_inference"
+      ]
+    },
+    "discovery_scope": {
+      "type": "string",
+      "enum": [
+        "same_session",
+        "same_window",
+        "next_window",
+        "post_release"
+      ]
+    },
+    "artifact_anchor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_layer": {
+      "type": "string",
+      "enum": [
+        "framework_supported",
+        "run_observed",
+        "hypothesis"
+      ]
+    }
+  }
+}

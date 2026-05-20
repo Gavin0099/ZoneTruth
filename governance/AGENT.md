@@ -235,3 +235,26 @@ L0 fast-track 路徑：
 - boundary rule 未被破壞
 - 選用的 evidence 與 risk 相稱
 - 進度是可實作的，不只是可討論的
+
+---
+
+## 11. Governance Expansion Heuristic (Advisory Only)
+
+> **Advisory only. Not enforced. Not a runtime gate.**
+> 用途：提高 governance expansion cost，避免 recursive ontology growth。
+
+在新增 research backlog 項目、新 governance semantic、新 contract、或新 runtime surface 之前，
+至少要能觀察到以下其中一條：
+
+1. 已有 hostile case 無法被現有 framework 解釋
+2. 已有 replay evidence 出現 drift（相同 task，結果不一致）
+3. Reviewer 在多個不同 session 中重複出現相同困惑
+4. Runtime 出現實際矛盾，無法用現有 semantics 描述
+
+符合任一條：可以作為 backlog candidate。
+四條都不符合：保留為 working note，不進 backlog。
+
+**這不叫 hard limit，叫 backlog admission heuristic。**
+
+原因：治理框架本身也需要停止條件。
+目前最大風險不是 governance 不夠，而是 governance recursive self-expansion。

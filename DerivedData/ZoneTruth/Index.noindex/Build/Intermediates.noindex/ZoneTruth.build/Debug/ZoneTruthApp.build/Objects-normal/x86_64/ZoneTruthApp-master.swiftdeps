@@ -1,0 +1,12 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "bc8edfc19bbb9189572b255ff9378e091b99cb02b720528f705766764dfd0832"
+build_start_time: [1777442377, 757852000]
+build_end_time: [1777442384, 140920000]
+inputs:
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/DataImport.swift": [1777029320, 786035223]
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/HealthKitAdapter.swift": [1777011366, 849099238]
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/SettingsManager.swift": [1777432047, 23653851]
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/StravaAdapter.swift": [1777028371, 792472709]
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/ViewModels.swift": [1777432058, 308221543]
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/Views.swift": [1777432066, 670347061]
+  "/Users/gavin_wu/Desktop/ZoneTruth/Sources/ZoneTruthApp/ZoneTruthApp.swift": [1777370591, 517729695]

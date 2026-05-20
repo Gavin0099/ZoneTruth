@@ -21,7 +21,7 @@ import sys
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from governance_tools.escalation_log_writer import assess_escalation_register
+from governance_tools.escalation_log_writer import assess_escalation_register, read_log_entry_hashes
 from governance_tools.lifecycle_transition_writer import validate_lifecycle_transition
 
 
@@ -244,7 +244,20 @@ def validate_prewrite_payload(payload: dict[str, Any]) -> tuple[bool, list[str],
     return len(errors) == 0, errors, normalized
 
 
-def build_authority_artifact(payload: dict[str, Any], *, written_at: str | None = None) -> dict[str, Any]:
+def build_authority_artifact(
+    payload: dict[str, Any],
+    *,
+    written_at: str | None = None,
+    log_entry_hash: str | None = None,
+) -> dict[str, Any]:
+    """
+    Build a validated authority artifact.
+
+    log_entry_hash: optional _entry_hash from the escalation log entry that
+    triggered this authority record. When supplied, the artifact carries a
+    log_reference that allows authority↔log binding validation. Callers should
+    obtain this from append_escalation_log_entry() return value["_entry_hash"].
+    """
     ok, errors, normalized = validate_prewrite_payload(payload)
     normalized_payload_hash = _hash_json(_canonical_for_fingerprint(normalized))
     source_inputs_hash = _hash_json(payload)
@@ -264,6 +277,12 @@ def build_authority_artifact(payload: dict[str, Any], *, written_at: str | None 
         "payload": normalized,
     }
     artifact["authority_provenance"]["payload_fingerprint"] = _fingerprint(normalized)
+    if log_entry_hash is not None:
+        artifact["log_reference"] = {
+            "entry_hash": log_entry_hash,
+            "escalation_id": normalized.get("escalation_id"),
+            "binding_version": "v1",
+        }
     return artifact
 
 
@@ -309,7 +328,7 @@ def write_authority_artifact(project_root: Path, payload: dict[str, Any], *, out
     }
 
 
-def assess_authority_artifact(path: Path) -> dict[str, Any]:
+def assess_authority_artifact(path: Path, *, known_log_hashes: set[str] | None = None) -> dict[str, Any]:
     if not path.is_file():
         return {
             "ok": False,
@@ -379,6 +398,44 @@ def assess_authority_artifact(path: Path) -> dict[str, Any]:
         if not ok:
             _append_unique_reason(release_block_reasons, "payload_prewrite_validation_failed")
 
+    # Log binding check (advisory only — does not affect authority_valid or release_blocked).
+    # Verifies that the artifact's log_reference.entry_hash appears in the known log hashes,
+    # forming the evidence chain: authority_file → log_entry.
+    log_binding_ok: bool | None = None
+    log_binding_advisory: str | None = None
+    log_ref = artifact.get("log_reference")
+    has_log_ref = isinstance(log_ref, dict) and bool(log_ref.get("entry_hash"))
+
+    if known_log_hashes is not None:
+        if not isinstance(log_ref, dict):
+            log_binding_ok = None
+            log_binding_advisory = "no_log_reference_in_artifact"
+        else:
+            entry_hash = log_ref.get("entry_hash")
+            if not isinstance(entry_hash, str) or not entry_hash:
+                log_binding_ok = False
+                log_binding_advisory = "log_reference_missing_entry_hash"
+            elif entry_hash in known_log_hashes:
+                log_binding_ok = True
+            else:
+                log_binding_ok = False
+                log_binding_advisory = "log_entry_not_found"
+
+    # trust_root_evidence_level: reviewer-visible signal distinguishing
+    # ok=True with no evidence chain from ok=True with verified chain.
+    # none             — no log_reference in artifact
+    # log_unbound      — log_reference present but not verified (no hashes supplied)
+    # log_bound        — log_reference verified against log (hash matched)
+    # log_binding_failed — log_reference present but hash not found in log
+    if known_log_hashes is None:
+        trust_root_evidence_level = "log_unbound" if has_log_ref else "none"
+    elif log_binding_ok is True:
+        trust_root_evidence_level = "log_bound"
+    elif log_binding_ok is False:
+        trust_root_evidence_level = "log_binding_failed"
+    else:
+        trust_root_evidence_level = "none"
+
     return {
         "ok": authority_valid,
         "exists": True,
@@ -395,14 +452,33 @@ def assess_authority_artifact(path: Path) -> dict[str, Any]:
         "written_at": provenance.get("written_at"),
         "release_blocked": release_blocked,
         "release_block_reasons": release_block_reasons,
+        "log_binding_ok": log_binding_ok,
+        "log_binding_advisory": log_binding_advisory,
+        "trust_root_evidence_level": trust_root_evidence_level,
     }
 
 
-def assess_authority_directory(project_root: Path) -> dict[str, Any]:
+def assess_authority_directory(
+    project_root: Path,
+    *,
+    require_register: bool = False,
+    require_log: bool = False,
+) -> dict[str, Any]:
     authority_dir = default_authority_dir(project_root)
 
     escalation_log = authority_dir.parent / "phase-b-escalation-log.jsonl"
     register_path = authority_dir.parent / "phase-b-escalation-register.json"
+
+    # Log Production Gap guard (advisory mode): when caller declares log is required,
+    # missing or empty log is recorded as a degraded signal — not a release blocker.
+    # Fail-closed enforcement is deferred until log contract + authority↔log binding
+    # are validated in production. See: feedback_require_log_semantic_risk.md
+    log_advisory_reason: str | None = None
+    if require_log:
+        if not escalation_log.is_file():
+            log_advisory_reason = "escalation_log_missing"
+        elif escalation_log.stat().st_size == 0:
+            log_advisory_reason = "escalation_log_empty"
 
     # Primary signal: escalation log existence with content.
     escalation_active_from_log = escalation_log.is_file() and escalation_log.stat().st_size > 0
@@ -417,15 +493,35 @@ def assess_authority_directory(project_root: Path) -> dict[str, Any]:
         and register_result["escalation_active"]
     )
     register_has_problem = register_result["available"] and not register_result["ok"]
+    register_missing_under_requirement = require_register and not register_result["available"]
+    register_present = bool(register_result["available"])
+    decision_source = "strict_register_enforcement" if require_register else "compatibility_mode"
 
     escalation_active = escalation_active_from_log or escalation_active_from_register
 
     if not authority_dir.is_dir():
+        if register_missing_under_requirement:
+            return {
+                "available": False,
+                "ok": False,
+                "source": "register_required_missing",
+                "decision_source": decision_source,
+                "register_required_mode": require_register,
+                "register_present": register_present,
+                "authority_dir": str(authority_dir),
+                "artifacts_read": 0,
+                "release_blocked": True,
+                "release_block_reasons": ["mandatory_register_missing"],
+                "records": [],
+            }
         if escalation_active:
             return {
                 "available": False,
                 "ok": False,
                 "source": "escalation_expected_missing",
+                "decision_source": decision_source,
+                "register_required_mode": require_register,
+                "register_present": register_present,
                 "authority_dir": str(authority_dir),
                 "artifacts_read": 0,
                 "release_blocked": True,
@@ -437,6 +533,9 @@ def assess_authority_directory(project_root: Path) -> dict[str, Any]:
                 "available": False,
                 "ok": False,
                 "source": "register_integrity_failed",
+                "decision_source": decision_source,
+                "register_required_mode": require_register,
+                "register_present": register_present,
                 "authority_dir": str(authority_dir),
                 "artifacts_read": 0,
                 "release_blocked": True,
@@ -447,15 +546,20 @@ def assess_authority_directory(project_root: Path) -> dict[str, Any]:
             "available": False,
             "ok": True,
             "source": "no_escalation_expected",
+            "decision_source": decision_source,
+            "register_required_mode": require_register,
+            "register_present": register_present,
             "authority_dir": str(authority_dir),
             "artifacts_read": 0,
             "release_blocked": False,
             "release_block_reasons": [],
+            "log_advisory_reason": log_advisory_reason,
             "records": [],
         }
 
     files = sorted(authority_dir.glob("*.json"))
-    records = [assess_authority_artifact(path) for path in files]
+    log_hashes = read_log_entry_hashes(escalation_log)
+    records = [assess_authority_artifact(path, known_log_hashes=log_hashes) for path in files]
     all_ok = all(item["ok"] for item in records)
     blocked = any(item.get("release_blocked") for item in records) or (len(records) > 0 and not all_ok)
     reasons: list[str] = []
@@ -497,20 +601,54 @@ def assess_authority_directory(project_root: Path) -> dict[str, Any]:
             _append_unique_reason(reasons, f"authority_precedence_active_register_overrides_resolved_confirmed:{escalation_id}")
 
     # Propagate register integrity problems even when authority dir exists.
+    if register_missing_under_requirement:
+        blocked = True
+        _append_unique_reason(reasons, "mandatory_register_missing")
     if register_has_problem:
         blocked = True
         for r in register_result.get("release_block_reasons") or []:
             if r not in reasons:
                 reasons.append(r)
 
+    # Summarise log binding state across all artifacts (advisory).
+    bound_count = sum(1 for r in records if r.get("log_binding_ok") is True)
+    unbound_count = sum(1 for r in records if r.get("log_binding_ok") is False)
+    no_ref_count = sum(1 for r in records if r.get("log_binding_ok") is None)
+    log_binding_summary = {
+        "bound": bound_count,
+        "unbound": unbound_count,
+        "no_reference": no_ref_count,
+        "advisory_only": True,
+    }
+
+    # Aggregate trust_root_evidence_level: worst-case across all artifact records.
+    # Precedence (worst → best): log_binding_failed > none > log_unbound > log_bound
+    _LEVEL_RANK = {"log_binding_failed": 0, "none": 1, "log_unbound": 2, "log_bound": 3}
+    artifact_levels = [r.get("trust_root_evidence_level", "none") for r in records]
+    if not artifact_levels:
+        dir_trust_level = "none"
+    else:
+        dir_trust_level = min(artifact_levels, key=lambda lvl: _LEVEL_RANK.get(lvl, 1))
+
     return {
         "available": len(files) > 0,
-        "ok": all_ok and not register_has_problem and not precedence_violation,
+        "ok": (
+            all_ok
+            and not register_has_problem
+            and not precedence_violation
+            and not register_missing_under_requirement
+        ),
         "source": "authority-writer-monopoly",
+        "decision_source": decision_source,
+        "register_required_mode": require_register,
+        "register_present": register_present,
         "authority_dir": str(authority_dir),
         "artifacts_read": len(files),
         "release_blocked": blocked,
         "release_block_reasons": reasons,
+        "log_advisory_reason": log_advisory_reason,
+        "log_binding_summary": log_binding_summary,
+        "trust_root_evidence_level": dir_trust_level,
         "lifecycle_effective_by_escalation": lifecycle_effective_by_escalation,
         "records": records,
     }
@@ -528,10 +666,16 @@ def _format_human(result: dict[str, Any]) -> str:
     reasons = result.get("release_block_reasons") or []
     if reasons:
         lines.append(f"release_block_reasons={','.join(reasons)}")
+    if result.get("trust_root_evidence_level") is not None:
+        lines.append(f"trust_root_evidence_level={result.get('trust_root_evidence_level')}")
+    if result.get("log_advisory_reason") is not None:
+        lines.append(f"log_advisory_reason={result.get('log_advisory_reason')}")
     for item in result.get("records") or []:
         lines.append(
             f"record[{item.get('escalation_id')}]="
-            f"ok:{item.get('ok')},trusted_writer:{item.get('trusted_writer')},fingerprint_valid:{item.get('fingerprint_valid')}"
+            f"ok:{item.get('ok')},trusted_writer:{item.get('trusted_writer')},"
+            f"fingerprint_valid:{item.get('fingerprint_valid')},"
+            f"trust_root_evidence_level:{item.get('trust_root_evidence_level')}"
         )
     return "\n".join(lines)
 
@@ -542,6 +686,7 @@ def main() -> int:
     parser.add_argument("--mode", choices=("assess", "write"), default="assess")
     parser.add_argument("--input")
     parser.add_argument("--out")
+    parser.add_argument("--require-register", action="store_true")
     parser.add_argument("--format", choices=("human", "json"), default="human")
     args = parser.parse_args()
 
@@ -556,7 +701,10 @@ def main() -> int:
             out_file=Path(args.out).resolve() if args.out else None,
         )
     else:
-        result = assess_authority_directory(project_root)
+        result = assess_authority_directory(
+            project_root,
+            require_register=bool(args.require_register),
+        )
 
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))

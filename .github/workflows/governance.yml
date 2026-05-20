@@ -1,0 +1,35 @@
+name: Governance Drift
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".governance/**"
+      - "AGENTS.base.md"
+      - "AGENTS.md"
+      - "PLAN.md"
+      - "contract.yaml"
+      - "governance/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".governance/**"
+      - "AGENTS.base.md"
+      - "AGENTS.md"
+      - "PLAN.md"
+      - "contract.yaml"
+      - "governance/**"
+  workflow_dispatch:
+
+jobs:
+  runtime-enforcement:
+    name: Runtime Governance Enforcement
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run runtime governance enforcement
+        run: bash scripts/run-runtime-governance.sh --mode ci

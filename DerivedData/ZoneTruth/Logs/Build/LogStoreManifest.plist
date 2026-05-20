@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>11</integer>
+	<key>logs</key>
+	<dict>
+		<key>F27940D2-52B2-40C7-93F1-1FEEDE492FF5</key>
+		<dict>
+			<key>className</key>
+			<string>IDEActivityLogSection</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>F27940D2-52B2-40C7-93F1-1FEEDE492FF5.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>ZoneTruth</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>ZoneTruthApp</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Build ZoneTruthApp</string>
+			<key>timeStartedRecording</key>
+			<real>799817506.04386401</real>
+			<key>timeStoppedRecording</key>
+			<real>799817508.02342403</real>
+			<key>title</key>
+			<string>Build ZoneTruthApp</string>
+			<key>uniqueIdentifier</key>
+			<string>F27940D2-52B2-40C7-93F1-1FEEDE492FF5</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

@@ -26,6 +26,10 @@ from governance_tools.framework_risk_signal import (
     clear_risk_signal_for_source,
     write_risk_signal,
 )
+from governance_tools.runtime_reliability_observation import (
+    DETERMINISM_BOUNDARY_LOG,
+    safe_append_observation_event,
+)
 
 _HISTORY_RELPATH = Path("artifacts") / "runtime" / "enforcement_feedback.jsonl"
 _SIGNAL_SOURCE = "runtime_enforcement_feedback"
@@ -186,6 +190,20 @@ def record_feedback(
             signal_written = True
         elif state == "ok":
             signal_cleared = clear_risk_signal_for_source(framework_root, _SIGNAL_SOURCE)
+
+    safe_append_observation_event(
+        framework_root,
+        DETERMINISM_BOUNDARY_LOG,
+        "runtime_enforcement_feedback_observation",
+        {
+            "source": "governance_tools.runtime_enforcement_feedback",
+            "mode": mode,
+            "smoke_status": smoke_status,
+            "pytest_status": pytest_status,
+            "trend_threshold_state": trend["threshold_state"],
+            "sample_count": trend["sample_count"],
+        },
+    )
 
     return {
         "record": record,

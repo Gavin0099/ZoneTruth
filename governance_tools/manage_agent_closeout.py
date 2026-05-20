@@ -116,6 +116,8 @@ class AgentAdapter(abc.ABC):
             "tier": self.tier,
             "tier_label": TIER_LABELS.get(self.tier, "Unknown"),
             "surface_description": self.surface_description,
+            "auto_trigger_capable": self.tier == TIER_A,
+            "fallback_required": self.tier in {TIER_B, TIER_C},
         }
 
     @abc.abstractmethod
@@ -209,6 +211,11 @@ _CLOSEOUT_CMD_BARE = (
     "python {framework_root}/governance_tools/session_closeout_entry.py "
     "--project-root ."
 )
+
+
+def _manual_closeout_cmd(framework_root: Path, agent_id: str, trigger_mode: str = "manual_fallback") -> str:
+    base = _fmt_cmd(_CLOSEOUT_CMD_BARE, framework_root)
+    return f"{base} --agent-id {agent_id} --trigger-mode {trigger_mode}"
 
 
 # ── Claude Code adapter ───────────────────────────────────────────────────────
@@ -331,7 +338,7 @@ class ClaudeAdapter(AgentAdapter):
         }
 
     def print_manual(self, framework_root: Path) -> str:
-        cmd = _fmt_cmd(_CLOSEOUT_CMD_BARE, framework_root)
+        cmd = _manual_closeout_cmd(framework_root, self.agent_id, "manual_fallback")
         return (
             f"[{self.display_name}] Manual closeout (fallback if stop hook is not installed):\n\n"
             f"    {cmd}\n\n"
@@ -459,7 +466,7 @@ class CopilotAdapter(AgentAdapter):
         return {"agent": self.agent_id, "status": "not_found", "message": "No governance hook found to remove."}
 
     def print_manual(self, framework_root: Path) -> str:
-        cmd = _fmt_cmd(_CLOSEOUT_CMD_BARE, framework_root)
+        cmd = _manual_closeout_cmd(framework_root, self.agent_id, "manual_fallback")
         return (
             f"[{self.display_name}] Manual closeout (if native hook is not active):\n\n"
             f"    {cmd}\n\n"
@@ -585,7 +592,7 @@ class GeminiAdapter(AgentAdapter):
         return {"agent": self.agent_id, "status": "not_found", "message": "No governance hook found to remove."}
 
     def print_manual(self, framework_root: Path) -> str:
-        cmd = _fmt_cmd(_CLOSEOUT_CMD_BARE, framework_root)
+        cmd = _manual_closeout_cmd(framework_root, self.agent_id, "manual_fallback")
         return (
             f"[{self.display_name}] Manual closeout (if native hook is not active):\n\n"
             f"    {cmd}\n\n"
@@ -655,7 +662,7 @@ class ChatGPTWebAdapter(AgentAdapter):
         }
 
     def print_manual(self, framework_root: Path) -> str:
-        cmd = _fmt_cmd(_CLOSEOUT_CMD_BARE, framework_root)
+        cmd = _manual_closeout_cmd(framework_root, self.agent_id, "manual_fallback")
         return (
             f"[{self.display_name}] Manual closeout — run this before ending each ChatGPT session:\n\n"
             f"    {cmd}\n\n"
@@ -740,7 +747,7 @@ class CodexCLIAdapter(AgentAdapter):
         }
 
     def print_manual(self, framework_root: Path) -> str:
-        cmd = _fmt_cmd(_CLOSEOUT_CMD_BARE, framework_root)
+        cmd = _manual_closeout_cmd(framework_root, self.agent_id, "manual_fallback")
         return (
             f"[{self.display_name}] Manual closeout — run before ending each Codex session:\n\n"
             f"    {cmd}\n\n"
@@ -775,17 +782,115 @@ def op_status(project_root: Path, framework_root: Path) -> list[dict[str, Any]]:
     for agent_id, adapter in _ADAPTERS.items():
         v = adapter.verify(project_root, framework_root)
         cap = adapter.capability()
+        fallback_required = bool(cap.get("fallback_required")) or not bool(v["installed"])
+        enforcement_level = "NATIVE_HOOK" if cap.get("auto_trigger_capable", False) else "MANUAL_FALLBACK"
+        compliance_status = "READY"
+        if enforcement_level == "MANUAL_FALLBACK":
+            compliance_status = "PENDING_MANUAL_ACTION"
         results.append({
-            "agent_id": agent_id,
+            "agent": agent_id,
             "display_name": cap["display_name"],
             "tier": cap["tier"],
             "tier_label": cap["tier_label"],
+            "hook_surface": cap["surface_description"],
+            "enforcement_level": enforcement_level,
             "installed": v["installed"],
             "manual_only": v.get("manual_only", False),
+            "auto_trigger_capable": cap.get("auto_trigger_capable", False),
+            "fallback_required": fallback_required,
+            "compliance_status": compliance_status,
             "location": v.get("location"),
             "note": v.get("note"),
         })
     return results
+
+
+def _run_synthetic_smoke(project_root: Path, framework_root: Path, agent_id: str) -> dict[str, Any]:
+    import subprocess
+
+    cmd = [
+        sys.executable,
+        str(framework_root / "governance_tools" / "session_closeout_entry.py"),
+        "--project-root",
+        str(project_root),
+        "--format",
+        "json",
+        "--agent-id",
+        agent_id,
+        "--trigger-mode",
+        "synthetic_smoke",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    stdout = proc.stdout.strip()
+    payload: dict[str, Any] = {}
+    if stdout:
+        try:
+            payload = json.loads(stdout)
+        except json.JSONDecodeError:
+            payload = {"raw_stdout": stdout}
+
+    evidence_path = project_root / "artifacts" / "runtime" / "closeout-trigger-evidence.ndjson"
+    receipt_dir = project_root / "artifacts" / "runtime" / "closeout-receipts"
+    receipt_recorded = False
+    receipt_path_latest: str | None = None
+    receipt_exit_code_ok = False
+    receipt_artifact_exists = False
+    memory_eligibility_evaluated = False
+    memory_write_required = False
+    memory_write_performed = False
+    evidence_recorded = False
+    if evidence_path.exists():
+        lines = [line for line in evidence_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        for line in reversed(lines[-20:]):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("agent_id") == agent_id and row.get("trigger_mode") == "synthetic_smoke":
+                evidence_recorded = True
+                break
+    if receipt_dir.exists():
+        for receipt in sorted(receipt_dir.glob("closeout_receipt_*.json"), reverse=True):
+            try:
+                data = json.loads(receipt.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            if data.get("agent_id") == agent_id and data.get("trigger_mode") == "synthetic_smoke":
+                receipt_recorded = True
+                receipt_path_latest = str(receipt)
+                receipt_exit_code_ok = data.get("exit_code") == 0
+                artifact_path = str(data.get("closeout_artifact_path") or "").strip()
+                receipt_artifact_exists = bool(artifact_path) and Path(artifact_path).exists()
+                memory_eligibility_evaluated = bool(data.get("memory_eligibility_evaluated"))
+                memory_write_required = bool(data.get("memory_write_required"))
+                memory_write_performed = bool(data.get("memory_write_performed"))
+                break
+
+    compliant = (
+        proc.returncode == 0
+        and evidence_recorded
+        and receipt_recorded
+        and receipt_exit_code_ok
+        and receipt_artifact_exists
+        and memory_eligibility_evaluated
+        and (not memory_write_required or memory_write_performed)
+    )
+    return {
+        "agent": agent_id,
+        "status": "pass" if compliant else "fail",
+        "compliance_status": "COMPLIANT" if compliant else "NON_COMPLIANT",
+        "exit_code": proc.returncode,
+        "evidence_recorded": evidence_recorded,
+        "evidence_path": str(evidence_path) if evidence_path.exists() else None,
+        "receipt_recorded": receipt_recorded,
+        "receipt_exit_code_ok": receipt_exit_code_ok,
+        "receipt_artifact_exists": receipt_artifact_exists,
+        "memory_eligibility_evaluated": memory_eligibility_evaluated,
+        "memory_write_required": memory_write_required,
+        "memory_write_performed": memory_write_performed,
+        "receipt_path": receipt_path_latest,
+        "closeout_artifact_path": payload.get("canonical_closeout_artifact"),
+    }
 
 
 def op_capabilities() -> list[dict[str, Any]]:
@@ -839,6 +944,22 @@ def _fmt_op_human(result: dict[str, Any], operation: str) -> str:
     ]
     if result.get("location"):
         lines.append(f"location={result['location']}")
+    if operation == "smoke":
+        lines.append(f"exit_code={result.get('exit_code')}")
+        lines.append(f"evidence_recorded={result.get('evidence_recorded')}")
+        lines.append(f"receipt_recorded={result.get('receipt_recorded')}")
+        lines.append(f"receipt_exit_code_ok={result.get('receipt_exit_code_ok')}")
+        lines.append(f"receipt_artifact_exists={result.get('receipt_artifact_exists')}")
+        lines.append(f"memory_eligibility_evaluated={result.get('memory_eligibility_evaluated')}")
+        lines.append(f"memory_write_required={result.get('memory_write_required')}")
+        lines.append(f"memory_write_performed={result.get('memory_write_performed')}")
+        lines.append(f"compliance_status={result.get('compliance_status')}")
+        if result.get("evidence_path"):
+            lines.append(f"evidence_path={result['evidence_path']}")
+        if result.get("receipt_path"):
+            lines.append(f"receipt_path={result['receipt_path']}")
+        if result.get("closeout_artifact_path"):
+            lines.append(f"closeout_artifact_path={result['closeout_artifact_path']}")
     msg = result.get("message") or result.get("note", "")
     if msg:
         lines.append(f"message={msg}")
@@ -863,7 +984,7 @@ def main() -> int:
     sub.add_parser("status", help="Show integration status for all agents")
     sub.add_parser("capabilities", help="Show capability tiers for all agents")
 
-    for op in ("install", "verify", "repair", "uninstall"):
+    for op in ("install", "verify", "repair", "uninstall", "smoke"):
         p = sub.add_parser(op, help=f"{op.capitalize()} integration for an agent")
         p.add_argument("--agent", choices=KNOWN_AGENTS + ["all"], required=True)
 
@@ -916,6 +1037,8 @@ def main() -> int:
             results.append(adapter.repair(project_root, framework_root))
         elif args.operation == "uninstall":
             results.append(adapter.uninstall(project_root))
+        elif args.operation == "smoke":
+            results.append(_run_synthetic_smoke(project_root, framework_root, agent_id))
 
     if args.format == "json":
         out = results[0] if len(results) == 1 else results
@@ -926,6 +1049,9 @@ def main() -> int:
 
     if args.operation == "verify":
         all_ok = all(r.get("installed") or r.get("manual_only") for r in results)
+        return 0 if all_ok else 1
+    if args.operation == "smoke":
+        all_ok = all(r.get("status") == "pass" for r in results)
         return 0 if all_ok else 1
     return 0
 

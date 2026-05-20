@@ -559,3 +559,40 @@ invalidity — the presumption is void absent affirmative demonstration.
 The exception path does not bypass the authority event requirement. The exception
 artifact itself requires independent review and must be recorded in the governance
 audit trail.
+
+---
+
+## Single-Contributor Adaptation Mode (SCAM-1)
+
+This section clarifies how reviewer-independence semantics apply when the
+repository has only one active maintainer.
+
+### SCAM-1A: No Silent Waiver
+
+Single-contributor operation does not waive RI-1 through RI-5. In particular,
+`self-review` remains non-authoritative for constitutional close claims. The
+independence requirement is not considered satisfied by default due to project
+size.
+
+### SCAM-1B: Allowed Outcomes Under Single-Contributor Constraints
+
+When no independent human reviewer is available, the project may:
+
+1. Remain in `resumable` status (fail-closed default), or
+2. Publish an explicitly bounded claim labeled `reviewer_independence_pending`
+   for operational continuity tracking only.
+
+The bounded claim path is non-authoritative and cannot be used as a substitute
+for a valid closeout authority event.
+
+### SCAM-1C: Minimum Disclosure Requirements
+
+Any closeout-related report emitted under single-contributor constraints must
+declare all of the following:
+
+- `independence_mode: single_contributor`
+- `authority_status: non_authoritative`
+- `independence_gap: reviewer_independence_pending`
+
+This disclosure requirement prevents implicit legitimacy inflation and preserves
+auditor-visible boundary conditions.

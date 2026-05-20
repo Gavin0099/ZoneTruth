@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# pre-commit hook — AI Governance Framework
+#
+# 檢查 PLAN.md 新鮮度：
+#   CRITICAL (距今 > 2× threshold) → 擋 commit，要求更新
+#   STALE    (距今 > threshold)    → 警告，允許 commit
+#   FRESH                          → 通過
+#
+# 安裝方式：
+#   bash scripts/install-hooks.sh
+#   或手動複製到 .git/hooks/pre-commit 並 chmod +x
+
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_REPO_ROOT="$(git -C "$HOOK_DIR" rev-parse --show-toplevel 2>/dev/null || pwd)"
+FRAMEWORK_ROOT="${AI_GOVERNANCE_FRAMEWORK_ROOT:-}"
+HOOK_CONFIG="$HOOK_DIR/ai-governance-framework-root"
+if [ -z "$FRAMEWORK_ROOT" ] && [ -f "$HOOK_CONFIG" ]; then
+    FRAMEWORK_ROOT="$(cat "$HOOK_CONFIG")"
+fi
+if [ -z "$FRAMEWORK_ROOT" ]; then
+    FRAMEWORK_ROOT="$TARGET_REPO_ROOT"
+fi
+
+PYTHON_LIB="$FRAMEWORK_ROOT/scripts/lib/python.sh"
+if [ ! -f "$PYTHON_LIB" ]; then
+    echo "⚠️  [governance] 找不到 framework Python helper: $PYTHON_LIB"
+    exit 0
+fi
+. "$PYTHON_LIB"
+
+PLAN_FILE="$TARGET_REPO_ROOT/PLAN.md"
+TOOL="$FRAMEWORK_ROOT/governance_tools/plan_freshness.py"
+
+# ── 跳過條件 ──────────────────────────────────────────────────────────────
+# 沒有 PLAN.md → 跳過（可能是新專案或 examples/ 子目錄）
+if [ ! -f "$PLAN_FILE" ]; then
+    exit 0
+fi
+
+# 沒有 plan_freshness.py → 跳過（框架尚未部署）
+if [ ! -f "$TOOL" ]; then
+    exit 0
+fi
+
+# ── 檢查新鮮度 ────────────────────────────────────────────────────────────
+# 嘗試取得 JSON 輸出；若 python 指令不存在則跳過
+if ! set_python_cmd; then
+    echo "⚠️  [governance] 找不到 Python，跳過 PLAN.md freshness 檢查"
+    exit 0
+fi
+
+# 取得 JSON（exit code 不影響後續 shell 判斷）
+RESULT=$("${PYTHON_CMD[@]}" "$TOOL" --file "$PLAN_FILE" --format json 2>/dev/null) || true
+
+if [ -z "$RESULT" ]; then
+    echo "⚠️  [governance] plan_freshness 回傳空值，跳過檢查"
+    exit 0
+fi
+
+STATUS=$(echo "$RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','ERROR'))" 2>/dev/null || echo "ERROR")
+DAYS=$(echo "$RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); print(d.get('days_since_update','?'))" 2>/dev/null || echo "?")
+THRESHOLD=$(echo "$RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); print(d.get('threshold_days','?'))" 2>/dev/null || echo "?")
+
+case "$STATUS" in
+    FRESH)
+        # 無輸出，靜默通過
+        exit 0
+        ;;
+    STALE)
+        echo ""
+        echo "⚠️  [governance] PLAN.md 已 ${DAYS}d 未更新（閾值: ${THRESHOLD}d）"
+        echo "   建議更新「最後更新」欄位與「本週聚焦」後再 commit"
+        echo "   （STALE 允許通過；CRITICAL 會擋截）"
+        echo ""
+        exit 0
+        ;;
+    CRITICAL)
+        echo ""
+        echo "🔴 [governance] PLAN.md 嚴重過期：已 ${DAYS}d 未更新（臨界值: $((THRESHOLD * 2))d）"
+        echo "   計畫可能已失效，請更新後再 commit："
+        echo ""
+        echo "   1. 更新 PLAN.md 的「最後更新」欄位（格式: YYYY-MM-DD）"
+        echo "   2. 更新「本週聚焦」或「變更歷史」"
+        echo "   3. git add PLAN.md && git commit"
+        echo ""
+        echo "   如需跳過此檢查（不建議）: git commit --no-verify"
+        echo ""
+        exit 1
+        ;;
+    ERROR)
+        # 解析失敗（欄位缺失等）→ 警告但不擋
+        ERRORS=$(echo "$RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); [print('  •',e) for e in d.get('errors',[])]" 2>/dev/null || true)
+        echo ""
+        echo "🚨 [governance] PLAN.md 解析錯誤，請確認 header 欄位格式："
+        echo "$ERRORS"
+        echo "   格式參考: governance/PLAN.md §2.1"
+        echo "   （ERROR 允許通過，但請儘快修正）"
+        echo ""
+        exit 0
+        ;;
+    *)
+        exit 0
+        ;;
+esac

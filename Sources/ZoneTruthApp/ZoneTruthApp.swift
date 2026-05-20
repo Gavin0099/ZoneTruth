@@ -1,12 +1,11 @@
 import SwiftUI
 
-@main
-struct ZoneTruthApp: App {
+public struct ZoneTruthMainView: View {
     @StateObject private var viewModel: WorkoutListViewModel
     @StateObject private var settingsManager = SettingsManager()
     private let callbackHandler: StravaCallbackHandler?
 
-    init() {
+    public init() {
         let environment = AppEnvironment.live()
         let settings = SettingsManager()
         _settingsManager = StateObject(wrappedValue: settings)
@@ -18,17 +17,15 @@ struct ZoneTruthApp: App {
         callbackHandler = environment.stravaCallbackHandler
     }
 
-    var body: some Scene {
-        WindowGroup {
-            WorkoutListView(viewModel: viewModel, settingsManager: settingsManager)
-                .onOpenURL { url in
-                    Task {
-                        let handled = await callbackHandler?.handle(url) ?? false
-                        if handled {
-                            await viewModel.refreshWorkouts()
-                        }
+    public var body: some View {
+        WorkoutListView(viewModel: viewModel, settingsManager: settingsManager)
+            .onOpenURL { url in
+                Task {
+                    let handled = await callbackHandler?.handle(url) ?? false
+                    if handled {
+                        await viewModel.refreshWorkouts()
                     }
                 }
-        }
+            }
     }
 }

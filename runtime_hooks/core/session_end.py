@@ -24,8 +24,15 @@ from memory_pipeline.session_snapshot import create_session_snapshot
 from governance_tools.decision_model_loader import build_runtime_policy_ref, final_verdict_owner, runtime_decision_source, violation_verdict_impact
 from governance_tools.domain_governance_metadata import domain_risk_tier
 from governance_tools.execution_surface_coverage import build_execution_surface_coverage
+from governance_tools.claim_enforcement_checker import evaluate as evaluate_claim_enforcement
+from governance_tools.memory_record import append_session_derived_entry, build_session_derived_record
 from governance_tools.runtime_phase_policy import aggregate_phase_classifications, build_phase_classification
 from governance_tools.runtime_surface_manifest import build_runtime_surface_manifest
+from governance_tools.runtime_reliability_observation import (
+    RECOVERY_LOG,
+    SIDE_EFFECT_JOURNAL,
+    safe_append_observation_event,
+)
 from runtime_hooks.core._canonical_closeout import (
     build_canonical_closeout,
     pick_latest_candidate,
@@ -76,6 +83,64 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _build_claim_binding_input(
+    *,
+    canonical_closeout: dict[str, Any],
+    summary: str,
+) -> dict[str, Any]:
+    """
+    Build a minimal runtime claim-binding input payload.
+
+    This is the session-end integration bridge that guarantees claim-enforcement
+    artifacts are emitted at runtime, so adoption can be measured.
+    """
+    closeout_status = str(canonical_closeout.get("closeout_status", "missing"))
+    return {
+        "preconditions": True,
+        "scenario_result": closeout_status,
+        "observed": {"closeout_status": closeout_status},
+        "final_claim": summary or f"session closeout status: {closeout_status}",
+        "claim_level": "bounded",
+        "same_evidence_as_previous": False,
+        "posture": "none",
+        "previous_posture": "none",
+        "publication_scope": "local_only",
+    }
+
+
+def _emit_claim_enforcement_check(
+    *,
+    project_root: Path,
+    session_id: str,
+    canonical_closeout: dict[str, Any],
+    summary: str,
+) -> Path:
+    claim_input = _build_claim_binding_input(
+        canonical_closeout=canonical_closeout,
+        summary=summary,
+    )
+    checker_out = evaluate_claim_enforcement(claim_input)
+    payload = {
+        "claim_source": "session_end_canonical_closeout",
+        "evidence_refs": [f"runtime_closeout:{session_id}"],
+        **checker_out,
+        "reviewer_response": {
+            "decision": "accept" if checker_out.get("enforcement_action") == "allow" else None,
+            "override_reason": None,
+        },
+    }
+    output_path = (
+        project_root
+        / "artifacts"
+        / "claim-enforcement"
+        / session_id
+        / "claim-enforcement-check.json"
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(output_path, payload)
+    return output_path
+
+
 def _build_post_task_phase_classification_from_checks(checks: dict[str, Any]) -> dict[str, Any]:
     action_ids: list[str] = []
     for error in checks.get("errors", []) or []:
@@ -109,10 +174,6 @@ def _build_session_end_phase_classification(
     if checks.get("cross_repo_drift_analysis"):
         action_ids.append("cross_repo_drift_analysis")
     return build_phase_classification(action_ids=action_ids, hook="session_end")
-
-
-def _current_local_date() -> str:
-    return datetime.now().astimezone().date().isoformat()
 
 
 def _resolve_head_commit(project_root: Path) -> str:
@@ -150,6 +211,21 @@ def _default_next_step(
     )
 
 
+def _resolve_memory_binding(commit: str, session_id: str) -> str:
+    """
+    Determine memory binding state per Memory Authority Contract v1.0.0.
+
+    bound            — real commit hash available
+    bound_session_id — no commit hash, but session_id provides fallback anchor
+    unbound          — neither commit hash nor session_id (violation: must not be promoted)
+    """
+    if commit and commit != "UNCOMMITTED":
+        return "bound"
+    if session_id and session_id.strip():
+        return "bound_session_id"
+    return "unbound"
+
+
 def _build_daily_memory_record(
     *,
     project_root: Path,
@@ -163,24 +239,41 @@ def _build_daily_memory_record(
 ) -> dict[str, str]:
     open_risks = [str(item).strip() for item in canonical_closeout.get("open_risks", []) if str(item).strip()]
     summary_text = summary.strip() or "Session closeout recorded without an explicit summary."
-    return {
-        "what_changed": (
+    commit = _resolve_head_commit(project_root)
+    memory_binding = _resolve_memory_binding(commit, session_id)
+    closeout_status = str(canonical_closeout.get("closeout_status", "")).strip().lower()
+    closeout_fail_closed = closeout_status in {
+        "missing",
+        "schema_invalid",
+        "content_insufficient",
+        "inconsistent",
+    }
+    displayed_decision = (
+        f"FAIL_CLOSED_CLOSEOUT_{closeout_status.upper()}"
+        if closeout_fail_closed and closeout_status
+        else decision
+    )
+    displayed_promoted = False if closeout_fail_closed else promoted
+    return build_session_derived_record(
+        what_changed=(
             f"session_end auto-closeout recorded for `{task}` "
-            f"(session={session_id}, decision={decision}, snapshot_created={snapshot_created}, promoted={promoted}). "
+            f"(session={session_id}, decision={displayed_decision}, snapshot_created={snapshot_created}, promoted={displayed_promoted}). "
             f"Summary: {summary_text}"
         ),
-        "commit": _resolve_head_commit(project_root),
-        "test_evidence": (
+        commit=commit,
+        session_id=session_id,
+        memory_binding=memory_binding,
+        test_evidence=(
             f"`session_end` => canonical_closeout_status={canonical_closeout.get('closeout_status', 'unknown')}, "
-            f"snapshot_created={snapshot_created}, promoted={promoted}, open_risk_count={len(open_risks)}"
+            f"snapshot_created={snapshot_created}, promoted={displayed_promoted}, open_risk_count={len(open_risks)}"
         ),
-        "next_step": _default_next_step(
+        next_step=_default_next_step(
             decision=decision,
             promoted=promoted,
             open_risks=open_risks,
             canonical_closeout=canonical_closeout,
         ),
-    }
+    )
 
 
 def _append_daily_memory_entry(
@@ -194,12 +287,6 @@ def _append_daily_memory_entry(
     snapshot_created: bool,
     canonical_closeout: dict[str, Any],
 ) -> Path:
-    memory_root = project_root / "memory"
-    memory_root.mkdir(parents=True, exist_ok=True)
-    daily_path = memory_root / f"{_current_local_date()}.md"
-    if not daily_path.exists():
-        daily_path.write_text(f"# {_current_local_date()}\n\n", encoding="utf-8")
-
     record = _build_daily_memory_record(
         project_root=project_root,
         session_id=session_id,
@@ -210,17 +297,7 @@ def _append_daily_memory_entry(
         snapshot_created=snapshot_created,
         canonical_closeout=canonical_closeout,
     )
-    entry = (
-        f"- what_changed: {record['what_changed']}\n"
-        f"  commit: {record['commit']}\n"
-        f"  test_evidence: {record['test_evidence']}\n"
-        f"  next_step: {record['next_step']}\n"
-    )
-    with daily_path.open("a", encoding="utf-8") as fh:
-        if daily_path.stat().st_size > 0:
-            fh.write("\n")
-        fh.write(entry)
-    return daily_path
+    return append_session_derived_entry(project_root=project_root, record=record)
 
 
 def _force_runtime_failure_if_requested(checks: dict[str, Any], stage: str) -> None:
@@ -543,6 +620,7 @@ def _build_verdict_artifact(
     contract_resolution: dict[str, Any],
     domain_contract: dict[str, Any],
     decision_context: dict[str, str],
+    runtime_completeness: dict[str, bool],
 ) -> dict[str, Any]:
     override_present = bool(checks.get("override_trace") or checks.get("reviewer_override"))
     escalation_present = decision == "REVIEW_REQUIRED" or contract.get("oversight") != "auto"
@@ -595,6 +673,7 @@ def _build_verdict_artifact(
             "governance_escalation_present": governance_escalation_present,
             "governance_escalation_type": governance_escalation_type,
         },
+        "runtime_completeness": runtime_completeness,
     }
 
 
@@ -676,6 +755,7 @@ def _build_trace_artifact(
     contract_resolution: dict[str, Any],
     domain_contract: dict[str, Any],
     decision_context: dict[str, str],
+    runtime_completeness: dict[str, bool],
 ) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -711,6 +791,7 @@ def _build_trace_artifact(
             "override_present": bool(checks.get("override_trace") or checks.get("reviewer_override")),
             "escalation_present": decision == "REVIEW_REQUIRED" or contract.get("oversight") != "auto",
         },
+        "runtime_completeness": runtime_completeness,
     }
 
 
@@ -895,6 +976,7 @@ def run_session_end(
         }
     )
     closeout_path: Path | None = None
+    claim_enforcement_check_path: Path | None = None
 
     try:
         _force_runtime_failure_if_requested(checks, "artifact_emission")
@@ -917,6 +999,18 @@ def run_session_end(
             "errors": errors,
             "phase_classification": session_end_phase_classification,
         }
+        if contract["memory_mode"] != "stateless":
+            daily_memory_path = _append_daily_memory_entry(
+                project_root=project_root,
+                session_id=session_id,
+                task=contract["task"],
+                decision=decision,
+                summary=summary,
+                promoted=promotion_result is not None,
+                snapshot_created=snapshot_result is not None,
+                canonical_closeout=canonical_closeout,
+            )
+
         summary_payload = {
             "session_id": session_id,
             "closed_at": now,
@@ -957,6 +1051,26 @@ def run_session_end(
             "error_count": len(errors),
             "decision_context": decision_context,
         }
+        _write_json(candidate_path, candidate_payload)
+        curated_result = curate_candidate_artifact(candidate_path, output_path=curated_path)
+        _write_json(summary_path, summary_payload)
+        _write_json(runtime_phase_summary_path, runtime_phase_summary)
+        closeout_path = write_canonical_closeout(canonical_closeout, project_root)
+        _append_session_index(canonical_closeout, project_root)
+        claim_enforcement_check_path = _emit_claim_enforcement_check(
+            project_root=project_root,
+            session_id=session_id,
+            canonical_closeout=canonical_closeout,
+            summary=summary,
+        )
+        runtime_completeness = {
+            "session_end_invoked": True,
+            "canonical_closeout_written": closeout_path is not None and closeout_path.exists(),
+            "claim_binding_written": (
+                claim_enforcement_check_path is not None
+                and claim_enforcement_check_path.exists()
+            ),
+        }
         verdict_payload = _build_verdict_artifact(
             session_id=session_id,
             now=now,
@@ -968,6 +1082,7 @@ def run_session_end(
             contract_resolution=contract_resolution,
             domain_contract=domain_contract,
             decision_context=decision_context,
+            runtime_completeness=runtime_completeness,
         )
         trace_payload = _build_trace_artifact(
             session_id=session_id,
@@ -981,27 +1096,10 @@ def run_session_end(
             contract_resolution=contract_resolution,
             domain_contract=domain_contract,
             decision_context=decision_context,
+            runtime_completeness=runtime_completeness,
         )
-
-        _write_json(candidate_path, candidate_payload)
-        curated_result = curate_candidate_artifact(candidate_path, output_path=curated_path)
-        _write_json(summary_path, summary_payload)
         _write_json(verdict_path, verdict_payload)
         _write_json(trace_path, trace_payload)
-        _write_json(runtime_phase_summary_path, runtime_phase_summary)
-        closeout_path = write_canonical_closeout(canonical_closeout, project_root)
-        _append_session_index(canonical_closeout, project_root)
-        if contract["memory_mode"] != "stateless":
-            daily_memory_path = _append_daily_memory_entry(
-                project_root=project_root,
-                session_id=session_id,
-                task=contract["task"],
-                decision=decision,
-                summary=summary,
-                promoted=promotion_result is not None,
-                snapshot_created=snapshot_result is not None,
-                canonical_closeout=canonical_closeout,
-            )
     except Exception as exc:
         closeout_path = None
         failure_message = str(exc)
@@ -1021,7 +1119,7 @@ def run_session_end(
         )
         _write_json(trace_path, failure_trace_payload)
 
-    return {
+    result = {
         "ok": len(errors) == 0,
         "session_id": session_id,
         "decision": decision,
@@ -1039,11 +1137,45 @@ def run_session_end(
         "phase_classification": session_end_phase_classification,
         "daily_memory_path": str(daily_memory_path) if daily_memory_path else None,
         "canonical_closeout_artifact": str(closeout_path) if closeout_path else None,
+        "claim_enforcement_check_artifact": str(claim_enforcement_check_path) if claim_enforcement_check_path else None,
         "canonical_closeout": canonical_closeout,
         "decision_context": decision_context,
+        "runtime_completeness": runtime_completeness if 'runtime_completeness' in locals() else {
+            "session_end_invoked": True,
+            "canonical_closeout_written": False,
+            "claim_binding_written": False,
+        },
         "warnings": warnings,
         "errors": errors,
     }
+    safe_append_observation_event(
+        project_root,
+        RECOVERY_LOG,
+        "session_end_recovery_observation",
+        {
+            "source": "runtime_hooks.core.session_end",
+            "session_id": session_id,
+            "decision": result["decision"],
+            "ok": result["ok"],
+            "error_count": len(errors),
+            "warning_count": len(warnings),
+            "runtime_failure_observed": any(str(e).startswith("runtime_failure:") for e in errors),
+        },
+    )
+    safe_append_observation_event(
+        project_root,
+        SIDE_EFFECT_JOURNAL,
+        "session_end_side_effect_observation",
+        {
+            "source": "runtime_hooks.core.session_end",
+            "session_id": session_id,
+            "memory_mode": contract["memory_mode"],
+            "snapshot_created": snapshot_result is not None,
+            "promotion_created": promotion_result is not None,
+            "canonical_closeout_written": bool(result.get("canonical_closeout_artifact")),
+        },
+    )
+    return result
 
 
 def format_human_result(result: dict[str, Any]) -> str:

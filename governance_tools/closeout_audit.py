@@ -42,7 +42,88 @@ _GENERATED_JSON = Path("docs/status/generated/closeout-audit.json")
 _GENERATED_MD = Path("docs/status/closeout-audit.md")
 
 
-def build_closeout_audit(project_root: Path) -> dict[str, Any]:
+def _evaluate_claim_binding(project_root: Path) -> dict[str, Any]:
+    """
+    Advisory-stage claim-binding check (future hard gate fields).
+
+    Current behavior:
+    - Emits validity + reasons in audit output.
+    - Does NOT block promotion or flip policy_ok.
+    """
+    checks_root = project_root / "artifacts" / "claim-enforcement"
+    check_files = sorted(checks_root.rglob("claim-enforcement-check.json")) if checks_root.exists() else []
+    reasons: list[str] = []
+    drift_count = 0
+    override_count = 0
+    invalid_override_count = 0
+    downgrade_count = 0
+    blocked_count = 0
+
+    if not check_files:
+        reasons.append("missing_claim_enforcement_check")
+
+    for path in check_files:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            reasons.append("unreadable_claim_enforcement_check")
+            continue
+
+        enforcement_action = str(payload.get("enforcement_action", "")).strip()
+        reviewer_override_required = bool(payload.get("reviewer_override_required", False))
+        semantic_drift_risk = bool(payload.get("semantic_drift_risk", False))
+        reviewer_response = payload.get("reviewer_response")
+        if semantic_drift_risk:
+            drift_count += 1
+        if enforcement_action == "downgrade":
+            downgrade_count += 1
+        elif enforcement_action == "block":
+            blocked_count += 1
+
+        if enforcement_action and enforcement_action != "allow":
+            decision = None
+            if isinstance(reviewer_response, dict):
+                decision = reviewer_response.get("decision")
+            if not isinstance(decision, str) or not decision.strip():
+                reasons.append("missing_reviewer_response")
+            elif decision.strip() == "override":
+                override_count += 1
+
+        if reviewer_override_required:
+            override_reason = None
+            if isinstance(reviewer_response, dict):
+                override_reason = reviewer_response.get("override_reason")
+            if not isinstance(override_reason, str) or not override_reason.strip():
+                reasons.append("missing_override_reason")
+                invalid_override_count += 1
+            else:
+                lowered = override_reason.lower()
+                if "evidence_ref:" not in lowered and "risk_ack:" not in lowered:
+                    reasons.append("weak_override_reason")
+                    invalid_override_count += 1
+
+    unique_reasons = sorted(set(reasons))
+    valid = len(unique_reasons) == 0
+    check_count = len(check_files)
+    drift_rate = round(drift_count / check_count, 3) if check_count > 0 else None
+    downgrade_rate = round(downgrade_count / check_count, 3) if check_count > 0 else None
+    blocked_rate = round(blocked_count / check_count, 3) if check_count > 0 else None
+    override_rate = round(override_count / check_count, 3) if check_count > 0 else None
+    invalid_override_rate = round(invalid_override_count / check_count, 3) if check_count > 0 else None
+    return {
+        "closeout_claim_binding_valid": valid,
+        "future_gate_required": not valid,
+        "invalid_reasons": unique_reasons,
+        "claim_enforcement_check_count": check_count,
+        "drift_rate": drift_rate,
+        "downgrade_rate": downgrade_rate,
+        "blocked_rate": blocked_rate,
+        "override_rate": override_rate,
+        "invalid_override_rate": invalid_override_rate,
+    }
+
+
+def build_closeout_audit(project_root: Path, require_claim_binding: bool = False) -> dict[str, Any]:
     """
     Scan ``artifacts/runtime/closeouts/`` under *project_root* and return
     aggregate closeout health statistics across all recorded sessions.
@@ -136,6 +217,14 @@ def build_closeout_audit(project_root: Path) -> dict[str, Any]:
     }
     policy_ok = not any(policy_flags.values())
 
+    claim_binding = _evaluate_claim_binding(project_root)
+
+    claim_binding_required_violation = (
+        require_claim_binding and not claim_binding["closeout_claim_binding_valid"]
+    )
+    if claim_binding_required_violation:
+        policy_ok = False
+
     return {
         "ok": True,
         "policy_ok": policy_ok,
@@ -155,6 +244,17 @@ def build_closeout_audit(project_root: Path) -> dict[str, Any]:
         "unknown_statuses": unknown_statuses,
         "policy_flags": policy_flags,
         "unreadable_files": unreadable,
+        "closeout_claim_binding_valid": claim_binding["closeout_claim_binding_valid"],
+        "future_gate_required": claim_binding["future_gate_required"],
+        "invalid_reasons": claim_binding["invalid_reasons"],
+        "claim_enforcement_check_count": claim_binding["claim_enforcement_check_count"],
+        "drift_rate": claim_binding["drift_rate"],
+        "downgrade_rate": claim_binding["downgrade_rate"],
+        "blocked_rate": claim_binding["blocked_rate"],
+        "override_rate": claim_binding["override_rate"],
+        "invalid_override_rate": claim_binding["invalid_override_rate"],
+        "require_claim_binding": require_claim_binding,
+        "claim_binding_required_violation": claim_binding_required_violation,
     }
 
 
@@ -187,6 +287,16 @@ def format_human_result(result: dict[str, Any]) -> str:
         f"recent_7d_session_count={result['recent_7d_session_count']}",
         f"recent_7d_valid_rate={recent_rate}",
         f"has_open_risks_count={result['has_open_risks_count']}",
+        f"claim_enforcement_check_count={result.get('claim_enforcement_check_count')}",
+        f"drift_rate={result.get('drift_rate')}",
+        f"downgrade_rate={result.get('downgrade_rate')}",
+        f"blocked_rate={result.get('blocked_rate')}",
+        f"override_rate={result.get('override_rate')}",
+        f"invalid_override_rate={result.get('invalid_override_rate')}",
+        f"closeout_claim_binding_valid={result.get('closeout_claim_binding_valid')}",
+        f"future_gate_required={result.get('future_gate_required')}",
+        f"require_claim_binding={result.get('require_claim_binding', False)}",
+        f"claim_binding_required_violation={result.get('claim_binding_required_violation', False)}",
     ]
 
     # Policy flags: show even when all False for reviewer confirmation
@@ -218,6 +328,15 @@ def format_human_result(result: dict[str, Any]) -> str:
         for path in result["unreadable_files"]:
             lines.append(f"unreadable={path}")
 
+    invalid_reasons = result.get("invalid_reasons") or []
+    if invalid_reasons:
+        if result.get("require_claim_binding"):
+            lines.append("claim binding: hard gate violation")
+        else:
+            lines.append("claim binding: future hard gate violation")
+        for reason in invalid_reasons:
+            lines.append(f"claim_binding_invalid_reason={reason}")
+
     return "\n".join(lines)
 
 
@@ -237,6 +356,16 @@ def build_status_markdown(result: dict[str, Any]) -> str:
         f"- recent_7d_session_count: `{result['recent_7d_session_count']}`",
         f"- recent_7d_valid_rate: `{result['recent_7d_valid_rate']}`",
         f"- has_open_risks_count: `{result['has_open_risks_count']}`",
+        f"- claim_enforcement_check_count: `{result.get('claim_enforcement_check_count')}`",
+        f"- drift_rate: `{result.get('drift_rate')}`",
+        f"- downgrade_rate: `{result.get('downgrade_rate')}`",
+        f"- blocked_rate: `{result.get('blocked_rate')}`",
+        f"- override_rate: `{result.get('override_rate')}`",
+        f"- invalid_override_rate: `{result.get('invalid_override_rate')}`",
+        f"- closeout_claim_binding_valid: `{result.get('closeout_claim_binding_valid')}`",
+        f"- future_gate_required: `{result.get('future_gate_required')}`",
+        f"- require_claim_binding: `{result.get('require_claim_binding', False)}`",
+        f"- claim_binding_required_violation: `{result.get('claim_binding_required_violation', False)}`",
         "",
         "## Policy Flags",
         "",
@@ -278,6 +407,18 @@ def build_status_markdown(result: dict[str, Any]) -> str:
         for path in unreadable_files:
             lines.append(f"- `{path}`")
 
+    invalid_reasons = result.get("invalid_reasons") or []
+    if invalid_reasons:
+        lines.extend([
+            "",
+            "## Claim Binding (Future Hard Gate)",
+            "",
+            "- claim binding: "
+            + ("`hard gate violation`" if result.get("require_claim_binding") else "`future hard gate violation`"),
+        ])
+        for reason in invalid_reasons:
+            lines.append(f"- `{reason}`")
+
     return "\n".join(lines) + "\n"
 
 
@@ -301,10 +442,15 @@ def main() -> int:
     parser.add_argument("--project-root", default=".")
     parser.add_argument("--format", choices=("human", "json"), default="human")
     parser.add_argument("--write", action="store_true", help="Write status outputs under docs/status/")
+    parser.add_argument(
+        "--require-claim-binding",
+        action="store_true",
+        help="Enable hard gate: claim-binding violations mark closeout audit as policy_not_ok.",
+    )
     args = parser.parse_args()
 
     project_root = Path(args.project_root).resolve()
-    result = build_closeout_audit(project_root)
+    result = build_closeout_audit(project_root, require_claim_binding=args.require_claim_binding)
     result["generated_at"] = datetime.now(timezone.utc).isoformat()
 
     if args.write:

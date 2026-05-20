@@ -37,3 +37,4 @@
 - [x] Promoted memory: Refine analyzer logic for sparse HR data and strength training classification.
 - [x] Promoted memory: Refine analyzer logic for sparse HR data and strength training classification.
 - [x] Promoted memory: Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.
+- Refactored `ZoneTruthApp` to a library and created `ZoneTruthHost` Xcode project wrapper to enable proper HealthKit capability signing on physical iOS devices, integrating it into the repository structure.

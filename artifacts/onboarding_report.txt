@@ -1,0 +1,74 @@
+External Repo Onboarding Report
+
+ok                = True
+repo_root         = /Users/gavin_wu/Desktop/ZoneTruth
+contract_path     = /Users/gavin_wu/Desktop/ZoneTruth/contract.yaml
+generated_at      = 2026-05-20T05:09:07.892817+00:00
+readiness_ready   = True
+smoke_ok          = True
+project_facts      = status=available | artifact_exists=False | artifact_drift=False | source=02_tech_stack.md
+token_summary      = prompt=None,completion=None,total=None,source=unknown,observability=none
+
+[readiness]
+contract_files_complete  = True
+contract_resolved        = True
+framework_release_compatible = True
+framework_source_canonical = False
+framework_version_current = False
+framework_version_known  = False
+git_repo_present         = True
+governance_baseline_present = True
+governance_drift_clean   = False
+hooks_ready              = False
+plan_fresh_enough        = True
+plan_present             = True
+project_facts_drift_free = True
+project_facts_intakeable = True
+project_facts_present    = True
+project_facts_schema_complete = True
+
+[framework_version]
+state              = unknown
+current_release    = None
+adopted_release    = None
+adopted_commit     = None
+framework_repo     = None
+canonical_repo     = https://github.com/Gavin0099/ai-governance-framework.git
+
+[project_facts]
+status             = available
+source_file        = /Users/gavin_wu/Desktop/ZoneTruth/memory/02_tech_stack.md
+source_filename    = 02_tech_stack.md
+sync_direction     = external_to_framework
+artifact_path      = /Users/gavin_wu/Desktop/ZoneTruth/artifacts/external-project-facts/ZoneTruth.json
+artifact_exists    = False
+artifact_drift     = False
+reason             = None
+remediation_hint   = None
+
+[agents_calibration]
+status             = repo_specific_minimal
+reason             = repo_local_paths_commands_or_boundaries_detected
+path               = /Users/gavin_wu/Desktop/ZoneTruth/AGENTS.md
+reviewer_signal    = None
+
+[smoke]
+rules             = common,avalonia,cpp,csharp,gl-hub-vendor-cmd,kernel-driver,python,refactor,swift
+pre_task_ok       = True
+session_start_ok  = True
+post_task_ok      = None
+
+warnings: 13
+- readiness: hooks (optional): missing AI Governance pre-commit hook: /Users/gavin_wu/Desktop/ZoneTruth/.git/hooks/pre-commit
+- readiness: hooks (optional): missing AI Governance pre-push hook: /Users/gavin_wu/Desktop/ZoneTruth/.git/hooks/pre-push
+- readiness: hooks (optional): ai-governance-framework-root not found; temporarily treating the target repo as the framework root.
+- readiness: plan: PLAN.md 已 13 天未更新（閾值: 7d） — 請更新本週聚焦或變更歷史
+- readiness: governance-drift: plan_freshness: PLAN.md is stale (13 days old, threshold PLAN.md policy: 7d)
+- readiness: governance-drift: expansion_boundary: new_return_key: unrecognized key(s) in return dict: ['by_consumer', 'by_field', 'by_type', 'contract_version', 'high_frequency_misuse_triggers_enforcement', 'notice', 'total_violations', 'visibility_only'] — if these are new decision inputs, they require Expansion Admission Gate passage
+- readiness: framework-version: framework lock file missing
+- readiness: framework-version: compatibility range could not be evaluated
+- readiness: framework-version: current framework release could not be determined
+- smoke: PLAN.md is STALE
+- smoke: Suggested language pack 'objective-c' is not active; repo signals: DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/ZoneTruthCore-Swift.h, DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/ZoneTruthCore-Swift.h
+- smoke: Assumption check missing before modification planning: missing=assumptions, alternative_root_causes, evidence, reframe_or_validation_step
+- smoke: Decision policy advisory: assumption evidence missing

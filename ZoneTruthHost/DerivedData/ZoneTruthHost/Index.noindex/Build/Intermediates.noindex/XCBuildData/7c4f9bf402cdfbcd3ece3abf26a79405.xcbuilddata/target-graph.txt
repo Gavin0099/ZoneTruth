@@ -1,0 +1,3 @@
+Target dependency graph (2 targets)
+Target 'ZoneTruthHost' in project 'ZoneTruthHost' (no dependencies)
+Target 'ZoneTruthHost' in project 'ZoneTruthHost' (no dependencies)

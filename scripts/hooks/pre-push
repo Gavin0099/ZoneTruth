@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# pre-push hook - AI Governance Framework
+# Enforces runtime governance checks and fail-closed daily memory discipline.
+
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_REPO_ROOT="$(git -C "$HOOK_DIR" rev-parse --show-toplevel 2>/dev/null || pwd)"
+FRAMEWORK_ROOT="${AI_GOVERNANCE_FRAMEWORK_ROOT:-}"
+HOOK_CONFIG="$HOOK_DIR/ai-governance-framework-root"
+if [ -z "$FRAMEWORK_ROOT" ] && [ -f "$HOOK_CONFIG" ]; then
+    FRAMEWORK_ROOT="$(cat "$HOOK_CONFIG")"
+fi
+if [ -z "$FRAMEWORK_ROOT" ]; then
+    FRAMEWORK_ROOT="$TARGET_REPO_ROOT"
+fi
+
+PYTHON_LIB="$FRAMEWORK_ROOT/scripts/lib/python.sh"
+if [ ! -f "$PYTHON_LIB" ]; then
+    echo "[governance] warning: missing framework Python helper: $PYTHON_LIB"
+    exit 0
+fi
+. "$PYTHON_LIB"
+
+TOOL="$FRAMEWORK_ROOT/governance_tools/contract_validator.py"
+DAILY_MEMORY_GUARD="$FRAMEWORK_ROOT/governance_tools/daily_memory_guard.py"
+VERSION_BUMP_GUARD="$FRAMEWORK_ROOT/governance_tools/version_bump_guard.py"
+MEMORY_FRESHNESS_GUARD="$FRAMEWORK_ROOT/governance_tools/memory_freshness_guard.py"
+SNAPSHOT_DIR="$TARGET_REPO_ROOT/memory/governance_snapshots"
+RUNTIME_SCRIPT="$FRAMEWORK_ROOT/scripts/run-runtime-governance.sh"
+
+TODAY_UTC="$(date -u +%F)"
+TODAY_MEMORY_PATH="memory/${TODAY_UTC}.md"
+ZERO_OID="0000000000000000000000000000000000000000"
+
+# pre-push stdin format:
+# <local ref> <local sha1> <remote ref> <remote sha1>
+PUSH_UPDATES="$(cat || true)"
+
+if ! set_python_cmd; then
+    echo "[governance] warning: Python not available; some advisory checks are skipped"
+fi
+
+# Snapshot validation remains advisory-only.
+FAIL_COUNT=0
+if [ -f "$TOOL" ] && [ -d "$SNAPSHOT_DIR" ] && [ "${#PYTHON_CMD[@]}" -gt 0 ]; then
+    for snapshot in "$SNAPSHOT_DIR"/*.txt; do
+        [ -f "$snapshot" ] || continue
+        RESULT=$("${PYTHON_CMD[@]}" "$TOOL" --file "$snapshot" --format json 2>/dev/null) || true
+        STATUS=$(echo "$RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); print(d.get('valid', True))" 2>/dev/null || echo "true")
+        if [ "$STATUS" = "False" ]; then
+            echo "[governance] warning: invalid AI contract snapshot: $(basename "$snapshot")"
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+        fi
+    done
+fi
+
+if [ "$FAIL_COUNT" -gt 0 ]; then
+    echo ""
+    echo "[governance] warning: ${FAIL_COUNT} invalid AI contract snapshot(s) found"
+    echo "  bypass once: git push --no-verify"
+    echo ""
+fi
+
+# Fail-closed daily memory gate.
+if [ ! -f "$TARGET_REPO_ROOT/$TODAY_MEMORY_PATH" ]; then
+    echo ""
+    echo "[governance] blocked: missing required memory file $TODAY_MEMORY_PATH (UTC date)"
+    echo "  update memory first, then push again"
+    echo ""
+    exit 1
+fi
+
+MEMORY_UPDATED_IN_PUSH=0
+if [ -n "$PUSH_UPDATES" ]; then
+    while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+        [ -n "${local_sha:-}" ] || continue
+        [ "$local_sha" = "$ZERO_OID" ] && continue
+
+        RANGE_OK=0
+        if [ "${remote_sha:-$ZERO_OID}" = "$ZERO_OID" ]; then
+            range="$local_sha"
+            RANGE_OK=1
+        elif git -C "$TARGET_REPO_ROOT" cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+            range="${remote_sha}..${local_sha}"
+            RANGE_OK=1
+        fi
+
+        if [ "$RANGE_OK" -eq 1 ] && git -C "$TARGET_REPO_ROOT" diff --name-only "$range" -- | grep -Fxq "$TODAY_MEMORY_PATH"; then
+            MEMORY_UPDATED_IN_PUSH=1
+            break
+        fi
+
+        # Minimal fallback: check files touched by the local tip commit itself.
+        if git -C "$TARGET_REPO_ROOT" diff-tree --no-commit-id --name-only -r "$local_sha" \
+            | grep -Fxq "$TODAY_MEMORY_PATH"; then
+            MEMORY_UPDATED_IN_PUSH=1
+            break
+        fi
+
+        # Fallback for missing remote commit object in local clone:
+        # inspect files touched by commits that are not yet in any remote.
+        if git -C "$TARGET_REPO_ROOT" rev-list "$local_sha" --not --remotes 2>/dev/null \
+            | xargs -r git -C "$TARGET_REPO_ROOT" diff-tree --no-commit-id --name-only -r \
+            | grep -Fxq "$TODAY_MEMORY_PATH"; then
+            MEMORY_UPDATED_IN_PUSH=1
+            break
+        fi
+    done <<< "$PUSH_UPDATES"
+fi
+
+if [ "$MEMORY_UPDATED_IN_PUSH" -ne 1 ]; then
+    echo ""
+    echo "[governance] blocked: push does not include $TODAY_MEMORY_PATH in outgoing commits"
+    echo "  add a post-push memory entry first, then commit and push"
+    echo ""
+    exit 1
+fi
+
+# Fail-closed structured memory freshness gate.
+if [ -f "$MEMORY_FRESHNESS_GUARD" ] && [ "${#PYTHON_CMD[@]}" -gt 0 ]; then
+    MEMORY_FRESHNESS_MAX_DAYS="${AI_GOVERNANCE_MEMORY_MAX_AGE_DAYS:-30}"
+    if ! MEMORY_FRESHNESS_OUTPUT=$("${PYTHON_CMD[@]}" "$MEMORY_FRESHNESS_GUARD" --project-root "$TARGET_REPO_ROOT" --max-age-days "$MEMORY_FRESHNESS_MAX_DAYS" --format human 2>&1); then
+        echo ""
+        echo "$MEMORY_FRESHNESS_OUTPUT"
+        echo "[governance] blocked: structured memory freshness check failed"
+        echo "  update memory/01_active_task.md and memory/03_knowledge_base.md (or aliases) and push again"
+        echo ""
+        exit 1
+    fi
+fi
+
+if [ -f "$RUNTIME_SCRIPT" ]; then
+    echo "[governance] running runtime-governance enforcement before push"
+    if ! (cd "$FRAMEWORK_ROOT" && bash "$RUNTIME_SCRIPT" --mode smoke); then
+        echo ""
+        echo "[governance] runtime-governance enforcement failed"
+        echo "  fix the runtime governance failures before push"
+        echo "  bypass once: git push --no-verify"
+        echo ""
+        exit 1
+    fi
+fi
+
+if [ -f "$DAILY_MEMORY_GUARD" ] && [ "${#PYTHON_CMD[@]}" -gt 0 ]; then
+    DAILY_MEMORY_WARNING=$("${PYTHON_CMD[@]}" "$DAILY_MEMORY_GUARD" --project-root "$TARGET_REPO_ROOT" --format human 2>/dev/null || true)
+    if [ -n "$DAILY_MEMORY_WARNING" ]; then
+        echo "$DAILY_MEMORY_WARNING"
+    fi
+fi
+
+if [ -f "$VERSION_BUMP_GUARD" ] && [ "${#PYTHON_CMD[@]}" -gt 0 ]; then
+    echo "[governance] version bump recommendation (advisory)"
+    (
+        cd "$TARGET_REPO_ROOT"
+        "${PYTHON_CMD[@]}" "$VERSION_BUMP_GUARD" --base-ref origin/main --head-ref HEAD --format human
+    ) || (
+        cd "$TARGET_REPO_ROOT"
+        "${PYTHON_CMD[@]}" "$VERSION_BUMP_GUARD" --base-ref HEAD~1 --head-ref HEAD --format human
+    ) || true
+fi
+
+exit 0

@@ -26,6 +26,11 @@ from governance_tools.public_api_diff_checker import check_public_api_diff
 from governance_tools.refactor_evidence_validator import validate_refactor_evidence
 from governance_tools.rule_pack_loader import available_rule_packs, describe_rule_selection, parse_rule_list
 from governance_tools.runtime_phase_policy import build_phase_classification
+from governance_tools.runtime_reliability_observation import (
+    INCIDENT_LOG,
+    safe_append_observation_event,
+)
+from governance_tools.semantic_observation import observe_semantic_failures
 from memory_pipeline.session_snapshot import create_session_snapshot
 from runtime_hooks.core.human_summary import build_summary_line, format_contract_summary_label
 
@@ -58,6 +63,57 @@ ADVISORY_SIGNAL_METADATA = {
         "usage": "advisory only; do not treat as a gate or blocker",
     }
 }
+
+PROTECTED_REPORT_PROVENANCE_FIELDS = {
+    "token_source_summary",
+    "provenance_warning",
+}
+
+PROTECTED_NON_AUTHORITATIVE_FIELDS = {
+    "token_count",
+    "token_observability_level",
+    "token_source_summary",
+    "provenance_warning",
+    "decision_safety",
+}
+
+MACHINE_FACING_PATHS = {
+    "analysis",
+    "decision",
+    "gate",
+    "machine",
+    "ranking",
+    "scoring",
+}
+
+FORBIDDEN_CONSUMPTION_USES = {
+    "gating",
+    "hard_gating",
+    "soft_gating",
+    "ranking",
+    "scoring",
+    "prioritization",
+    "automatic_review_routing",
+    "review_routing",
+}
+
+PROMOTION_REQUIRED_FIELDS = (
+    "reviewer_confirmed",
+    "authority_ref",
+    "evidence_ref",
+    "promoted_at",
+    "promotion_reason",
+)
+
+
+def _is_protected_non_authoritative_field(field_name: str) -> bool:
+    normalized = str(field_name or "").strip()
+    if not normalized:
+        return False
+    for protected in PROTECTED_NON_AUTHORITATIVE_FIELDS:
+        if normalized == protected or normalized.startswith(f"{protected}."):
+            return True
+    return False
 
 
 def _build_post_task_phase_classification(
@@ -359,6 +415,204 @@ def _classify_missing_required_evidence(
     return violations
 
 
+def _build_provenance_boundary_audit(checks: dict | None) -> dict:
+    audit = {
+        "status": "no_observation",
+        "advisory_only": True,
+        "observed_surface": "post_task_check",
+        "suspected_consumer": None,
+        "protected_field": None,
+        "protected_namespace": "report",
+        "basis": "report provenance consumption observation",
+        "usage_note": "No machine-facing consumption of protected report provenance fields was observed.",
+    }
+    if not checks:
+        return audit
+
+    observations = checks.get("report_provenance_consumption") or []
+    if not isinstance(observations, list):
+        return audit
+
+    for item in observations:
+        if not isinstance(item, dict):
+            continue
+        consumer_path = str(item.get("consumer_path", "")).strip().lower()
+        if consumer_path not in MACHINE_FACING_PATHS:
+            continue
+
+        fields = item.get("fields") or []
+        if isinstance(fields, str):
+            fields = [fields]
+        protected = [str(field).strip() for field in fields if _is_protected_non_authoritative_field(str(field).strip())]
+        if not protected:
+            continue
+
+        audit.update(
+            {
+                "status": "candidate_violation",
+                "suspected_consumer": str(item.get("consumer_name", "")).strip() or None,
+                "protected_field": protected[0],
+                "violation_type": "non_decisional_signal_used_in_decision",
+                "usage_note": (
+                    "Candidate violation: machine-facing logic consumed a protected non-authoritative report field. "
+                    "Advisory only; must not modify gate behavior."
+                ),
+            }
+        )
+        return audit
+
+    return audit
+
+
+def _build_candidate_violation_promotion_contract(
+    provenance_boundary_audit: dict,
+    checks: dict | None,
+) -> dict:
+    contract = {
+        "contract_version": "v0.1",
+        "notice": "This contract does not authorize automated escalation.",
+        "candidate_violation_status": str(provenance_boundary_audit.get("status", "no_observation")),
+        "advisory_only": True,
+        "auto_block_allowed": False,
+        "auto_promotion_allowed": False,
+        "promotion_decision": "not_applicable",
+        "promotion_eligible": False,
+        "promoted_policy_violation": None,
+        "missing_requirements": [],
+    }
+
+    if contract["candidate_violation_status"] != "candidate_violation":
+        return contract
+
+    contract["promotion_decision"] = "pending_authority_path"
+    payload = {}
+    if checks and isinstance(checks.get("candidate_violation_promotion"), dict):
+        payload = checks.get("candidate_violation_promotion") or {}
+
+    reviewer_confirmed = bool(payload.get("reviewer_confirmed"))
+    authority_ref = str(payload.get("authority_ref", "") or "").strip()
+    evidence_ref = str(payload.get("evidence_ref", "") or "").strip()
+    promoted_at = str(payload.get("promoted_at", "") or "").strip()
+    promotion_reason = str(payload.get("promotion_reason", "") or "").strip()
+    confidence = payload.get("detector_confidence")
+
+    missing = []
+    if not reviewer_confirmed:
+        missing.append("reviewer_confirmed")
+    if not authority_ref:
+        missing.append("authority_ref")
+    if not evidence_ref:
+        missing.append("evidence_ref")
+    if not promoted_at:
+        missing.append("promoted_at")
+    if not promotion_reason:
+        missing.append("promotion_reason")
+
+    contract["missing_requirements"] = missing
+    contract["promotion_inputs"] = {
+        "reviewer_confirmed": reviewer_confirmed,
+        "authority_ref": authority_ref or None,
+        "evidence_ref": evidence_ref or None,
+        "promoted_at": promoted_at or None,
+        "promotion_reason": promotion_reason or None,
+        "detector_confidence": confidence,
+    }
+    contract["promotion_eligible"] = len(missing) == 0
+
+    if contract["promotion_eligible"]:
+        contract["promotion_decision"] = "promoted_by_authority_path"
+        contract["promoted_policy_violation"] = {
+            "violation_type": "non_decisional_signal_used_in_decision",
+            "detected_by": "candidate-violation promotion contract",
+            "authority_ref": authority_ref,
+            "evidence_ref": evidence_ref,
+            "promoted_at": promoted_at,
+            "promotion_reason": promotion_reason,
+        }
+    else:
+        contract["promotion_decision"] = "cannot_promote_missing_requirements"
+
+    return contract
+
+
+def _build_candidate_violation_consumption_contract(
+    *,
+    promotion_contract: dict,
+    checks: dict | None,
+) -> dict:
+    contract = {
+        "contract_version": "v0.1",
+        "notice": "This contract does not authorize automated escalation.",
+        "allowed_uses": ["human_review", "diagnostics", "investigation"],
+        "forbidden_uses": sorted(FORBIDDEN_CONSUMPTION_USES),
+        "enforcement_readiness": False,
+        "enforcement_readiness_note": (
+            "Presence of promoted_policy_violation does not imply enforcement readiness."
+        ),
+        "consumption_violation": False,
+        "violation_type": None,
+        "field": None,
+        "consumer": None,
+    }
+
+    usage = {}
+    if checks and isinstance(checks.get("candidate_violation_consumption"), dict):
+        usage = checks.get("candidate_violation_consumption") or {}
+    use_type = str(usage.get("use_type", "") or "").strip().lower()
+    field = str(usage.get("field", "") or "").strip() or None
+    consumer = str(usage.get("consumer", "") or "").strip() or None
+
+    contract["observed_use_type"] = use_type or None
+    contract["field"] = field
+    contract["consumer"] = consumer
+
+    if use_type in FORBIDDEN_CONSUMPTION_USES:
+        contract["consumption_violation"] = True
+        contract["violation_type"] = f"used_in_{use_type}"
+
+    return contract
+
+
+def _build_consumption_pattern_visibility(checks: dict | None) -> dict:
+    by_type: dict[str, int] = {}
+    by_field: dict[str, int] = {}
+    by_consumer: dict[str, int] = {}
+    total = 0
+
+    records = []
+    if checks and isinstance(checks.get("candidate_violation_consumption_events"), list):
+        records = checks.get("candidate_violation_consumption_events") or []
+    elif checks and isinstance(checks.get("candidate_violation_consumption"), dict):
+        records = [checks.get("candidate_violation_consumption") or {}]
+
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        use_type = str(item.get("use_type", "") or "").strip().lower()
+        field = str(item.get("field", "") or "").strip() or "unknown"
+        consumer = str(item.get("consumer", "") or "").strip() or "unknown"
+
+        if use_type not in FORBIDDEN_CONSUMPTION_USES:
+            continue
+
+        total += 1
+        key = f"used_in_{use_type}"
+        by_type[key] = by_type.get(key, 0) + 1
+        by_field[field] = by_field.get(field, 0) + 1
+        by_consumer[consumer] = by_consumer.get(consumer, 0) + 1
+
+    return {
+        "contract_version": "v0.1",
+        "total_violations": total,
+        "by_type": by_type,
+        "by_field": by_field,
+        "by_consumer": by_consumer,
+        "high_frequency_misuse_triggers_enforcement": False,
+        "visibility_only": True,
+        "notice": "High frequency misuse does NOT trigger enforcement. Visibility increase only; no blocking, routing, scoring, or automated action.",
+    }
+
+
 def _slim_domain_contract(dc: dict | None) -> dict | None:
     """Return domain_contract with document content elided for the return payload.
 
@@ -436,6 +690,7 @@ def run_post_task_check(
     project_root: Path | None = None,
     evidence_paths: list[Path] | None = None,
 ) -> dict:
+    observed_project_root = (project_root.resolve() if project_root else Path.cwd().resolve())
     contract_resolution = resolve_contract(
         contract_file,
         project_root=project_root,
@@ -546,6 +801,17 @@ def run_post_task_check(
             hard_stop_rules=domain_hard_stop_rules,
         )
     )
+    provenance_boundary_audit = _build_provenance_boundary_audit(effective_checks)
+    candidate_violation_promotion = _build_candidate_violation_promotion_contract(
+        provenance_boundary_audit,
+        effective_checks,
+    )
+    candidate_violation_consumption = _build_candidate_violation_consumption_contract(
+        promotion_contract=candidate_violation_promotion,
+        checks=effective_checks,
+    )
+    consumption_pattern_visibility = _build_consumption_pattern_visibility(effective_checks)
+    semantic_observation = observe_semantic_failures(effective_checks)
     for violation in evidence_violations:
         errors.append(f"runtime-evidence: {violation['message']}")
     for violation in policy_violations:
@@ -564,7 +830,7 @@ def run_post_task_check(
                 oversight=oversight,
             )
 
-    return {
+    result = {
         "ok": validation.contract_found and validation.compliant and len(errors) == 0,
         "contract_found": validation.contract_found,
         "compliant": validation.compliant,
@@ -588,6 +854,11 @@ def run_post_task_check(
         "driver_evidence": driver_evidence,
         "evidence_violations": evidence_violations,
         "policy_violations": policy_violations,
+        "provenance_boundary_audit": provenance_boundary_audit,
+        "candidate_violation_promotion": candidate_violation_promotion,
+        "candidate_violation_consumption": candidate_violation_consumption,
+        "consumption_pattern_visibility": consumption_pattern_visibility,
+        "semantic_observation": semantic_observation,
         "phase_classification": _build_post_task_phase_classification(
             evidence_violations=evidence_violations,
             assumption_advisories=assumption_advisories,
@@ -599,6 +870,23 @@ def run_post_task_check(
         "errors": errors,
         "warnings": warnings,
     }
+    safe_append_observation_event(
+        observed_project_root,
+        INCIDENT_LOG,
+        "post_task_incident_observation",
+        {
+            "source": "runtime_hooks.core.post_task_check",
+            "ok": result["ok"],
+            "error_count": len(errors),
+            "warning_count": len(warnings),
+            "risk": risk,
+            "oversight": oversight,
+            "policy_violation_count": len(result.get("policy_violations") or []),
+            "evidence_violation_count": len(result.get("evidence_violations") or []),
+            "semantic_observation_count": len((semantic_observation or {}).get("observations") or []),
+        },
+    )
+    return result
 
 
 def _render_advisory_violation_line(violation: dict) -> str | None:
@@ -684,6 +972,50 @@ def format_human_result(result: dict) -> str:
                 lines.append(advisory_line)
     if result.get("policy_violations"):
         lines.append(f"policy_violation_count={len(result['policy_violations'])}")
+    provenance_boundary_audit = result.get("provenance_boundary_audit") or {}
+    if provenance_boundary_audit.get("status") == "candidate_violation":
+        lines.append(
+            "provenance_boundary_audit="
+            f"{provenance_boundary_audit['status']} "
+            f"field={provenance_boundary_audit.get('protected_field')} "
+            f"consumer={provenance_boundary_audit.get('suspected_consumer') or 'unknown'} "
+            f"advisory_only={provenance_boundary_audit.get('advisory_only')}"
+        )
+    promotion = result.get("candidate_violation_promotion") or {}
+    if promotion:
+        lines.append(
+            "candidate_violation_promotion="
+            f"{promotion.get('promotion_decision')} "
+            f"eligible={promotion.get('promotion_eligible')} "
+            f"auto_block_allowed={promotion.get('auto_block_allowed')}"
+        )
+    consumption = result.get("candidate_violation_consumption") or {}
+    if consumption:
+        lines.append(
+            "candidate_violation_consumption="
+            f"violation={consumption.get('consumption_violation')} "
+            f"type={consumption.get('violation_type') or 'none'} "
+            f"use={consumption.get('observed_use_type') or 'none'}"
+        )
+    visibility = result.get("consumption_pattern_visibility") or {}
+    if visibility:
+        lines.append(
+            "consumption_pattern_visibility="
+            f"total={visibility.get('total_violations', 0)} "
+            f"visibility_only={visibility.get('visibility_only')} "
+            f"enforcement={visibility.get('high_frequency_misuse_triggers_enforcement')}"
+        )
+    semantic_observation = result.get("semantic_observation") or {}
+    if semantic_observation.get("observations"):
+        lines.append(f"semantic_observation_count={len(semantic_observation['observations'])}")
+        for hotspot in semantic_observation.get("hotspots", []):
+            lines.append(
+                "semantic_hotspot="
+                f"{hotspot.get('hotspot_id')} "
+                f"{hotspot.get('failure_class')} "
+                f"risk={hotspot.get('risk_rank')} "
+                f"invariant={hotspot.get('invariant_id') or 'none'}"
+            )
     if result.get("domain_validator_results"):
         lines.append(f"domain_validator_count={len(result['domain_validator_results'])}")
     if result.get("domain_hard_stop_rules"):

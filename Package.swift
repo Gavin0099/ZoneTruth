@@ -12,7 +12,7 @@ let package = Package(
             name: "ZoneTruthCore",
             targets: ["ZoneTruthCore"]
         ),
-        .executable(
+        .library(
             name: "ZoneTruthApp",
             targets: ["ZoneTruthApp"]
         ),
@@ -21,7 +21,7 @@ let package = Package(
         .target(
             name: "ZoneTruthCore"
         ),
-        .executableTarget(
+        .target(
             name: "ZoneTruthApp",
             dependencies: ["ZoneTruthCore"],
             exclude: ["Info.plist"]

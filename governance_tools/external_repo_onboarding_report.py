@@ -78,6 +78,7 @@ def build_onboarding_report(
             "session_start_ok": smoke.session_start_ok,
             "post_task_ok": smoke.post_task_ok,
             "post_task_cases": smoke.post_task_cases,
+            "token_summary": smoke.token_summary,
             "warnings": smoke.warnings,
             "errors": smoke.errors,
         },
@@ -108,6 +109,16 @@ def format_human(report: ExternalRepoOnboardingReport) -> str:
         f"readiness_ready   = {report.readiness.get('ready')}",
         f"smoke_ok          = {report.smoke.get('ok')}",
         f"project_facts      = {_project_facts_summary(report.readiness.get('project_facts'))}",
+        "token_summary      = "
+        + ",".join(
+            [
+                f"prompt={((report.smoke.get('token_summary') or {}).get('prompt_tokens'))}",
+                f"completion={((report.smoke.get('token_summary') or {}).get('completion_tokens'))}",
+                f"total={((report.smoke.get('token_summary') or {}).get('total_tokens'))}",
+                f"source={((report.smoke.get('token_summary') or {}).get('token_source_summary'))}",
+                f"observability={((report.smoke.get('token_summary') or {}).get('token_observability_level'))}",
+            ]
+        ),
         "",
         "[readiness]",
     ]

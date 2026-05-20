@@ -1,0 +1,50 @@
+summary=ok=False | upstream_ok=False | trust=False | release=False | lint=clean | identity=non-clean | release_version=1.0.0 | contract=none
+[reviewer_handoff_summary]
+project_root=/Users/gavin_wu/Desktop/ZoneTruth
+plan_path=PLAN.md
+release_version=1.0.0
+contract_path=None
+strict_runtime=False
+external_contract_repo_count=0
+structural_promotion_allowed=False
+structural_failure_class=authority_unqualified
+structural_blocked_reasons=missing_structural_promotions,missing_required_promotion_markers
+structural_authority_rate=None
+[trust_signal]
+ok=False
+quickstart_ok=True
+examples_ok=False
+release_ok=False
+auditor_ok=False
+[release_surface]
+ok=False
+readiness_ok=False
+package_ok=False
+bundle_available=False
+publication_available=False
+bundle_source=unavailable
+publication_source=unavailable
+[reviewer_lint]
+status=clean
+violation_count=0
+highest_severity=none
+[reviewer_lint_policy]
+fail_on_non_clean=True
+allow_non_clean=True
+override_active=False
+override_source=None
+override_effect=none
+override_reason_code=manual_audit_required
+override_reason_note=None
+override_decision_reason=clean_no_override_needed
+allow_request_valid=True
+allow_request_error=None
+override_blocked_by_non_overridable=False
+non_overridable_claim_types=
+handoff_clean_identity=False
+bundle_manifest_file=/Users/gavin_wu/Desktop/ZoneTruth/docs/releases/generated/1.0.0/MANIFEST.json
+publication_manifest_file=/Users/gavin_wu/Desktop/ZoneTruth/docs/releases/generated/PUBLICATION_MANIFEST.json
+[commands]
+trust_signal_overview=python governance_tools/trust_signal_overview.py --project-root . --plan PLAN.md --release-version 1.0.0 --format human
+release_surface_overview=python governance_tools/release_surface_overview.py --version 1.0.0 --format human
+phase_gates=bash scripts/verify_phase_gates.sh

@@ -10,6 +10,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -34,8 +35,38 @@ class ExternalRepoSmokeResult:
     pre_task_ok: bool = False
     post_task_ok: bool | None = None
     post_task_cases: list[dict] = field(default_factory=list)
+    token_summary: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+
+
+def _default_token_summary() -> dict[str, Any]:
+    return {
+        "prompt_tokens": None,
+        "completion_tokens": None,
+        "total_tokens": None,
+        "token_source_summary": "unknown",
+        "token_observability_level": "none",
+        "provenance_warning": "not_provided_by_smoke",
+        "decision_usage_allowed": False,
+        "analysis_safe_for_decision": False,
+    }
+
+
+def _extract_token_summary_from_checks(checks: dict | None) -> dict[str, Any]:
+    token_summary = _default_token_summary()
+    if not isinstance(checks, dict):
+        return token_summary
+    token_count = checks.get("token_count") if isinstance(checks.get("token_count"), dict) else {}
+    token_summary["prompt_tokens"] = token_count.get("prompt_tokens")
+    token_summary["completion_tokens"] = token_count.get("completion_tokens")
+    token_summary["total_tokens"] = token_count.get("total_tokens")
+    token_summary["token_source_summary"] = checks.get("token_source_summary", "unknown")
+    token_summary["token_observability_level"] = checks.get("token_observability_level", "none")
+    token_summary["provenance_warning"] = checks.get("provenance_warning", "provenance_unverified")
+    token_summary["decision_usage_allowed"] = False
+    token_summary["analysis_safe_for_decision"] = False
+    return token_summary
 
 
 def infer_smoke_rules(contract: dict | None) -> list[str]:
@@ -105,6 +136,7 @@ def run_external_repo_smoke(
     pre_task_ok = False
     post_task_ok: bool | None = None
     post_task_cases: list[dict] = []
+    token_summary = _default_token_summary()
     if not errors:
         pre_task = run_pre_task_check(
             project_root=repo_root,
@@ -155,12 +187,14 @@ def run_external_repo_smoke(
                     "checks_file": str(checks_file),
                     "ok": result["ok"],
                     "domain_validator_count": len(result.get("domain_validator_results") or []),
+                    "token_summary": _extract_token_summary_from_checks(result.get("checks")),
                     "warnings": result.get("warnings") or [],
                     "errors": result.get("errors") or [],
                 }
                 post_task_cases.append(case)
                 if case["ok"]:
                     post_task_ok = True
+                    token_summary = case["token_summary"]
                     break
             if post_task_ok is False:
                 errors.append("No compliant post-task smoke fixture passed.")
@@ -178,6 +212,7 @@ def run_external_repo_smoke(
         pre_task_ok=pre_task_ok,
         post_task_ok=post_task_ok,
         post_task_cases=post_task_cases,
+        token_summary=token_summary,
         warnings=deduped_warnings,
         errors=deduped_errors,
     )
@@ -192,6 +227,16 @@ def format_human(result: ExternalRepoSmokeResult) -> str:
             f"pre_task_ok={result.pre_task_ok}",
             f"session_start_ok={result.session_start_ok}",
             f"post_task_ok={result.post_task_ok}",
+        ),
+        "token_summary="
+        + ",".join(
+            [
+                f"prompt={result.token_summary.get('prompt_tokens')}",
+                f"completion={result.token_summary.get('completion_tokens')}",
+                f"total={result.token_summary.get('total_tokens')}",
+                f"source={result.token_summary.get('token_source_summary')}",
+                f"observability={result.token_summary.get('token_observability_level')}",
+            ]
         ),
         f"repo_root={result.repo_root}",
         f"plan_path={result.plan_path}",
@@ -236,6 +281,7 @@ def format_json(result: ExternalRepoSmokeResult) -> str:
             "session_start_ok": result.session_start_ok,
             "post_task_ok": result.post_task_ok,
             "post_task_cases": result.post_task_cases,
+            "token_summary": result.token_summary,
             "warnings": result.warnings,
             "errors": result.errors,
         },
