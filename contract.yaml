@@ -2,7 +2,8 @@ name: zonetruth-contract
 plugin_version: "1.0.0"
 framework_interface_version: "1"
 framework_compatible: ">=1.0.0,<2.0.0"
-domain: zonetruth
+domain: zonetruth-ios
+risk_tier: medium
 documents:
   - AGENTS.base.md
   - PLAN.md
