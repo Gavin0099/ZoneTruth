@@ -715,6 +715,135 @@ final class ZoneTruthAppTests: XCTestCase {
         )
     }
 
+    func testDualRunComparatorBuildsReportForAllWorkouts() {
+        let workouts = [
+            SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout,
+            SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout
+        ]
+        let report = DualRunComparator.buildReport(
+            workouts: workouts,
+            policy: .default,
+            mode: .dualRun
+        )
+
+        XCTAssertEqual(report.migrationMode, .dualRun)
+        XCTAssertEqual(report.totalWorkouts, workouts.count)
+        XCTAssertEqual(report.diffs.count, workouts.count)
+        XCTAssertFalse(report.reviewStatus == .invalidReport)
+    }
+
+    func testSettingsManagerPersistsMigrationMode() {
+        let suiteName = "test.migration.mode.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        XCTAssertEqual(manager.migrationMode, .observeOnly)
+
+        manager.updateMigrationMode(.dualRun)
+        let reloaded = SettingsManager(userDefaults: defaults)
+        XCTAssertEqual(reloaded.migrationMode, .dualRun)
+    }
+
+    func testSettingsManagerPolicyPrimaryIsGatedToObserveOnly() {
+        let suiteName = "test.migration.gate.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        manager.updateMigrationMode(.policyPrimary)
+
+        XCTAssertEqual(manager.migrationMode, .observeOnly)
+        XCTAssertEqual(defaults.string(forKey: "com.zonetruth.migrationMode"), MigrationMode.observeOnly.rawValue)
+    }
+
+    func testDualRunReportContainsRequiredMetadataAndNoUserFacingOverride() {
+        let workouts = [SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout]
+        let report = DualRunComparator.buildReport(
+            workouts: workouts,
+            policy: .default,
+            mode: .dualRun
+        )
+
+        XCTAssertEqual(report.migrationMode, .dualRun)
+        XCTAssertEqual(report.totalWorkouts, workouts.count)
+        XCTAssertEqual(report.schemaVersion, "1.0")
+        XCTAssertFalse(report.userFacingOverrideApplied)
+        XCTAssertNotEqual(report.reviewStatus, .invalidReport)
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try! encoder.encode(report)
+        let json = String(decoding: data, as: UTF8.self)
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("recommendationOverride"))
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("nextActionOverride"))
+    }
+
+    func testDualRunReviewClassificationThresholds() {
+        XCTAssertEqual(
+            DualRunComparator.classifyDiff(goalFitDelta: 3, tendencyChanged: false),
+            .minorDrift
+        )
+        XCTAssertEqual(
+            DualRunComparator.classifyDiff(goalFitDelta: 10, tendencyChanged: false),
+            .reviewRequired
+        )
+        XCTAssertEqual(
+            DualRunComparator.classifyDiff(goalFitDelta: 16, tendencyChanged: false),
+            .blockingDrift
+        )
+        XCTAssertEqual(
+            DualRunComparator.classifyDiff(goalFitDelta: 1, tendencyChanged: true),
+            .reviewRequired
+        )
+    }
+
+    func testDualRunReportStatusInvalidWhenUserFacingOverrideApplied() {
+        let diffs = [
+            EvaluationDiff(
+                workoutID: UUID(),
+                intent: TrainingIntent.zone2.rawValue,
+                legacyGoalFitScore: 70,
+                shadowGoalFitScore: 72,
+                goalFitDelta: 2,
+                legacyTendency: "A",
+                shadowTendency: "A",
+                tendencyChanged: false,
+                reviewStatus: .minorDrift
+            )
+        ]
+
+        let status = DualRunComparator.classifyReportStatus(
+            diffs: diffs,
+            userFacingOverrideApplied: true
+        )
+        XCTAssertEqual(status, .invalidReport)
+    }
+
+    @MainActor
+    func testDualRunDoesNotChangeUIEvaluationPath() {
+        let suiteName = "test.migration.ui.path.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = SettingsManager(userDefaults: defaults)
+        let viewModel = WorkoutListViewModel(
+            repository: MockWorkoutRepository(),
+            settingsManager: settings
+        )
+        guard let workout = viewModel.workouts.first else {
+            XCTFail("Expected at least one workout from MockWorkoutRepository")
+            return
+        }
+
+        settings.updateMigrationMode(.observeOnly)
+        let observeEval = viewModel.evaluationResult(for: workout)
+
+        settings.updateMigrationMode(.dualRun)
+        let dualRunEval = viewModel.evaluationResult(for: workout)
+
+        XCTAssertEqual(observeEval, dualRunEval, "UI evaluation result must remain legacy-path stable in dual_run mode.")
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)

@@ -5,9 +5,11 @@ import ZoneTruthCore
 final class SettingsManager: ObservableObject {
     @Published var policy: AnalysisPolicy
     @Published var pendingSuggestion: CalibrationSuggestion?
+    @Published var migrationMode: MigrationMode
 
     private let userDefaults: UserDefaults
     private let policyKey = "com.zonetruth.analysisPolicy"
+    private let migrationModeKey = "com.zonetruth.migrationMode"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -17,6 +19,13 @@ final class SettingsManager: ObservableObject {
             self.policy = decoded
         } else {
             self.policy = .default
+        }
+
+        if let raw = userDefaults.string(forKey: migrationModeKey),
+           let decoded = MigrationMode(rawValue: raw) {
+            self.migrationMode = decoded
+        } else {
+            self.migrationMode = .observeOnly
         }
     }
 
@@ -72,5 +81,12 @@ final class SettingsManager: ObservableObject {
         if let encoded = try? JSONEncoder().encode(policy) {
             userDefaults.set(encoded, forKey: policyKey)
         }
+    }
+
+    func updateMigrationMode(_ mode: MigrationMode) {
+        // P1j guard: policy_primary is reserved until migration gates are explicitly unlocked.
+        let effectiveMode: MigrationMode = (mode == .policyPrimary) ? .observeOnly : mode
+        migrationMode = effectiveMode
+        userDefaults.set(effectiveMode.rawValue, forKey: migrationModeKey)
     }
 }

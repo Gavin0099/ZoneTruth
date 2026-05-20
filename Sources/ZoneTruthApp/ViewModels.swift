@@ -65,6 +65,7 @@ final class WorkoutListViewModel: ObservableObject {
         apply(refreshed)
         isRefreshing = false
         triggerCalibrationCheck()
+        emitMigrationReportIfNeeded()
     }
 
     func requestHealthAccess() async {
@@ -119,6 +120,29 @@ final class WorkoutListViewModel: ObservableObject {
     private func triggerCalibrationCheck() {
         let analyses = workouts.map { ($0, analysisResult(for: $0)) }
         settingsManager.updateCalibrationSuggestion(analyses: analyses)
+    }
+
+    private func emitMigrationReportIfNeeded() {
+        guard settingsManager.migrationMode == .dualRun else { return }
+        let report = DualRunComparator.buildReport(
+            workouts: workouts.map { workout in
+                WorkoutInput(
+                    id: workout.id,
+                    workoutType: workout.workoutType,
+                    startDate: workout.startDate,
+                    endDate: workout.endDate,
+                    durationSeconds: workout.durationSeconds,
+                    heartRateSamples: workout.heartRateSamples,
+                    intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent
+                )
+            },
+            policy: settingsManager.policy,
+            mode: settingsManager.migrationMode
+        )
+        DualRunComparator.writeReport(
+            report,
+            projectRoot: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        )
     }
 
     var canRequestHealthAccess: Bool {

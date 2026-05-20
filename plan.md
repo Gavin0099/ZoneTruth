@@ -414,6 +414,34 @@ Migration Gate（需同時滿足）：
 - 形成可執行 migration checklist（可用於 PR gate / closeout gate）。
 - 在不破壞現有語意穩定性的前提下，允許有意圖的 policy 切換。
 
+14. P1j：Dual-run Admissibility Guard（進行中）
+
+定位：
+
+- `dual_run` 只允許作為觀察差異的 admissible path。
+- 不允許成為 product behavior authority。
+
+規則：
+
+1. `observe_only` 不產生 dual-run shadow artifact。
+2. `dual_run` 可產生 artifact，但 UI `evaluationResult` 仍使用 legacy path。
+3. `policy_primary` 需明確 gate，禁止 accidental enable。
+4. artifact 必須包含 `migrationMode`、`generatedAt`、`totalWorkouts`。
+5. artifact 不得帶入 user-facing override（例如 recommendation override）。
+
+Dual-run 差異解讀契約（P1k）：
+
+- `goalFitDelta <= 5`：`minor_drift`
+- `goalFitDelta 6–15`：`review_required`
+- `goalFitDelta > 15`：`blocking_drift`
+- `tendencyChanged == true`：`review_required`
+- `userFacingOverrideApplied == true`：`invalid_report`
+
+Closeout Gate：
+
+- `blocking_drift` 或 `invalid_report` 時，closeout fail。
+- 不可自動宣稱 shadow 比 legacy 更正確，只能聲明差異已記錄與分級。
+
 
 Project name：**ZoneTruth**  
 副標可以用：**Train with intent. Verify with data.**

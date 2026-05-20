@@ -59,6 +59,15 @@
   - Updated memory append dedup to use `session_id` identity so each distinct run is recorded.
 - Added P1i migration planning artifact:
   - `docs/P1I_MIGRATION_GATE_CHECKLIST.md` as migration gate contract for intentional semantic changes.
+- Executable P1i migration gate path added:
+  - `MigrationMode` persistence + dual-run comparator/report emission.
+  - Shadow-vs-legacy diffs now stored as migration artifacts (non-authoritative path).
+- Completed P1j dual-run admissibility guard:
+  - `policy_primary` accidental enable blocked (gated to `observe_only`).
+  - UI evaluation output remains legacy in `dual_run`.
+- Completed P1k dual-run report review contract:
+  - Added per-diff/report `reviewStatus` classification.
+  - Closeout gate fails on `blocking_drift` or `invalid_report`.
 
 ## Next Steps
 
