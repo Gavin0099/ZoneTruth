@@ -414,7 +414,20 @@ Migration Gate（需同時滿足）：
 - 形成可執行 migration checklist（可用於 PR gate / closeout gate）。
 - 在不破壞現有語意穩定性的前提下，允許有意圖的 policy 切換。
 
-14. P1j：Dual-run Admissibility Guard（進行中）
+14. P1l：ObservationBridge + Shadow Evaluator Rewiring（完成）
+
+定位：
+
+- `ObservationPolicyShadowEvaluator` 原本手寫 inline scoring，與 `WorkoutEvaluationPolicyFactory` 邏輯重複且略有差異。
+- P1l 新增 `ObservationBridge`，統一橋接 `WorkoutObservationPrimitives` → `WorkoutObservation`，並讓 shadow path 走相同 policy factory。
+
+完成標準：
+- `ObservationBridge.observation(from:intent:)` 為唯一 primitives → observation 橋接路徑。
+- `ObservationPolicyShadowEvaluator` 移除 hand-coded scoring，改呼叫 `WorkoutEvaluationPolicyFactory`。
+- Shadow 與 legacy 在相同 Zone 2 穩定案例上 tendency 必須一致（guard test）。
+- 乾淨 Zone 2 案例的 dual-run diff 為 `minor_drift`。
+
+15. P1j：Dual-run Admissibility Guard（完成）
 
 定位：
 

@@ -68,6 +68,10 @@
 - Completed P1k dual-run report review contract:
   - Added per-diff/report `reviewStatus` classification.
   - Closeout gate fails on `blocking_drift` or `invalid_report`.
+- Completed P1l observation-to-policy bridge rewiring:
+  - Added `ObservationBridge` (primitives → `WorkoutObservation`, `TrainingIntent` → `PrimaryIntent`).
+  - Rewired `ObservationPolicyShadowEvaluator` to use `ObservationBridge` + `WorkoutEvaluationPolicyFactory`; removed hand-coded inline scoring.
+  - Added guard tests: tendency convergence, bridge validity, minor-drift assertion for clean Zone 2.
 
 ## Next Steps
 

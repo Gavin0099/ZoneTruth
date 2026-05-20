@@ -820,6 +820,53 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(status, .invalidReport)
     }
 
+    func testObservationShadowEvaluatorRoutesThroughPolicyFactory() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!.workout
+        let policy = AnalysisPolicy.default
+
+        let legacy = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: workout.intent,
+            legacy: WorkoutIntentAnalyzer.analyze(workout, policy: policy)
+        )
+        let shadow = ObservationPolicyShadowEvaluator.evaluate(workout: workout, policy: policy)
+
+        XCTAssertEqual(legacy.primaryIntent, shadow.primaryIntent)
+        XCTAssertEqual(
+            legacy.trainingTendency, shadow.trainingTendency,
+            "Shadow and legacy must agree on tendency: both route through the same policy factory."
+        )
+    }
+
+    func testObservationBridgeProducesValidWorkoutObservation() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "leaky_zone2_run" }!.workout
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: .default)
+        let observation = ObservationBridge.observation(from: primitives, intent: .zone2)
+
+        XCTAssertEqual(observation.primaryIntent, .zone2)
+        XCTAssertTrue((0...100).contains(observation.classificationConfidence))
+        XCTAssertTrue((0...100).contains(observation.evaluationConfidence))
+        XCTAssertEqual(observation.zoneDistribution, primitives.zoneDistribution)
+    }
+
+    func testDualRunDiffIsMinorForStableZone2WithRewiredShadow() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!.workout
+        let report = DualRunComparator.buildReport(
+            workouts: [workout],
+            policy: .default,
+            mode: .dualRun
+        )
+
+        XCTAssertEqual(report.diffs.count, 1)
+        XCTAssertEqual(report.diffs[0].reviewStatus, .minorDrift,
+            "Rewired shadow path must produce only minor drift vs legacy for a clean Zone 2 session.")
+    }
+
     @MainActor
     func testDualRunDoesNotChangeUIEvaluationPath() {
         let suiteName = "test.migration.ui.path.\(UUID().uuidString)"

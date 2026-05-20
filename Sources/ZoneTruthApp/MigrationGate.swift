@@ -41,73 +41,10 @@ enum ObservationPolicyShadowEvaluator {
         workout: WorkoutInput,
         policy: AnalysisPolicy
     ) -> WorkoutEvaluation {
-        switch workout.intent {
-        case .zone2:
-            let obs = Zone2ObservationAnalyzer.analyze(workout: workout, policy: policy)
-            let score: Int = {
-                let zone3 = obs.zoneDistribution.ratio(for: .zone3)
-                if obs.sampleQuality != .sufficient { return 35 }
-                if zone3 >= 0.20 { return 45 }
-                if zone3 >= 0.10 { return 58 }
-                return 82
-            }()
-            let tendency: String = {
-                let zone3 = obs.zoneDistribution.ratio(for: .zone3)
-                if zone3 >= 0.20 { return "偏混合有氧訓練" }
-                if zone3 >= 0.10 { return "偏 Zone 2 但強度略高" }
-                return "偏穩定有氧訓練"
-            }()
-            return makeEvaluation(intent: .zone2, tendency: tendency, score: score, sampleQuality: obs.sampleQuality)
-
-        case .vo2Interval:
-            let obs = VO2ObservationAnalyzer.analyze(workout: workout, policy: policy)
-            let score: Int = {
-                if obs.sampleQuality != .sufficient { return 40 }
-                if obs.highIntensityRatio > 0.10 { return 84 }
-                if obs.highIntensityRatio >= 0.05 { return 63 }
-                return 45
-            }()
-            let tendency: String = {
-                if obs.highIntensityRatio > 0.10 { return "偏高強度間歇訓練" }
-                if obs.highIntensityRatio >= 0.05 { return "偏中高強度有氧訓練" }
-                return "偏穩態有氧訓練"
-            }()
-            return makeEvaluation(intent: .vo2Max, tendency: tendency, score: score, sampleQuality: obs.sampleQuality)
-
-        case .strength:
-            let obs = StrengthObservationAnalyzer.analyze(workout: workout, policy: policy)
-            let score: Int = {
-                if obs.sampleQuality != .sufficient { return 40 }
-                if obs.highHrSustainedRatio > 0.50 { return 48 }
-                return 76
-            }()
-            let tendency = obs.highHrSustainedRatio > 0.50 ? "偏代謝循環訓練" : "偏傳統肌力訓練"
-            return makeEvaluation(intent: .strength, tendency: tendency, score: score, sampleQuality: obs.sampleQuality)
-
-        case .activityReview:
-            let obs = ActivityObservationAnalyzer.analyze(workout: workout, policy: policy)
-            return makeEvaluation(intent: .activity, tendency: "偏一般活動訓練", score: 72, sampleQuality: obs.sampleQuality)
-        }
-    }
-
-    private static func makeEvaluation(
-        intent: PrimaryIntent,
-        tendency: String,
-        score: Int,
-        sampleQuality: SampleQuality
-    ) -> WorkoutEvaluation {
-        let confidence = sampleQuality == .sufficient ? 75 : 55
-        return WorkoutEvaluation(
-            primaryIntent: intent,
-            trainingTendency: tendency,
-            goalFitScore: score,
-            classificationConfidence: confidence,
-            evaluationConfidence: confidence,
-            keyFindings: [],
-            nextAction: "",
-            secondarySignals: [],
-            legacyPassFail: score >= 70
-        )
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy)
+        let intent = ObservationBridge.intent(from: workout.intent)
+        let observation = ObservationBridge.observation(from: primitives, intent: intent)
+        return WorkoutEvaluationPolicyFactory.make(for: intent).evaluate(observation)
     }
 }
 

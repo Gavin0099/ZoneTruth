@@ -52,12 +52,42 @@ enum WorkoutEvaluationPolicyFactory {
     }
 }
 
+enum ObservationBridge {
+    static func intent(from training: TrainingIntent) -> PrimaryIntent {
+        switch training {
+        case .zone2: return .zone2
+        case .vo2Interval: return .vo2Max
+        case .strength: return .strength
+        case .activityReview: return .activity
+        }
+    }
+
+    static func observation(
+        from primitives: WorkoutObservationPrimitives,
+        intent: PrimaryIntent
+    ) -> WorkoutObservation {
+        let classificationConfidence = primitives.sampleQuality == .sufficient ? 80 : 55
+        var evaluationConfidence = primitives.sampleQuality == .sufficient ? 75 : 50
+        if primitives.driftRatio == nil { evaluationConfidence -= 10 }
+        if primitives.stabilityStandardDeviation == nil { evaluationConfidence -= 10 }
+        evaluationConfidence = max(evaluationConfidence, 30)
+        return WorkoutObservation(
+            primaryIntent: intent,
+            classificationConfidence: classificationConfidence,
+            evaluationConfidence: evaluationConfidence,
+            zoneDistribution: primitives.zoneDistribution,
+            stabilityStandardDeviation: primitives.stabilityStandardDeviation,
+            driftRatio: primitives.driftRatio
+        )
+    }
+}
+
 enum WorkoutEvaluationAdapter {
     static func mapLegacyAnalysisToEvaluation(
         primaryIntentBaseline: TrainingIntent,
         legacy: AnalysisResult
     ) -> WorkoutEvaluation {
-        let primaryIntent = mapPrimaryIntent(primaryIntentBaseline)
+        let primaryIntent = ObservationBridge.intent(from: primaryIntentBaseline)
         let classificationConfidence = boundedPercent(Int((legacy.confidence * 100).rounded()))
         var evaluationConfidence = classificationConfidence
         if legacy.stabilityStandardDeviation == nil { evaluationConfidence -= 10 }
@@ -72,15 +102,6 @@ enum WorkoutEvaluationAdapter {
             driftRatio: legacy.driftRatio
         )
         return WorkoutEvaluationPolicyFactory.make(for: primaryIntent).evaluate(observation)
-    }
-
-    private static func mapPrimaryIntent(_ intent: TrainingIntent) -> PrimaryIntent {
-        switch intent {
-        case .zone2: return .zone2
-        case .vo2Interval: return .vo2Max
-        case .strength: return .strength
-        case .activityReview: return .activity
-        }
     }
 
     private static func boundedPercent(_ value: Int) -> Int {
