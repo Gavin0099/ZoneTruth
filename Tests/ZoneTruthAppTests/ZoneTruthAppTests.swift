@@ -820,6 +820,95 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(status, .invalidReport)
     }
 
+    // MARK: P1n – Migration Gate Full Condition Verification
+
+    @MainActor
+    func testMigrationGateFallbackChecksAllPass() {
+        let checks = MigrationGateChecker.runFallbackChecks()
+        let failed = checks.filter { $0.status == .fail }
+        XCTAssertTrue(
+            failed.isEmpty,
+            "Migration gate fallback checks must all pass: \(failed.map { "\($0.id): \($0.detail ?? "no detail")" })"
+        )
+    }
+
+    @MainActor
+    func testMigrationGateReportPolicyPrimaryNeverAdmissibleInV1() {
+        let snapshotChecks: [MigrationGateCheck] = [
+            .init(id: "primitive_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "observation_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "evaluation_snapshot_stable_or_annotated", status: .pass, detail: nil),
+        ]
+        let report = MigrationGateChecker.buildReport(
+            snapshotChecks: snapshotChecks,
+            fallbackChecks: MigrationGateChecker.runFallbackChecks()
+        )
+
+        XCTAssertFalse(report.policyPrimaryAdmissible,
+            "policy_primary_admissible must always be false in P1n-v1.")
+        XCTAssertEqual(report.gateVersion, "P1n-v1")
+    }
+
+    @MainActor
+    func testMigrationGateReportAdmissibleForDiscussionWhenAllCheckPass() {
+        let snapshotChecks: [MigrationGateCheck] = [
+            .init(id: "primitive_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "observation_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "evaluation_snapshot_stable_or_annotated", status: .pass, detail: nil),
+        ]
+        let report = MigrationGateChecker.buildReport(
+            snapshotChecks: snapshotChecks,
+            fallbackChecks: MigrationGateChecker.runFallbackChecks()
+        )
+
+        XCTAssertTrue(report.policyPrimaryAdmissibleForDiscussion,
+            "All checks passing → admissible for discussion.")
+        XCTAssertTrue(report.blockingReasons.isEmpty)
+    }
+
+    @MainActor
+    func testMigrationGateReportNotAdmissibleWhenAnySnapshotCheckFails() {
+        let snapshotChecks: [MigrationGateCheck] = [
+            .init(id: "primitive_snapshots_stable", status: .fail, detail: "snapshot mismatch"),
+            .init(id: "observation_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "evaluation_snapshot_stable_or_annotated", status: .pass, detail: nil),
+        ]
+        let report = MigrationGateChecker.buildReport(
+            snapshotChecks: snapshotChecks,
+            fallbackChecks: MigrationGateChecker.runFallbackChecks()
+        )
+
+        XCTAssertFalse(report.policyPrimaryAdmissibleForDiscussion)
+        XCTAssertTrue(report.blockingReasons.contains("primitive_snapshots_stable"))
+        XCTAssertFalse(report.policyPrimaryAdmissible)
+    }
+
+    @MainActor
+    func testMigrationGateReportContainsAllExpectedCheckIDs() {
+        let snapshotChecks: [MigrationGateCheck] = [
+            .init(id: "primitive_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "observation_snapshots_stable", status: .pass, detail: nil),
+            .init(id: "evaluation_snapshot_stable_or_annotated", status: .pass, detail: nil),
+        ]
+        let report = MigrationGateChecker.buildReport(
+            snapshotChecks: snapshotChecks,
+            fallbackChecks: MigrationGateChecker.runFallbackChecks()
+        )
+        let ids = Set(report.checks.map(\.id))
+        let expected: Set<String> = [
+            "primitive_snapshots_stable",
+            "observation_snapshots_stable",
+            "evaluation_snapshot_stable_or_annotated",
+            "shadow_policy_consumes_observation",
+            "policy_primary_disabled_by_default",
+            "policy_primary_requires_explicit_allow",
+            "dual_run_revertible_to_observe_only",
+            "observe_only_never_writes_dual_run_artifact",
+            "ui_path_forces_legacy_evaluation",
+        ]
+        XCTAssertEqual(ids, expected, "Report must contain all 9 migration gate check IDs.")
+    }
+
     // MARK: P1m – Semantic Change Annotation Gate
 
     func testAnnotationGatePassesWhenSnapshotUnchanged() {

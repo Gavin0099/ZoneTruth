@@ -414,7 +414,35 @@ Migration Gate（需同時滿足）：
 - 形成可執行 migration checklist（可用於 PR gate / closeout gate）。
 - 在不破壞現有語意穩定性的前提下，允許有意圖的 policy 切換。
 
-14. P1m：Semantic Change Annotation Gate（完成）
+14. P1n：Migration Gate Full Condition Verification（完成）
+
+定位：
+
+- 把「能不能討論 policy_primary」變成可執行 checklist，不靠人工印象。
+- 五個條件 + fallback path sub-checks，全部機器可驗。
+
+9 個 check ID：
+
+1. `primitive_snapshots_stable` — swift test PrimitiveBuilder
+2. `observation_snapshots_stable` — swift test Zone2/VO2/Strength/Activity Observation
+3. `evaluation_snapshot_stable_or_annotated` — swift test snapshot fixture 或有 SEM-*.json
+4. `shadow_policy_consumes_observation` — shadow/legacy tendency 一致（in-process）
+5. `policy_primary_disabled_by_default` — SettingsManager 預設 observeOnly
+6. `policy_primary_requires_explicit_allow` — updateMigrationMode(.policyPrimary) 被攔截
+7. `dual_run_revertible_to_observe_only` — dual_run → observe_only 可回退
+8. `observe_only_never_writes_dual_run_artifact` — structural guard in ViewModels
+9. `ui_path_forces_legacy_evaluation` — evaluationResult 永遠走 legacy
+
+輸出：`artifacts/migration/migration_gate_report.json`
+
+關鍵約定：
+
+- `policy_primary_admissible`: 永遠 `false`（v1 硬碼）
+- `policy_primary_admissible_for_discussion`: 全通過才 `true`
+
+腳本：`scripts/run_migration_gate.sh`
+
+15. P1m：Semantic Change Annotation Gate（完成）
 
 定位：
 

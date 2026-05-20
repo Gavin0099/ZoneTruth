@@ -68,6 +68,12 @@
 - Completed P1k dual-run report review contract:
   - Added per-diff/report `reviewStatus` classification.
   - Closeout gate fails on `blocking_drift` or `invalid_report`.
+- Completed P1n migration gate full condition verification:
+  - `MigrationGateReport.swift`: `MigrationGateCheck`, `MigrationGateReport`, `MigrationGateChecker` with all 9 checks.
+  - Checks 1–3 (snapshot stability) verified by shell; checks 4–5 (shadow policy + fallback path) verified in-process.
+  - `scripts/run_migration_gate.sh`: runs all 4 check groups via swift test, generates `artifacts/migration/migration_gate_report.json`.
+  - `policyPrimaryAdmissible` is always `false` in v1; only `policyPrimaryAdmissibleForDiscussion` can be true.
+  - 5 guard tests: fallback checks all-pass, policy_primary never admissible, discussion admissibility, snapshot fail blocks, check-ID coverage.
 - Completed P1m semantic change annotation gate:
   - Added `SemanticChangeAnnotation` struct + `AnnotationAdmissibility` enum + `AnnotationGate.validate()` in `SemanticAnnotation.swift`.
   - Admissibility rules: snapshot changed + no annotation → `requiresAnnotation`; `blocking_drift` without `intentional_semantic_change` → `blockedByAdmissibility`.
