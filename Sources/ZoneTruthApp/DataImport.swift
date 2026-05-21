@@ -32,8 +32,8 @@ struct AppEnvironment {
         return AppEnvironment(
             repository: CompositeWorkoutRepository(
                 repositories: [
-                    healthKitRepository,
                     stravaRepository,
+                    healthKitRepository,
                     importedRepository,
                     MockWorkoutRepository(),
                 ]
