@@ -111,11 +111,15 @@ struct WorkoutListView: View {
                         isRefreshing: viewModel.isRefreshing,
                         isRequestingAuthorization: viewModel.isRequestingAuthorization,
                         canRequestHealthAccess: viewModel.canRequestHealthAccess,
+                        canDisconnectStrava: viewModel.canDisconnectStrava,
                         onRequestHealthAccess: {
                             Task { await viewModel.requestHealthAccess() }
                         },
                         onConnectStrava: viewModel.canConnectStrava ? {
                             Task { await viewModel.connectStrava() }
+                        } : nil,
+                        onDisconnectStrava: viewModel.canDisconnectStrava ? {
+                            Task { await viewModel.disconnectStrava() }
                         } : nil
                     )
                     
@@ -197,8 +201,10 @@ struct WorkoutSourceBannerView: View {
     let isRefreshing: Bool
     let isRequestingAuthorization: Bool
     let canRequestHealthAccess: Bool
+    let canDisconnectStrava: Bool
     let onRequestHealthAccess: () -> Void
     var onConnectStrava: (() -> Void)? = nil
+    var onDisconnectStrava: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -262,6 +268,25 @@ struct WorkoutSourceBannerView: View {
                     }
                     .disabled(isRefreshing)
                 }
+
+                if canDisconnectStrava, let disconnectStrava = onDisconnectStrava {
+                    Button {
+                        disconnectStrava()
+                    } label: {
+                        HStack {
+                            Image(systemName: "xmark.circle")
+                            Text("中斷 Strava")
+                        }
+                        .font(.caption.weight(.bold))
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(PremiumColor.redOrange.opacity(0.15))
+                        .foregroundColor(PremiumColor.redOrange)
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(PremiumColor.redOrange.opacity(0.3), lineWidth: 1))
+                    }
+                    .disabled(isRefreshing)
+                }
             }
         }
         .padding(14)
@@ -297,10 +322,22 @@ struct WorkoutRowView: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(workout.workoutType.localizedName)
-                    .font(.system(.body, design: .rounded).bold())
-                    .foregroundStyle(.white)
-                
+                HStack(spacing: 6) {
+                    Text(workout.workoutType.localizedName)
+                        .font(.system(.body, design: .rounded).bold())
+                        .foregroundStyle(.white)
+
+                    if let badge = sourceBadge {
+                        Text(badge.label)
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(badge.color.opacity(0.2))
+                            .foregroundStyle(badge.color)
+                            .clipShape(Capsule())
+                    }
+                }
+
                 Text(workout.startDate.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -332,6 +369,15 @@ struct WorkoutRowView: View {
                 .stroke(PremiumColor.border, lineWidth: 1)
         )
         .padding(.vertical, 4)
+    }
+
+    private struct SourceBadge { let label: String; let color: Color }
+    private var sourceBadge: SourceBadge? {
+        switch workout.dataSource {
+        case "strava":   return SourceBadge(label: "S", color: Color(red: 252/255, green: 76/255, blue: 2/255))
+        case "healthkit": return SourceBadge(label: "HK", color: Color(red: 255/255, green: 60/255, blue: 120/255))
+        default: return nil
+        }
     }
 
     private var statusSymbol: String {

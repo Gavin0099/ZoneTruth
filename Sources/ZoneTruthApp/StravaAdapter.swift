@@ -208,7 +208,8 @@ struct StravaActivitySnapshot: Equatable, Sendable {
             startDate: startDate,
             endDate: endDate,
             heartRateSamples: heartRateSamples,
-            intent: defaultIntent
+            intent: defaultIntent,
+            dataSource: "strava"
         )
     }
 }
@@ -253,16 +254,13 @@ struct SystemStravaClient: StravaClient {
 
     func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot] {
         guard let session = sessionStore.loadSession() else {
-            print("[Strava] fetchRecentActivities: no session, throwing disconnected")
             throw StravaClientError.disconnected
         }
 
         let validSession = session.isExpired ? try await refreshed(from: session) : session
-        print("[Strava] fetchRecentActivities: fetching up to \(limit) activities")
         let summaries = try await fetchActivitySummaries(accessToken: validSession.accessToken, limit: limit)
-        print("[Strava] fetchRecentActivities: got \(summaries.count) summaries, fetching streams in parallel")
 
-        let snapshots = try await withThrowingTaskGroup(of: (Int, StravaActivitySnapshot).self) { group in
+        return try await withThrowingTaskGroup(of: (Int, StravaActivitySnapshot).self) { group in
             for (index, summary) in summaries.enumerated() {
                 group.addTask {
                     let heartRateSamples: [HeartRateSample]
@@ -284,8 +282,6 @@ struct SystemStravaClient: StravaClient {
             }
             return collected.sorted { $0.0 < $1.0 }.map(\.1)
         }
-        print("[Strava] fetchRecentActivities: done, \(snapshots.count) snapshots with heart rate")
-        return snapshots
     }
 
     private func fetchActivitySummaries(accessToken: String, limit: Int) async throws -> [StravaActivitySummary] {
@@ -294,13 +290,8 @@ struct SystemStravaClient: StravaClient {
         components.queryItems = [URLQueryItem(name: "per_page", value: String(limit))]
 
         let (data, response) = try await urlSession.data(for: authorized(components.url!, token: accessToken))
-        if let http = response as? HTTPURLResponse {
-            print("[Strava] fetchActivitySummaries: HTTP \(http.statusCode)")
-        }
         try validateHTTP(response)
-        let decoded = try JSONDecoder.zoneTruth.decode([StravaActivitySummary].self, from: data)
-        print("[Strava] fetchActivitySummaries: decoded \(decoded.count) items")
-        return decoded
+        return try JSONDecoder.zoneTruth.decode([StravaActivitySummary].self, from: data)
     }
 
     private func fetchHeartRateSamples(activityID: Int, startDate: Date, accessToken: String) async throws -> [HeartRateSample] {
@@ -370,6 +361,7 @@ struct SystemStravaClient: StravaClient {
 protocol StravaSessionStore {
     func loadSession() -> StravaSession?
     func saveSession(_ session: StravaSession)
+    func clearSession()
 }
 
 struct StravaAuthorizationParser {
@@ -453,35 +445,24 @@ struct FileStravaSessionStore: StravaSessionStore {
     }
 
     func loadSession() -> StravaSession? {
-        guard fileManager.fileExists(atPath: fileURL.path) else {
-            print("[Strava] loadSession: file not found at \(fileURL.path)")
-            return nil
-        }
-
+        guard fileManager.fileExists(atPath: fileURL.path) else { return nil }
         do {
             let data = try Data(contentsOf: fileURL)
             let sessionFile = try JSONDecoder.zoneTruth.decode(StravaSessionFile.self, from: data)
-            let s = sessionFile.session
-            print("[Strava] loadSession: ok, athleteID=\(s.athleteID as Any), expired=\(s.isExpired)")
-            return s
+            return sessionFile.session
         } catch {
-            print("[Strava] loadSession: decode error \(error)")
             return nil
         }
     }
 
     func saveSession(_ session: StravaSession) {
         let file = StravaSessionFile(session: session)
-        guard let data = try? JSONEncoder.zoneTruth.encode(file) else {
-            print("[Strava] saveSession: encode failed")
-            return
-        }
-        do {
-            try data.write(to: fileURL, options: .atomic)
-            print("[Strava] saveSession: wrote to \(fileURL.path)")
-        } catch {
-            print("[Strava] saveSession: write failed \(error)")
-        }
+        guard let data = try? JSONEncoder.zoneTruth.encode(file) else { return }
+        try? data.write(to: fileURL, options: .atomic)
+    }
+
+    func clearSession() {
+        try? fileManager.removeItem(at: fileURL)
     }
 }
 
@@ -618,6 +599,10 @@ final class StravaCallbackHandler {
         self.sessionStore = sessionStore
     }
 
+    func disconnect() {
+        sessionStore.clearSession()
+    }
+
     // Returns true if the URL was a recognized Strava callback that was handled.
     func handle(_ url: URL) async -> Bool {
         guard url.scheme == configuration.callbackScheme else { return false }
@@ -694,7 +679,8 @@ private struct StravaActivitySummary: Decodable {
             workoutType: domainWorkoutType(for: sportType),
             startDate: startDate,
             endDate: startDate.addingTimeInterval(TimeInterval(elapsedTime)),
-            heartRateSamples: heartRateSamples
+            heartRateSamples: heartRateSamples,
+            defaultIntent: defaultIntent(for: sportType)
         )
     }
 
@@ -712,6 +698,18 @@ private struct StravaActivitySummary: Decodable {
             return .strengthTraining
         default:
             return .other
+        }
+    }
+
+    private func defaultIntent(for sportType: String) -> TrainingIntent {
+        switch sportType {
+        case "Run", "TrailRun", "VirtualRun",
+             "Ride", "VirtualRide", "GravelRide", "Handcycle":
+            return .zone2
+        case "WeightTraining", "Crossfit", "Workout":
+            return .strength
+        default:
+            return .activityReview
         }
     }
 }

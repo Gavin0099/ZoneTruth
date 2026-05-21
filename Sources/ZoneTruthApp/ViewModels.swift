@@ -60,6 +60,10 @@ final class WorkoutListViewModel: ObservableObject {
         stravaAuthorizationURL != nil && currentSource != .strava && currentSource != .combined
     }
 
+    var canDisconnectStrava: Bool {
+        callbackHandler != nil && (currentSource == .strava || currentSource == .combined)
+    }
+
     func connectStrava() async {
         guard let url = stravaAuthorizationURL, let handler = callbackHandler else { return }
         let coordinator = StravaOAuthCoordinator()
@@ -79,6 +83,11 @@ final class WorkoutListViewModel: ObservableObject {
         } catch {
             // User cancelled — no refresh needed.
         }
+    }
+
+    func disconnectStrava() async {
+        callbackHandler?.disconnect()
+        await refreshWorkouts()
     }
 
     func selectWorkout(_ workout: WorkoutInput) {
@@ -115,7 +124,8 @@ final class WorkoutListViewModel: ObservableObject {
             endDate: workout.endDate,
             durationSeconds: workout.durationSeconds,
             heartRateSamples: workout.heartRateSamples,
-            intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent
+            intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
+            dataSource: workout.dataSource
         )
         return WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
     }
@@ -128,7 +138,8 @@ final class WorkoutListViewModel: ObservableObject {
             endDate: workout.endDate,
             durationSeconds: workout.durationSeconds,
             heartRateSamples: workout.heartRateSamples,
-            intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent
+            intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
+            dataSource: workout.dataSource
         )
         let legacy = WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
         return WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
@@ -138,15 +149,16 @@ final class WorkoutListViewModel: ObservableObject {
     }
 
     private func apply(_ result: WorkoutLoadResult) {
-        print("[ViewModel] apply: source=\(result.source), count=\(result.workouts.count), msg=\(result.statusMessage ?? "nil")")
         workouts = result.workouts
         currentSource = result.source
         statusMessage = result.statusMessage
-        selectedWorkout = result.workouts.first
-        if let intent = result.workouts.first?.intent {
+        // If current selection is no longer in the new list, clear it (don't auto-pick first).
+        if let current = selectedWorkout, !result.workouts.contains(where: { $0.id == current.id }) {
+            selectedWorkout = nil
+        }
+        if selectedWorkout == nil, let intent = result.workouts.first?.intent {
             selectedIntent = intent
         }
-        print("[ViewModel] after apply: workouts.count=\(workouts.count)")
         triggerCalibrationCheck()
     }
 
@@ -166,7 +178,8 @@ final class WorkoutListViewModel: ObservableObject {
                     endDate: workout.endDate,
                     durationSeconds: workout.durationSeconds,
                     heartRateSamples: workout.heartRateSamples,
-                    intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent
+                    intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
+                    dataSource: workout.dataSource
                 )
             },
             policy: settingsManager.policy,

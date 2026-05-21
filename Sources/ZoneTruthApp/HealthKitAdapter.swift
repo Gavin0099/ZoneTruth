@@ -45,7 +45,8 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
             startDate: startDate,
             endDate: endDate,
             heartRateSamples: heartRateSamples,
-            intent: defaultIntent
+            intent: defaultIntent,
+            dataSource: "healthkit"
         )
     }
 }

@@ -77,6 +77,23 @@ struct CompositeWorkoutRepository: WorkoutRepository {
         return resolve(results: results)
     }
 
+    private func deduplicate(_ workouts: [WorkoutInput]) -> [WorkoutInput] {
+        var result: [WorkoutInput] = []
+        for workout in workouts {
+            if let idx = result.firstIndex(where: {
+                $0.workoutType == workout.workoutType &&
+                abs($0.startDate.timeIntervalSince(workout.startDate)) < 300
+            }) {
+                if workout.heartRateSamples.count > result[idx].heartRateSamples.count {
+                    result[idx] = workout
+                }
+            } else {
+                result.append(workout)
+            }
+        }
+        return result
+    }
+
     func requestHealthAccess() async -> WorkoutLoadResult {
         for repository in repositories where repository.supportsHealthAuthorization {
             _ = await repository.requestHealthAccess()
@@ -101,10 +118,11 @@ struct CompositeWorkoutRepository: WorkoutRepository {
             return mockResult ?? WorkoutLoadResult(workouts: [], source: .none, statusMessage: "No workouts are available yet.")
         }
 
-        let merged = realResults
-            .flatMap(\.workouts)
-            .sorted { $0.startDate > $1.startDate }
-            .prefix(100)
+        let merged = deduplicate(
+            realResults
+                .flatMap(\.workouts)
+                .sorted { $0.startDate > $1.startDate }
+        ).prefix(100)
 
         let activeSources = realResults.map(\.source)
         let source: WorkoutDataSource
