@@ -9,12 +9,14 @@ public struct ZoneTruthMainView: View {
         let environment = AppEnvironment.live()
         let settings = SettingsManager()
         _settingsManager = StateObject(wrappedValue: settings)
+        let handler = environment.stravaCallbackHandler
         _viewModel = StateObject(wrappedValue: WorkoutListViewModel(
             repository: environment.repository,
             settingsManager: settings,
-            stravaAuthorizationURL: environment.stravaAuthorizationURL
+            stravaAuthorizationURL: environment.stravaAuthorizationURL,
+            callbackHandler: handler
         ))
-        callbackHandler = environment.stravaCallbackHandler
+        callbackHandler = handler
     }
 
     public var body: some View {

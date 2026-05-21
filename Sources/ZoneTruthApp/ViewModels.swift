@@ -1,4 +1,5 @@
 import Foundation
+import AuthenticationServices
 import ZoneTruthCore
 
 enum WorkoutDataSource: String, Equatable, Sendable {
@@ -38,16 +39,38 @@ final class WorkoutListViewModel: ObservableObject {
     let stravaAuthorizationURL: URL?
     private let repository: WorkoutRepository
     private let settingsManager: SettingsManager
+    private let callbackHandler: StravaCallbackHandler?
+    private var oauthCoordinator: StravaOAuthCoordinator?
 
-    init(repository: WorkoutRepository, settingsManager: SettingsManager, stravaAuthorizationURL: URL? = nil) {
+    init(
+        repository: WorkoutRepository,
+        settingsManager: SettingsManager,
+        stravaAuthorizationURL: URL? = nil,
+        callbackHandler: StravaCallbackHandler? = nil
+    ) {
         self.repository = repository
         self.settingsManager = settingsManager
         self.stravaAuthorizationURL = stravaAuthorizationURL
+        self.callbackHandler = callbackHandler
         apply(repository.loadResult())
     }
 
     var canConnectStrava: Bool {
         stravaAuthorizationURL != nil && currentSource != .strava
+    }
+
+    func connectStrava() async {
+        guard let url = stravaAuthorizationURL, let handler = callbackHandler else { return }
+        let coordinator = StravaOAuthCoordinator()
+        oauthCoordinator = coordinator
+        defer { oauthCoordinator = nil }
+        do {
+            let callbackURL = try await coordinator.authenticate(url: url, callbackScheme: "zonetruth")
+            let handled = await handler.handle(callbackURL)
+            if handled { await refreshWorkouts() }
+        } catch {
+            // 使用者取消或授權失敗，靜默處理
+        }
     }
 
     func selectWorkout(_ workout: WorkoutInput) {
@@ -184,5 +207,43 @@ struct MockWorkoutRepository: WorkoutRepository {
             source: .mockSamples,
             statusMessage: "在連接 Apple Health 或匯入資料之前，暫時顯示預覽樣本。"
         )
+    }
+}
+
+private final class StravaOAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextProviding {
+    private var activeSession: ASWebAuthenticationSession?
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        #if canImport(UIKit)
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .compactMap { $0.windows.first { $0.isKeyWindow } }
+            .first ?? ASPresentationAnchor()
+        #else
+        NSApplication.shared.windows.first(where: { $0.isKeyWindow }) ?? ASPresentationAnchor()
+        #endif
+    }
+
+    func authenticate(url: URL, callbackScheme: String) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: callbackScheme
+            ) { [weak self] callbackURL, error in
+                self?.activeSession = nil
+                if let callbackURL {
+                    continuation.resume(returning: callbackURL)
+                } else {
+                    continuation.resume(throwing: error ?? URLError(.cancelled))
+                }
+            }
+            session.presentationContextProvider = self
+            session.prefersEphemeralWebBrowserSession = false
+            if session.start() {
+                activeSession = session
+            } else {
+                continuation.resume(throwing: URLError(.cancelled))
+            }
+        }
     }
 }

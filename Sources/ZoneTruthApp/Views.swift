@@ -112,11 +112,11 @@ struct WorkoutListView: View {
                         isRequestingAuthorization: viewModel.isRequestingAuthorization,
                         canRequestHealthAccess: viewModel.canRequestHealthAccess,
                         onRequestHealthAccess: {
-                            Task {
-                                await viewModel.requestHealthAccess()
-                            }
+                            Task { await viewModel.requestHealthAccess() }
                         },
-                        stravaAuthorizationURL: viewModel.canConnectStrava ? viewModel.stravaAuthorizationURL : nil
+                        onConnectStrava: viewModel.canConnectStrava ? {
+                            Task { await viewModel.connectStrava() }
+                        } : nil
                     )
                     
                     if viewModel.workouts.isEmpty {
@@ -198,9 +198,7 @@ struct WorkoutSourceBannerView: View {
     let isRequestingAuthorization: Bool
     let canRequestHealthAccess: Bool
     let onRequestHealthAccess: () -> Void
-    var stravaAuthorizationURL: URL? = nil
-
-    @Environment(\.openURL) private var openURL
+    var onConnectStrava: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -246,9 +244,9 @@ struct WorkoutSourceBannerView: View {
                     .disabled(isRequestingAuthorization || isRefreshing)
                 }
 
-                if let url = stravaAuthorizationURL {
+                if let connectStrava = onConnectStrava {
                     Button {
-                        openURL(url)
+                        connectStrava()
                     } label: {
                         HStack {
                             Image(systemName: "arrow.triangle.2.circlepath")
