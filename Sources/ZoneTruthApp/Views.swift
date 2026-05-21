@@ -488,7 +488,7 @@ struct SummaryCardView: View {
                 
                 if let stability = result.stabilityStandardDeviation {
                     MetricGridCell(
-                        icon: "activity",
+                        icon: "waveform.path.ecg.rectangle",
                         color: PremiumColor.gold,
                         title: "心率穩定度 (標差)",
                         value: String(format: "%.1f bpm", stability)

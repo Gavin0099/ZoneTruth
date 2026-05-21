@@ -239,11 +239,11 @@ private final class StravaOAuthCoordinator: NSObject, ASWebAuthenticationPresent
             }
             session.presentationContextProvider = self
             session.prefersEphemeralWebBrowserSession = false
-            if session.start() {
-                activeSession = session
-            } else {
-                continuation.resume(throwing: URLError(.cancelled))
-            }
+            // activeSession must be set before start() so the session stays alive.
+            // We let the completion handler exclusively own the continuation resume —
+            // never calling resume in the else-branch avoids double-resume crashes.
+            activeSession = session
+            _ = session.start()
         }
     }
 }
