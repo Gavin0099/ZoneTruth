@@ -384,6 +384,11 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.workouts.first?.workoutType, .cycling)
         XCTAssertEqual(result.workouts.first?.intent, .activityReview)
         XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 2)
+        guard let hrv = result.workouts.first?.hrvSDNNMilliseconds else {
+            XCTFail("Expected HRV SDNN value from HealthKit snapshot")
+            return
+        }
+        XCTAssertEqual(hrv, 42.5, accuracy: 0.001)
     }
 
     func testHealthKitWorkoutRepositoryRequestsAuthorizationWhenNeeded() async {
@@ -1171,7 +1176,8 @@ final class ZoneTruthAppTests: XCTestCase {
             heartRateSamples: [
                 HeartRateSample(timestamp: start, bpm: 118),
                 HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 121),
-            ]
+            ],
+            hrvSDNNMilliseconds: 42.5
         )
     }
 

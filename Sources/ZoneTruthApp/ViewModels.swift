@@ -130,6 +130,7 @@ final class WorkoutListViewModel: ObservableObject {
             endDate: workout.endDate,
             durationSeconds: workout.durationSeconds,
             heartRateSamples: workout.heartRateSamples,
+            hrvSDNNMilliseconds: workout.hrvSDNNMilliseconds,
             intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
             dataSource: workout.dataSource
         )
@@ -144,6 +145,7 @@ final class WorkoutListViewModel: ObservableObject {
             endDate: workout.endDate,
             durationSeconds: workout.durationSeconds,
             heartRateSamples: workout.heartRateSamples,
+            hrvSDNNMilliseconds: workout.hrvSDNNMilliseconds,
             intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
             dataSource: workout.dataSource
         )
@@ -200,6 +202,7 @@ final class WorkoutListViewModel: ObservableObject {
                     endDate: workout.endDate,
                     durationSeconds: workout.durationSeconds,
                     heartRateSamples: workout.heartRateSamples,
+                    hrvSDNNMilliseconds: workout.hrvSDNNMilliseconds,
                     intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
                     dataSource: workout.dataSource
                 )

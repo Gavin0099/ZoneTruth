@@ -23,6 +23,7 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
     let startDate: Date
     let endDate: Date
     let heartRateSamples: [HeartRateSample]
+    let hrvSDNNMilliseconds: Double?
     let defaultIntent: TrainingIntent
 
     init(
@@ -30,12 +31,14 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
         startDate: Date,
         endDate: Date,
         heartRateSamples: [HeartRateSample],
+        hrvSDNNMilliseconds: Double? = nil,
         defaultIntent: TrainingIntent = .activityReview
     ) {
         self.workoutType = workoutType
         self.startDate = startDate
         self.endDate = endDate
         self.heartRateSamples = heartRateSamples
+        self.hrvSDNNMilliseconds = hrvSDNNMilliseconds
         self.defaultIntent = defaultIntent
     }
 
@@ -45,6 +48,7 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
             startDate: startDate,
             endDate: endDate,
             heartRateSamples: heartRateSamples,
+            hrvSDNNMilliseconds: hrvSDNNMilliseconds,
             intent: defaultIntent,
             dataSource: "healthkit"
         )
@@ -205,10 +209,11 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
             guard let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
                 return .unavailable
             }
-            let readTypes: Set<HKObjectType> = [
+            let readTypes = Set([
                 HKObjectType.workoutType(),
                 heartRateType,
-            ]
+                HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
+            ].compactMap { $0 })
 
             do {
                 try await store.requestAuthorization(toShare: [], read: readTypes)
@@ -234,11 +239,13 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
 
             return try await workouts.asyncMap { workout in
                 let heartRateSamples = try await heartRateSamples(for: workout, from: store)
+                let hrvSDNNMilliseconds = try await averageHRVSDNN(for: workout, from: store)
                 return HealthKitWorkoutSnapshot(
                     workoutType: domainWorkoutType(for: workout.workoutActivityType),
                     startDate: workout.startDate,
                     endDate: workout.endDate,
-                    heartRateSamples: heartRateSamples
+                    heartRateSamples: heartRateSamples,
+                    hrvSDNNMilliseconds: hrvSDNNMilliseconds
                 )
             }
         }
@@ -312,6 +319,48 @@ private func heartRateSamples(for workout: HKWorkout, from store: HKHealthStore)
             bpm: sample.quantity.doubleValue(for: beatsPerMinuteUnit)
         )
     }
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+private func averageHRVSDNN(for workout: HKWorkout, from store: HKHealthStore) async throws -> Double? {
+    guard let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
+        return nil
+    }
+
+    let predicate = HKQuery.predicateForSamples(
+        withStart: workout.startDate,
+        end: workout.endDate,
+        options: [.strictStartDate, .strictEndDate]
+    )
+    let sortDescriptors = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+    let unit = HKUnit.secondUnit(with: .milli)
+
+    let quantitySamples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+        let query = HKSampleQuery(
+            sampleType: hrvType,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: sortDescriptors
+        ) { _, samples, error in
+            if let error {
+                continuation.resume(throwing: error)
+                return
+            }
+
+            continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
+        }
+
+        store.execute(query)
+    }
+
+    guard !quantitySamples.isEmpty else {
+        return nil
+    }
+
+    let sum = quantitySamples.reduce(0.0) { partial, sample in
+        partial + sample.quantity.doubleValue(for: unit)
+    }
+    return sum / Double(quantitySamples.count)
 }
 
 @available(iOS 17.0, macOS 14.0, *)

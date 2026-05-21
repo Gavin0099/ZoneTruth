@@ -122,6 +122,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let endDate: Date
     public let durationSeconds: TimeInterval
     public let heartRateSamples: [HeartRateSample]
+    public let hrvSDNNMilliseconds: Double?
     public let intent: TrainingIntent
     public let dataSource: String?
 
@@ -132,6 +133,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         endDate: Date,
         durationSeconds: TimeInterval? = nil,
         heartRateSamples: [HeartRateSample],
+        hrvSDNNMilliseconds: Double? = nil,
         intent: TrainingIntent,
         dataSource: String? = nil
     ) {
@@ -141,6 +143,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         self.endDate = endDate
         self.durationSeconds = durationSeconds ?? endDate.timeIntervalSince(startDate)
         self.heartRateSamples = heartRateSamples.sorted { $0.timestamp < $1.timestamp }
+        self.hrvSDNNMilliseconds = hrvSDNNMilliseconds
         self.intent = intent
         self.dataSource = dataSource
     }
