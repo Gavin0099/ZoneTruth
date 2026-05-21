@@ -3,6 +3,7 @@
 A macOS/iOS workout analysis app that answers one question: **was this actually a Zone 2 session?** (Or VO2 max, or Strength?)
 
 It reads workout data from Apple Health or Strava, applies a multi-intent heart-rate analyzer, and returns a plain-language verdict — pass, warning, or fail — with the reasons why.
+It also provides a weekly dashboard view for recovery observation and load tendency, with confidence-aware messaging when heart-rate data is sparse.
 
 ---
 
@@ -94,9 +95,12 @@ ZoneTruth tries sources in priority order and uses the first one that returns da
 ```bash
 swift build
 swift test
+bash scripts/closeout_workout_evaluation.sh
 ```
 
-All 41 tests should pass. No credentials are required to run tests.
+All tests and closeout guards should pass. No credentials are required to run tests.
+
+`closeout_workout_evaluation.sh` now enforces weekly-policy snapshot stability, weekly UI forbidden-term checks, and a weekly dashboard smoke compile guard.
 
 ### Apple Health
 

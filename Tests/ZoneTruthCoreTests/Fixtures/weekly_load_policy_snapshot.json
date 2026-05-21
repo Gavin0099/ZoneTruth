@@ -1,0 +1,68 @@
+[
+  {
+    "confidence" : 0.85,
+    "id" : "balanced_week",
+    "keyFindings" : [
+      "本週第 7 天，累計 4 次訓練，3 天休息",
+      "肌力訓練共 1 天"
+    ],
+    "loadTendency" : "balanced",
+    "nextAction" : "目前訓練節奏良好，可依計劃繼續。",
+    "recoveryConcernLevel" : "low"
+  },
+  {
+    "confidence" : 0.85,
+    "id" : "high_intensity_cluster",
+    "keyFindings" : [
+      "本週第 7 天，累計 6 次訓練，1 天休息",
+      "高強度訓練（VO2／間歇）共 3 天",
+      "肌力訓練共 1 天",
+      "最長連續訓練 6 天"
+    ],
+    "loadTendency" : "highIntensityFocused",
+    "nextAction" : "下週建議安排至少兩天輕量訓練或完整休息，並降低高強度課程的頻率。",
+    "recoveryConcernLevel" : "high"
+  },
+  {
+    "confidence" : 0.85,
+    "id" : "no_rest_days_zone2",
+    "keyFindings" : [
+      "本週第 7 天，累計 7 次訓練，0 天休息",
+      "最長連續訓練 7 天"
+    ],
+    "loadTendency" : "aerobicFocused",
+    "nextAction" : "下週可安排一天完整休息，有助於維持訓練與恢復的平衡。",
+    "recoveryConcernLevel" : "elevated"
+  },
+  {
+    "confidence" : 0.85,
+    "id" : "mixed_week",
+    "keyFindings" : [
+      "本週第 7 天，累計 5 次訓練，2 天休息",
+      "肌力訓練共 1 天"
+    ],
+    "loadTendency" : "balanced",
+    "nextAction" : "目前訓練節奏良好，可依計劃繼續。",
+    "recoveryConcernLevel" : "low"
+  },
+  {
+    "confidence" : 0.85,
+    "id" : "underloaded_week",
+    "keyFindings" : [
+      "本週第 7 天，累計 1 次訓練，6 天休息"
+    ],
+    "loadTendency" : "underloaded",
+    "nextAction" : "目前訓練節奏良好，可依計劃繼續。",
+    "recoveryConcernLevel" : "low"
+  },
+  {
+    "confidence" : 0.4,
+    "id" : "sparse_data_week",
+    "keyFindings" : [
+      "本週第 7 天，累計 2 次訓練，5 天休息"
+    ],
+    "loadTendency" : "aerobicFocused",
+    "nextAction" : "目前訓練節奏良好，可依計劃繼續。",
+    "recoveryConcernLevel" : "low"
+  }
+]

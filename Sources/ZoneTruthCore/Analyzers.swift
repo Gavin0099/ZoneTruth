@@ -44,6 +44,23 @@ public enum ZoneDistributionAnalyzer {
 
         return ZoneDistribution(counts: counts, ratios: ratios)
     }
+
+    public static func merge(_ distributions: [ZoneDistribution]) -> ZoneDistribution {
+        var mergedCounts = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { ($0, 0) })
+        for distribution in distributions {
+            for zone in TrainingZone.allCases {
+                mergedCounts[zone, default: 0] += distribution.counts[zone, default: 0]
+            }
+        }
+        let total = Double(mergedCounts.values.reduce(0, +))
+        guard total > 0 else {
+            return ZoneDistribution(counts: mergedCounts, ratios: [:])
+        }
+        let ratios = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { zone in
+            (zone, Double(mergedCounts[zone, default: 0]) / total)
+        })
+        return ZoneDistribution(counts: mergedCounts, ratios: ratios)
+    }
 }
 
 public enum Zone3LeakageAnalyzer {
@@ -513,4 +530,189 @@ private func confidenceScore(
     let base = sampleCount >= policy.minimumSampleCount ? 0.8 : 0.45
     let penalty = Double(severities.reduce(0, +)) * 0.08
     return min(max(base - penalty, 0.1), 0.95)
+}
+
+public enum WeeklyObservationBuilder {
+    public static func build(
+        workouts: [WorkoutInput],
+        weekStart: Date,
+        calendar: Calendar = .current,
+        asOf: Date = Date(),
+        policy: AnalysisPolicy = .default
+    ) -> WeeklyWorkoutSummary {
+        let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)!
+        let weekEnd = nextWeekStart.addingTimeInterval(-1)
+        let effectiveEnd = min(nextWeekStart, asOf)
+
+        let elapsedDays: Int = {
+            if asOf < weekStart { return 0 }
+            if asOf >= nextWeekStart { return 7 }
+            let weekStartDay = calendar.startOfDay(for: weekStart)
+            let asOfDay = calendar.startOfDay(for: asOf)
+            let delta = calendar.dateComponents([.day], from: weekStartDay, to: asOfDay).day ?? 0
+            return max(0, min(7, delta + 1))
+        }()
+
+        let weekWorkouts = workouts.filter {
+            $0.startDate >= weekStart && $0.startDate < effectiveEnd
+        }
+
+        let totalDurationMinutes = weekWorkouts.reduce(0.0) { $0 + $1.durationSeconds } / 60.0
+
+        var intentDistribution: [TrainingIntent: Int] = [:]
+        for workout in weekWorkouts {
+            intentDistribution[workout.intent, default: 0] += 1
+        }
+
+        let distributions = weekWorkouts.map { workout in
+            WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy).zoneDistribution
+        }
+        let zoneDistribution = ZoneDistributionAnalyzer.merge(distributions)
+
+        let trainingDays = Set(weekWorkouts.map { calendar.startOfDay(for: $0.startDate) })
+
+        let highIntensityDays = Set(
+            weekWorkouts
+                .filter { $0.intent == .vo2Interval }
+                .map { calendar.startOfDay(for: $0.startDate) }
+        ).count
+
+        let strengthDays = Set(
+            weekWorkouts
+                .filter { $0.intent == .strength || $0.workoutType == .strengthTraining }
+                .map { calendar.startOfDay(for: $0.startDate) }
+        ).count
+
+        let restDays = max(0, elapsedDays - trainingDays.count)
+
+        let sortedDays = trainingDays.sorted()
+        var consecutiveTrainingDays = sortedDays.isEmpty ? 0 : 1
+        if sortedDays.count > 1 {
+            var currentStreak = 1
+            for i in 1..<sortedDays.count {
+                let diff = calendar.dateComponents([.day], from: sortedDays[i - 1], to: sortedDays[i]).day ?? 0
+                if diff == 1 {
+                    currentStreak += 1
+                    consecutiveTrainingDays = max(consecutiveTrainingDays, currentStreak)
+                } else {
+                    currentStreak = 1
+                }
+            }
+        }
+
+        return WeeklyWorkoutSummary(
+            weekStart: weekStart,
+            weekEnd: weekEnd,
+            workoutCount: weekWorkouts.count,
+            totalDurationMinutes: totalDurationMinutes,
+            totalActiveCalories: nil,
+            intentDistribution: intentDistribution,
+            zoneDistribution: zoneDistribution,
+            highIntensityDays: highIntensityDays,
+            strengthDays: strengthDays,
+            restDays: restDays,
+            elapsedDays: elapsedDays,
+            consecutiveTrainingDays: consecutiveTrainingDays
+        )
+    }
+}
+
+public enum WeeklyLoadPolicyEngine {
+    public static func evaluate(summary: WeeklyWorkoutSummary) -> WeeklyLoadPolicy {
+        let totalZoneSamples = summary.zoneDistribution.counts.values.reduce(0, +)
+        let confidence = computeConfidence(workoutCount: summary.workoutCount, totalZoneSamples: totalZoneSamples)
+        let (concern, findings) = buildConcernAndFindings(summary: summary)
+        let tendency = assessLoadTendency(summary: summary)
+        let nextAction = buildNextAction(concern: concern, tendency: tendency, workoutCount: summary.workoutCount)
+        return WeeklyLoadPolicy(
+            recoveryConcernLevel: concern,
+            loadTendency: tendency,
+            keyFindings: findings,
+            nextAction: nextAction,
+            confidence: confidence
+        )
+    }
+
+    private static func computeConfidence(workoutCount: Int, totalZoneSamples: Int) -> Double {
+        guard workoutCount > 0 else { return 0.75 }
+        if totalZoneSamples == 0 { return 0.4 }
+        if totalZoneSamples < workoutCount * 20 { return 0.6 }
+        return 0.85
+    }
+
+    private static func buildConcernAndFindings(summary: WeeklyWorkoutSummary) -> (RecoveryConcernLevel, [String]) {
+        var findings: [String] = []
+
+        if summary.workoutCount == 0 {
+            findings.append("本週第 \(summary.elapsedDays) 天，尚無訓練紀錄")
+        } else {
+            findings.append("本週第 \(summary.elapsedDays) 天，累計 \(summary.workoutCount) 次訓練，\(summary.restDays) 天休息")
+        }
+
+        if summary.highIntensityDays >= 2 {
+            findings.append("高強度訓練（VO2／間歇）共 \(summary.highIntensityDays) 天")
+        }
+
+        if summary.strengthDays > 0 {
+            findings.append("肌力訓練共 \(summary.strengthDays) 天")
+        }
+
+        if summary.consecutiveTrainingDays >= 4 {
+            findings.append("最長連續訓練 \(summary.consecutiveTrainingDays) 天")
+        }
+
+        let concern: RecoveryConcernLevel
+        if summary.highIntensityDays >= 3 && summary.restDays <= 1 {
+            concern = .high
+        } else if summary.consecutiveTrainingDays >= 5 || summary.restDays == 0 || summary.highIntensityDays >= 3 {
+            concern = .elevated
+        } else if summary.consecutiveTrainingDays >= 4 || summary.restDays <= 1 || summary.highIntensityDays >= 2 {
+            concern = .moderate
+        } else {
+            concern = .low
+        }
+
+        return (concern, findings)
+    }
+
+    private static func assessLoadTendency(summary: WeeklyWorkoutSummary) -> LoadTendency {
+        guard summary.workoutCount > 1 else { return .underloaded }
+        let vo2Count = summary.intentDistribution[.vo2Interval, default: 0]
+        let z2Count = summary.intentDistribution[.zone2, default: 0]
+        let total = summary.workoutCount
+
+        if Double(vo2Count) / Double(total) >= 0.4 || vo2Count >= 3 {
+            return .highIntensityFocused
+        }
+        if Double(z2Count) / Double(total) >= 0.6 {
+            return .aerobicFocused
+        }
+        if summary.restDays >= 2 && total >= 3 {
+            return .balanced
+        }
+        return .mixed
+    }
+
+    private static func buildNextAction(
+        concern: RecoveryConcernLevel,
+        tendency: LoadTendency,
+        workoutCount: Int
+    ) -> String {
+        switch concern {
+        case .high:
+            return "下週建議安排至少兩天輕量訓練或完整休息，並降低高強度課程的頻率。"
+        case .elevated:
+            return "下週可安排一天完整休息，有助於維持訓練與恢復的平衡。"
+        case .moderate:
+            if tendency == .highIntensityFocused {
+                return "下週可加入一至兩次有氧基礎訓練，平衡高強度課程的比例。"
+            }
+            return "本週訓練節奏尚可，下週視體感微調強度。"
+        case .low:
+            if workoutCount == 0 {
+                return "可嘗試從輕量活動開始，建立每週訓練習慣。"
+            }
+            return "目前訓練節奏良好，可依計劃繼續。"
+        }
+    }
 }

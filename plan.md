@@ -1,5 +1,5 @@
 # ZoneTruth - iOS Workout Intent Analyzer Plan
-> **最後更新**: 2026-05-20
+> **最後更新**: 2026-05-21
 > **Owner**: Gavin
 > **Freshness**: Sprint (7d)
 
@@ -518,3 +518,26 @@ Closeout Gate：
 
 Project name：**ZoneTruth**  
 副標可以用：**Train with intent. Verify with data.**
+
+16. P2：Weekly Dashboard（完成）與 P3 HRV（Deferred）
+
+P2 已完成交付：
+
+- 產品從單次分析擴展到週期觀察（Weekly Dashboard 三區塊）。
+- `WorkoutListViewModel` 已提供 `weeklySummary` / `weeklyPolicy` 並在每次 `apply()` 後更新。
+- App 主入口已採 `TabView`，保留訓練紀錄並新增本週視圖。
+
+P2f（closeout guard）已納入：
+
+1. closeout script 納入 `WeeklyLoadPolicy` snapshot 驗證。
+2. closeout script 檢查 Weekly UI 禁用詞（`過度訓練` / `overtraining` / `休息不足`）。
+3. 新增 WeeklyDashboard smoke compile guard（`testWeeklyDashboardViewSmokeCompiles`）。
+4. Weekly fixture 變更沿用 semantic annotation gate（`SEM-*.json`）。
+
+P3 規劃：
+
+- P3a：HRV observation import
+- P3b：HRV uncertainty signal
+- P3c：Weekly policy confidence adjustment
+
+備註：P3 HRV 目前 deferred，先以 P2 guard 穩定性為優先。

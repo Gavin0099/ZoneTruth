@@ -370,3 +370,83 @@ public struct CalibrationSuggestion: Equatable, Sendable {
         self.sourceSessionIDs = sourceSessionIDs
     }
 }
+
+public struct WeeklyWorkoutSummary: Equatable, Sendable {
+    public let weekStart: Date
+    public let weekEnd: Date
+    public let workoutCount: Int
+    public let totalDurationMinutes: Double
+    public let totalActiveCalories: Double?
+    public let intentDistribution: [TrainingIntent: Int]
+    public let zoneDistribution: ZoneDistribution
+    public let highIntensityDays: Int
+    public let strengthDays: Int
+    public let restDays: Int
+    public let elapsedDays: Int
+    public let consecutiveTrainingDays: Int
+
+    public init(
+        weekStart: Date,
+        weekEnd: Date,
+        workoutCount: Int,
+        totalDurationMinutes: Double,
+        totalActiveCalories: Double?,
+        intentDistribution: [TrainingIntent: Int],
+        zoneDistribution: ZoneDistribution,
+        highIntensityDays: Int,
+        strengthDays: Int,
+        restDays: Int,
+        elapsedDays: Int,
+        consecutiveTrainingDays: Int
+    ) {
+        self.weekStart = weekStart
+        self.weekEnd = weekEnd
+        self.workoutCount = workoutCount
+        self.totalDurationMinutes = totalDurationMinutes
+        self.totalActiveCalories = totalActiveCalories
+        self.intentDistribution = intentDistribution
+        self.zoneDistribution = zoneDistribution
+        self.highIntensityDays = highIntensityDays
+        self.strengthDays = strengthDays
+        self.restDays = restDays
+        self.elapsedDays = elapsedDays
+        self.consecutiveTrainingDays = consecutiveTrainingDays
+    }
+}
+
+public enum RecoveryConcernLevel: String, Codable, Equatable, Sendable {
+    case low
+    case moderate
+    case elevated
+    case high
+}
+
+public enum LoadTendency: String, Codable, Equatable, Sendable {
+    case balanced
+    case highIntensityFocused
+    case aerobicFocused
+    case mixed
+    case underloaded
+}
+
+public struct WeeklyLoadPolicy: Equatable, Sendable {
+    public let recoveryConcernLevel: RecoveryConcernLevel
+    public let loadTendency: LoadTendency
+    public let keyFindings: [String]
+    public let nextAction: String
+    public let confidence: Double
+
+    public init(
+        recoveryConcernLevel: RecoveryConcernLevel,
+        loadTendency: LoadTendency,
+        keyFindings: [String],
+        nextAction: String,
+        confidence: Double
+    ) {
+        self.recoveryConcernLevel = recoveryConcernLevel
+        self.loadTendency = loadTendency
+        self.keyFindings = keyFindings
+        self.nextAction = nextAction
+        self.confidence = confidence
+    }
+}

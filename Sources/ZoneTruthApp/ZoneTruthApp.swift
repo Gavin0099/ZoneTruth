@@ -20,14 +20,27 @@ public struct ZoneTruthMainView: View {
     }
 
     public var body: some View {
-        WorkoutListView(viewModel: viewModel, settingsManager: settingsManager)
-            .onOpenURL { url in
-                Task {
-                    let handled = await callbackHandler?.handle(url) ?? false
-                    if handled {
-                        await viewModel.refreshWorkouts()
-                    }
+        TabView {
+            WorkoutListView(viewModel: viewModel, settingsManager: settingsManager)
+                .tabItem {
+                    Label("訓練紀錄", systemImage: "figure.run")
+                }
+
+            NavigationStack {
+                WeeklyDashboardView(viewModel: viewModel)
+            }
+            .tabItem {
+                Label("本週", systemImage: "calendar")
+            }
+        }
+        .tint(PremiumColor.skyBlue)
+        .onOpenURL { url in
+            Task {
+                let handled = await callbackHandler?.handle(url) ?? false
+                if handled {
+                    await viewModel.refreshWorkouts()
                 }
             }
+        }
     }
 }

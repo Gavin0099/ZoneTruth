@@ -1072,6 +1072,24 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(observeEval, dualRunEval, "UI evaluation result must remain legacy-path stable in dual_run mode.")
     }
 
+    @MainActor
+    func testWeeklyDashboardViewSmokeCompiles() {
+        let suiteName = "test.weekly.dashboard.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = SettingsManager(userDefaults: defaults)
+        let viewModel = WorkoutListViewModel(
+            repository: MockWorkoutRepository(),
+            settingsManager: settings
+        )
+        let view = WeeklyDashboardView(viewModel: viewModel)
+
+        XCTAssertNotNil(viewModel.weeklySummary.weekStart)
+        XCTAssertFalse(viewModel.weeklyPolicy.keyFindings.isEmpty)
+        _ = view.body
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -1224,5 +1242,9 @@ private final class SpyStravaSessionStore: StravaSessionStore {
     func saveSession(_ session: StravaSession) {
         stored = session
         savedSessions.append(session)
+    }
+
+    func clearSession() {
+        stored = nil
     }
 }

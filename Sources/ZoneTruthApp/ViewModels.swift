@@ -36,6 +36,8 @@ final class WorkoutListViewModel: ObservableObject {
     @Published var isRequestingAuthorization = false
     @Published private(set) var currentSource: WorkoutDataSource = .none
     @Published private(set) var statusMessage: String?
+    @Published private(set) var weeklySummary: WeeklyWorkoutSummary
+    @Published private(set) var weeklyPolicy: WeeklyLoadPolicy
 
     let stravaAuthorizationURL: URL?
     private let repository: WorkoutRepository
@@ -53,6 +55,10 @@ final class WorkoutListViewModel: ObservableObject {
         self.settingsManager = settingsManager
         self.stravaAuthorizationURL = stravaAuthorizationURL
         self.callbackHandler = callbackHandler
+        let monday = Self.currentWeekMonday()
+        let emptySummary = WeeklyObservationBuilder.build(workouts: [], weekStart: monday)
+        self.weeklySummary = emptySummary
+        self.weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: emptySummary)
         apply(repository.loadResult())
     }
 
@@ -159,7 +165,23 @@ final class WorkoutListViewModel: ObservableObject {
         if selectedWorkout == nil, let intent = result.workouts.first?.intent {
             selectedIntent = intent
         }
+        updateWeeklyData(workouts: result.workouts)
         triggerCalibrationCheck()
+    }
+
+    private func updateWeeklyData(workouts: [WorkoutInput]) {
+        let monday = Self.currentWeekMonday()
+        let summary = WeeklyObservationBuilder.build(workouts: workouts, weekStart: monday)
+        weeklySummary = summary
+        weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: summary)
+    }
+
+    private static func currentWeekMonday() -> Date {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let weekday = cal.component(.weekday, from: today)
+        let daysFromMonday = weekday == 1 ? 6 : (weekday - 2)
+        return cal.date(byAdding: .day, value: -daysFromMonday, to: today)!
     }
 
     private func triggerCalibrationCheck() {
