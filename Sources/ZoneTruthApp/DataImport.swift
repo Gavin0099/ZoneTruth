@@ -32,8 +32,8 @@ struct AppEnvironment {
         return AppEnvironment(
             repository: CompositeWorkoutRepository(
                 repositories: [
-                    stravaRepository,
                     healthKitRepository,
+                    stravaRepository,
                     importedRepository,
                     MockWorkoutRepository(),
                 ]
@@ -79,50 +79,51 @@ struct CompositeWorkoutRepository: WorkoutRepository {
 
     func requestHealthAccess() async -> WorkoutLoadResult {
         for repository in repositories where repository.supportsHealthAuthorization {
-            let result = await repository.requestHealthAccess()
-            if !result.workouts.isEmpty || result.source == .healthKit {
-                return result
-            }
+            _ = await repository.requestHealthAccess()
             break
         }
-
         return await refreshResult()
     }
 
     private func resolve(results: [WorkoutLoadResult]) -> WorkoutLoadResult {
-        var notices: [String] = []
+        var realResults: [WorkoutLoadResult] = []
+        var mockResult: WorkoutLoadResult?
 
         for result in results {
-            if let statusMessage = result.statusMessage {
-                notices.append(statusMessage)
-            }
-
-            if !result.workouts.isEmpty {
-                return WorkoutLoadResult(
-                    workouts: result.workouts,
-                    source: result.source,
-                    statusMessage: mergedMessage(for: result, notices: notices)
-                )
+            if result.source == .mockSamples {
+                if mockResult == nil { mockResult = result }
+            } else if !result.workouts.isEmpty {
+                realResults.append(result)
             }
         }
+
+        guard !realResults.isEmpty else {
+            return mockResult ?? WorkoutLoadResult(workouts: [], source: .none, statusMessage: "No workouts are available yet.")
+        }
+
+        let merged = realResults
+            .flatMap(\.workouts)
+            .sorted { $0.startDate > $1.startDate }
+            .prefix(100)
+
+        let activeSources = realResults.map(\.source)
+        let source: WorkoutDataSource
+        let label: String
+        if activeSources.contains(.healthKit) && activeSources.contains(.strava) {
+            source = .combined
+            label = "Apple Health + Strava"
+        } else {
+            source = activeSources[0]
+            label = activeSources[0].rawValue
+        }
+
+        let statusMsg = "\(label)：共 \(merged.count) 筆活動"
 
         return WorkoutLoadResult(
-            workouts: [],
-            source: .none,
-            statusMessage: notices.isEmpty ? "No workouts are available yet." : notices.joined(separator: " ")
+            workouts: Array(merged),
+            source: source,
+            statusMessage: statusMsg
         )
-    }
-
-    private func mergedMessage(for result: WorkoutLoadResult, notices: [String]) -> String? {
-        let unique = notices.reduce(into: [String]()) { partial, item in
-            if !partial.contains(item) {
-                partial.append(item)
-            }
-        }
-
-        guard !unique.isEmpty else { return result.statusMessage }
-        guard result.source != .healthKit else { return result.statusMessage ?? unique.first }
-        return unique.joined(separator: " ")
     }
 }
 

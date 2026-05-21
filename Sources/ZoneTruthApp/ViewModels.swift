@@ -5,6 +5,7 @@ import ZoneTruthCore
 enum WorkoutDataSource: String, Equatable, Sendable {
     case healthKit = "Apple Health"
     case strava = "Strava"
+    case combined = "Apple Health + Strava"
     case jsonImport = "匯入的 JSON"
     case mockSamples = "預覽樣本"
     case none = "沒有資料"
@@ -56,7 +57,7 @@ final class WorkoutListViewModel: ObservableObject {
     }
 
     var canConnectStrava: Bool {
-        stravaAuthorizationURL != nil && currentSource != .strava
+        stravaAuthorizationURL != nil && currentSource != .strava && currentSource != .combined
     }
 
     func connectStrava() async {
@@ -178,7 +179,7 @@ final class WorkoutListViewModel: ObservableObject {
     }
 
     var canRequestHealthAccess: Bool {
-        repository.supportsHealthAuthorization && currentSource != .healthKit
+        repository.supportsHealthAuthorization && currentSource != .healthKit && currentSource != .combined
     }
 }
 
