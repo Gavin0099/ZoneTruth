@@ -593,10 +593,9 @@ extension StravaOAuthConfiguration {
     }
 }
 
-// Replace with values from https://www.strava.com/settings/api
 private enum StravaCredentials {
-    static let clientID: Int = 0
-    static let clientSecret: String = ""
+    static let clientID: Int = 248735
+    static let clientSecret: String = "6602b2daae5f48fe4782dfe3f80fcf844f6f6831"
 }
 
 private extension String {

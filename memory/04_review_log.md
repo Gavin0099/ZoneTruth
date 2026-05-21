@@ -46,3 +46,5 @@
 - Risk: low
 - Oversight: auto
 
+- 2026-05-21: 填入真實 Strava 憑證（Client ID: 248735 / Client Secret）至 `StravaCredentials` enum。Repo 為 private，憑證由使用者確認後直接導入。
+

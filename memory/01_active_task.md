@@ -85,6 +85,8 @@
   - Rewired `ObservationPolicyShadowEvaluator` to use `ObservationBridge` + `WorkoutEvaluationPolicyFactory`; removed hand-coded inline scoring.
   - Added guard tests: tendency convergence, bridge validity, minor-drift assertion for clean Zone 2.
 
+- 填入真實 Strava 憑證至 `StravaCredentials`（Client ID: 248735），Repo 為 private，使用者已確認。
+
 ## Next Steps
 
 - Open Package.swift in Xcode and verify Info.plist is picked up; run on real device with Strava credentials.
