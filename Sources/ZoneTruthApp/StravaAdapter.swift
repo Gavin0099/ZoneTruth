@@ -253,11 +253,14 @@ struct SystemStravaClient: StravaClient {
 
     func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot] {
         guard let session = sessionStore.loadSession() else {
+            print("[Strava] fetchRecentActivities: no session, throwing disconnected")
             throw StravaClientError.disconnected
         }
 
         let validSession = session.isExpired ? try await refreshed(from: session) : session
+        print("[Strava] fetchRecentActivities: fetching up to \(limit) activities")
         let summaries = try await fetchActivitySummaries(accessToken: validSession.accessToken, limit: limit)
+        print("[Strava] fetchRecentActivities: got \(summaries.count) summaries")
 
         return try await summaries.stravaAsyncMap { summary in
             let heartRateSamples: [HeartRateSample]
@@ -280,8 +283,13 @@ struct SystemStravaClient: StravaClient {
         components.queryItems = [URLQueryItem(name: "per_page", value: String(limit))]
 
         let (data, response) = try await urlSession.data(for: authorized(components.url!, token: accessToken))
+        if let http = response as? HTTPURLResponse {
+            print("[Strava] fetchActivitySummaries: HTTP \(http.statusCode)")
+        }
         try validateHTTP(response)
-        return try JSONDecoder.zoneTruth.decode([StravaActivitySummary].self, from: data)
+        let decoded = try JSONDecoder.zoneTruth.decode([StravaActivitySummary].self, from: data)
+        print("[Strava] fetchActivitySummaries: decoded \(decoded.count) items")
+        return decoded
     }
 
     private func fetchHeartRateSamples(activityID: Int, startDate: Date, accessToken: String) async throws -> [HeartRateSample] {
@@ -434,21 +442,35 @@ struct FileStravaSessionStore: StravaSessionStore {
     }
 
     func loadSession() -> StravaSession? {
-        guard fileManager.fileExists(atPath: fileURL.path) else { return nil }
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            print("[Strava] loadSession: file not found at \(fileURL.path)")
+            return nil
+        }
 
         do {
             let data = try Data(contentsOf: fileURL)
             let sessionFile = try JSONDecoder.zoneTruth.decode(StravaSessionFile.self, from: data)
-            return sessionFile.session
+            let s = sessionFile.session
+            print("[Strava] loadSession: ok, athleteID=\(s.athleteID as Any), expired=\(s.isExpired)")
+            return s
         } catch {
+            print("[Strava] loadSession: decode error \(error)")
             return nil
         }
     }
 
     func saveSession(_ session: StravaSession) {
         let file = StravaSessionFile(session: session)
-        guard let data = try? JSONEncoder.zoneTruth.encode(file) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        guard let data = try? JSONEncoder.zoneTruth.encode(file) else {
+            print("[Strava] saveSession: encode failed")
+            return
+        }
+        do {
+            try data.write(to: fileURL, options: .atomic)
+            print("[Strava] saveSession: wrote to \(fileURL.path)")
+        } catch {
+            print("[Strava] saveSession: write failed \(error)")
+        }
     }
 }
 
