@@ -587,7 +587,7 @@ extension StravaOAuthConfiguration {
         return StravaOAuthConfiguration(
             clientID: StravaCredentials.clientID,
             clientSecret: StravaCredentials.clientSecret,
-            redirectURI: "zonetruth://localhost/strava/callback",
+            redirectURI: "zonetruth://localhost",
             callbackScheme: "zonetruth"
         )
     }
