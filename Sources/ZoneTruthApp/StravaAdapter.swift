@@ -260,21 +260,32 @@ struct SystemStravaClient: StravaClient {
         let validSession = session.isExpired ? try await refreshed(from: session) : session
         print("[Strava] fetchRecentActivities: fetching up to \(limit) activities")
         let summaries = try await fetchActivitySummaries(accessToken: validSession.accessToken, limit: limit)
-        print("[Strava] fetchRecentActivities: got \(summaries.count) summaries")
+        print("[Strava] fetchRecentActivities: got \(summaries.count) summaries, fetching streams in parallel")
 
-        return try await summaries.stravaAsyncMap { summary in
-            let heartRateSamples: [HeartRateSample]
-            if summary.hasHeartrate {
-                heartRateSamples = (try? await fetchHeartRateSamples(
-                    activityID: summary.id,
-                    startDate: summary.startDate,
-                    accessToken: validSession.accessToken
-                )) ?? []
-            } else {
-                heartRateSamples = []
+        let snapshots = try await withThrowingTaskGroup(of: (Int, StravaActivitySnapshot).self) { group in
+            for (index, summary) in summaries.enumerated() {
+                group.addTask {
+                    let heartRateSamples: [HeartRateSample]
+                    if summary.hasHeartrate {
+                        heartRateSamples = (try? await fetchHeartRateSamples(
+                            activityID: summary.id,
+                            startDate: summary.startDate,
+                            accessToken: validSession.accessToken
+                        )) ?? []
+                    } else {
+                        heartRateSamples = []
+                    }
+                    return (index, summary.toSnapshot(heartRateSamples: heartRateSamples))
+                }
             }
-            return summary.toSnapshot(heartRateSamples: heartRateSamples)
+            var collected = [(Int, StravaActivitySnapshot)]()
+            for try await result in group {
+                collected.append(result)
+            }
+            return collected.sorted { $0.0 < $1.0 }.map(\.1)
         }
+        print("[Strava] fetchRecentActivities: done, \(snapshots.count) snapshots with heart rate")
+        return snapshots
     }
 
     private func fetchActivitySummaries(accessToken: String, limit: Int) async throws -> [StravaActivitySummary] {
