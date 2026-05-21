@@ -146,6 +146,102 @@ enum WeeklyAdaptationDirection: String {
     }
 }
 
+enum TrainingState: String {
+    case recovered = "Recovered"
+    case accumulatingLoad = "Accumulating load"
+    case functionalFatigue = "Functional fatigue"
+    case possibleUnderRecovery = "Possible under-recovery"
+    case recoveryNormalizing = "Recovery normalizing"
+
+    var localizedLabel: String {
+        switch self {
+        case .recovered: return "恢復穩定"
+        case .accumulatingLoad: return "累積負荷中"
+        case .functionalFatigue: return "功能性疲勞"
+        case .possibleUnderRecovery: return "可能恢復不足"
+        case .recoveryNormalizing: return "恢復回穩中"
+        }
+    }
+}
+
+struct WeeklyTrainingStateSignal {
+    let state: TrainingState
+    let authority: WeeklyDecisionAuthority
+    let inferenceClass: WeeklyInferenceClass
+    let rationale: String
+
+    static func from(summary: WeeklyWorkoutSummary, policy: WeeklyLoadPolicy, freshness: WeeklyDataFreshness) -> WeeklyTrainingStateSignal {
+        let authority = WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+        let inferenceClass = WeeklyInferenceClassifier.classify(
+            confidence: policy.confidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            elapsedDays: summary.elapsedDays
+        )
+
+        if inferenceClass == .unsupported {
+            return WeeklyTrainingStateSignal(
+                state: .recoveryNormalizing,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                rationale: "觀測不足，暫以恢復回穩中呈現，不做狀態升級判定。"
+            )
+        }
+
+        if freshness == .stale || freshness == .missing {
+            return WeeklyTrainingStateSignal(
+                state: .recoveryNormalizing,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                rationale: "資料新鮮度不足，狀態回到恢復回穩中並降低決策權重。"
+            )
+        }
+
+        if summary.workoutCount == 0 || summary.restDays >= 4 {
+            return WeeklyTrainingStateSignal(
+                state: .recovered,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                rationale: "近期負荷偏低且休息比例較高，恢復訊號偏穩定。"
+            )
+        }
+
+        if summary.highIntensityDays >= 2 && summary.consecutiveTrainingDays >= 4 {
+            return WeeklyTrainingStateSignal(
+                state: .possibleUnderRecovery,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                rationale: "高強度與連續負荷並存，恢復壓力上升，建議控管強度堆疊。"
+            )
+        }
+
+        if summary.consecutiveTrainingDays >= 3 || policy.recoveryConcernLevel == .elevated || policy.recoveryConcernLevel == .high {
+            return WeeklyTrainingStateSignal(
+                state: .functionalFatigue,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                rationale: "負荷連續性提升，較像適應期常見的功能性疲勞訊號。"
+            )
+        }
+
+        if summary.workoutCount >= 3 {
+            return WeeklyTrainingStateSignal(
+                state: .accumulatingLoad,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                rationale: "本週訓練節奏連續，負荷正在累積，屬於正常訓練推進期。"
+            )
+        }
+
+        return WeeklyTrainingStateSignal(
+            state: .recoveryNormalizing,
+            authority: authority,
+            inferenceClass: inferenceClass,
+            rationale: "訊號偏中性，恢復與負荷正在重新平衡。"
+        )
+    }
+}
+
 enum AdaptationTemporalScope {
     case short7d
     case medium28dUnavailable
@@ -579,6 +675,9 @@ struct WeeklyAdvancedCard: View {
     private var reminderLevel: NonAuthorityReminderLevel {
         NonAuthorityReminderPolicy.level(inference: adaptation.inferenceClass, freshness: freshness)
     }
+    private var trainingState: WeeklyTrainingStateSignal {
+        WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: freshness)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -612,6 +711,24 @@ struct WeeklyAdvancedCard: View {
                         .background(PremiumColor.gold.opacity(reminderLevel.backgroundOpacity))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+            }
+
+            Divider().background(PremiumColor.border)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("訓練狀態")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white.opacity(0.8))
+                HStack(spacing: 8) {
+                    EvidenceChip(label: trainingState.authority.rawValue, color: stateAuthorityChipColor)
+                    EvidenceChip(label: trainingState.inferenceClass.rawValue, color: stateInferenceChipColor)
+                    Text(trainingState.state.localizedLabel)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                Text(trainingState.rationale)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Divider().background(PremiumColor.border)
@@ -703,6 +820,22 @@ struct WeeklyAdvancedCard: View {
 
     private var adaptationInferenceChipColor: Color {
         switch adaptation.inferenceClass {
+        case .bounded: return PremiumColor.skyBlue
+        case .weak: return PremiumColor.gold
+        case .unsupported: return .gray
+        }
+    }
+
+    private var stateAuthorityChipColor: Color {
+        switch trainingState.authority {
+        case .observational: return PremiumColor.emerald
+        case .boundedInference: return PremiumColor.skyBlue
+        case .weakInference: return PremiumColor.gold
+        }
+    }
+
+    private var stateInferenceChipColor: Color {
+        switch trainingState.inferenceClass {
         case .bounded: return PremiumColor.skyBlue
         case .weak: return PremiumColor.gold
         case .unsupported: return .gray

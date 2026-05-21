@@ -1216,6 +1216,127 @@ final class ZoneTruthAppTests: XCTestCase {
         )
     }
 
+    func testWeeklyTrainingStateSignalCoversStateProgression() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let policy = WeeklyLoadPolicy(
+            recoveryConcernLevel: .low,
+            loadTendency: .balanced,
+            keyFindings: [],
+            nextAction: "",
+            confidence: 0.85
+        )
+
+        let recoveredSummary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 1,
+            totalDurationMinutes: 45,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 0,
+            strengthDays: 0,
+            restDays: 5,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 1
+        )
+        XCTAssertEqual(
+            WeeklyTrainingStateSignal.from(summary: recoveredSummary, policy: policy, freshness: .fresh).state,
+            .recovered
+        )
+
+        let accumulatingSummary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 3,
+            totalDurationMinutes: 180,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 2, .activityReview: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 0,
+            strengthDays: 0,
+            restDays: 2,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 2
+        )
+        XCTAssertEqual(
+            WeeklyTrainingStateSignal.from(summary: accumulatingSummary, policy: policy, freshness: .fresh).state,
+            .accumulatingLoad
+        )
+
+        let fatigueSummary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 4,
+            totalDurationMinutes: 250,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 3, .activityReview: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 1,
+            strengthDays: 0,
+            restDays: 2,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 3
+        )
+        XCTAssertEqual(
+            WeeklyTrainingStateSignal.from(summary: fatigueSummary, policy: policy, freshness: .fresh).state,
+            .functionalFatigue
+        )
+
+        let underRecoverySummary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 5,
+            totalDurationMinutes: 320,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 2, .vo2Interval: 2, .strength: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 2,
+            strengthDays: 1,
+            restDays: 1,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 4
+        )
+        XCTAssertEqual(
+            WeeklyTrainingStateSignal.from(summary: underRecoverySummary, policy: policy, freshness: .fresh).state,
+            .possibleUnderRecovery
+        )
+    }
+
+    func testWeeklyTrainingStateSignalDowngradesUnderStaleOrMissingEvidence() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 5,
+            totalDurationMinutes: 320,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 2, .vo2Interval: 2, .strength: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 2,
+            strengthDays: 1,
+            restDays: 1,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 4
+        )
+        let policy = WeeklyLoadPolicy(
+            recoveryConcernLevel: .high,
+            loadTendency: .highIntensityFocused,
+            keyFindings: [],
+            nextAction: "",
+            confidence: 0.85
+        )
+
+        XCTAssertEqual(
+            WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: .stale).state,
+            .recoveryNormalizing
+        )
+        XCTAssertEqual(
+            WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: .missing).state,
+            .recoveryNormalizing
+        )
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
