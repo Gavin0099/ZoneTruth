@@ -44,15 +44,17 @@ struct AppEnvironment {
     }
 
     private static func defaultImportURL(fileManager: FileManager) -> URL {
-        URL(fileURLWithPath: fileManager.currentDirectoryPath)
-            .appendingPathComponent("SampleData", isDirectory: true)
+        documentsDirectory(fileManager: fileManager)
             .appendingPathComponent("workouts.json")
     }
 
     private static func defaultStravaSessionURL(fileManager: FileManager) -> URL {
-        URL(fileURLWithPath: fileManager.currentDirectoryPath)
-            .appendingPathComponent("SampleData", isDirectory: true)
+        documentsDirectory(fileManager: fileManager)
             .appendingPathComponent("strava-session.json")
+    }
+
+    private static func documentsDirectory(fileManager: FileManager) -> URL {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 }
 
