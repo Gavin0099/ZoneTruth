@@ -1,6 +1,127 @@
 import SwiftUI
 import ZoneTruthCore
 
+enum WeeklyDecisionAuthority: String {
+    case observational = "Direct observation"
+    case boundedInference = "Bounded inference"
+    case weakInference = "Weak inference"
+}
+
+enum WeeklyDataFreshness: String {
+    case fresh = "fresh"
+    case partial = "partial"
+    case stale = "stale"
+    case missing = "missing"
+
+    var label: String {
+        switch self {
+        case .fresh: return "Data fresh"
+        case .partial: return "Data partial"
+        case .stale: return "Data stale"
+        case .missing: return "Data missing"
+        }
+    }
+}
+
+enum WeeklyFreshnessSignal {
+    static func classify(
+        workouts: [WorkoutInput],
+        weekStart: Date,
+        now: Date = Date()
+    ) -> WeeklyDataFreshness {
+        let weekWorkouts = workouts.filter { $0.startDate >= weekStart }
+        guard let latest = weekWorkouts.map(\.startDate).max() else {
+            return .missing
+        }
+        let hours = now.timeIntervalSince(latest) / 3600
+        if hours <= 30 { return .fresh }
+        if hours <= 72 { return .partial }
+        return .stale
+    }
+}
+
+enum WeeklyAuthorityRendering {
+    static func authority(for confidence: Double, freshness: WeeklyDataFreshness) -> WeeklyDecisionAuthority {
+        if freshness == .stale || freshness == .missing {
+            return .weakInference
+        }
+        if confidence < 0.6 { return .weakInference }
+        if confidence < 0.75 { return .boundedInference }
+        return .observational
+    }
+
+    static func recommendationEmphasisOpacity(for confidence: Double) -> Double {
+        confidence < 0.6 ? 0.03 : 0.08
+    }
+
+    static func recommendationStrokeOpacity(for confidence: Double) -> Double {
+        confidence < 0.6 ? 0.12 : 0.2
+    }
+}
+
+enum WeeklyAdaptationDirection: String {
+    case enduranceBuild = "Endurance build"
+    case maintenance = "Maintenance"
+    case mixedAdaptation = "Mixed adaptation"
+    case recoveryBiased = "Recovery-biased"
+
+    var localizedLabel: String {
+        switch self {
+        case .enduranceBuild: return "有氧建設期"
+        case .maintenance: return "維持期"
+        case .mixedAdaptation: return "混合適應"
+        case .recoveryBiased: return "恢復優先週"
+        }
+    }
+}
+
+struct WeeklyAdaptationSignal {
+    let direction: WeeklyAdaptationDirection
+    let authority: WeeklyDecisionAuthority
+    let rationale: String
+
+    static func from(summary: WeeklyWorkoutSummary, policy: WeeklyLoadPolicy, freshness: WeeklyDataFreshness) -> WeeklyAdaptationSignal {
+        let authority = WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+        let total = summary.workoutCount
+        let z2Count = summary.intentDistribution[.zone2, default: 0]
+        let z2Ratio = total > 0 ? Double(z2Count) / Double(total) : 0
+
+        if total == 0 {
+            return WeeklyAdaptationSignal(
+                direction: .recoveryBiased,
+                authority: authority,
+                rationale: "本週尚無有效訓練觀測，方向訊號偏向恢復優先。"
+            )
+        }
+        if summary.restDays >= 3 && total <= 3 {
+            return WeeklyAdaptationSignal(
+                direction: .recoveryBiased,
+                authority: authority,
+                rationale: "休息日比例偏高，整體負荷偏向恢復導向。"
+            )
+        }
+        if z2Ratio >= 0.6 && summary.highIntensityDays <= 1 {
+            return WeeklyAdaptationSignal(
+                direction: .enduranceBuild,
+                authority: authority,
+                rationale: "低中強度佔比較高，與有氧建設期型態一致。"
+            )
+        }
+        if summary.highIntensityDays >= 2 && summary.consecutiveTrainingDays >= 4 {
+            return WeeklyAdaptationSignal(
+                direction: .mixedAdaptation,
+                authority: authority,
+                rationale: "高強度與連續負荷並存，訊號偏向混合適應。"
+            )
+        }
+        return WeeklyAdaptationSignal(
+            direction: .maintenance,
+            authority: authority,
+            rationale: "負荷分布中性，方向訊號偏向維持期。"
+        )
+    }
+}
+
 // MARK: - Extensions
 
 extension RecoveryConcernLevel {
@@ -49,6 +170,12 @@ extension LoadTendency {
 
 struct WeeklyDashboardView: View {
     @ObservedObject var viewModel: WorkoutListViewModel
+    private var freshness: WeeklyDataFreshness {
+        WeeklyFreshnessSignal.classify(
+            workouts: viewModel.workouts,
+            weekStart: viewModel.weeklySummary.weekStart
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -58,12 +185,14 @@ struct WeeklyDashboardView: View {
                     weekRangeHeader
                     WeeklyOverviewCard(
                         summary: viewModel.weeklySummary,
-                        policy: viewModel.weeklyPolicy
+                        policy: viewModel.weeklyPolicy,
+                        freshness: freshness
                     )
                     WeeklyDistributionCard(summary: viewModel.weeklySummary)
                     WeeklyAdvancedCard(
                         summary: viewModel.weeklySummary,
-                        policy: viewModel.weeklyPolicy
+                        policy: viewModel.weeklyPolicy,
+                        freshness: freshness
                     )
                 }
                 .padding(16)
@@ -96,6 +225,10 @@ struct WeeklyDashboardView: View {
 struct WeeklyOverviewCard: View {
     let summary: WeeklyWorkoutSummary
     let policy: WeeklyLoadPolicy
+    let freshness: WeeklyDataFreshness
+    private var authority: WeeklyDecisionAuthority {
+        WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -115,6 +248,14 @@ struct WeeklyOverviewCard: View {
                 }
 
                 Divider().background(PremiumColor.border)
+
+                HStack(spacing: 8) {
+                    EvidenceChip(label: authority.rawValue, color: chipColor)
+                    EvidenceChip(label: freshness.label, color: freshnessChipColor)
+                    if policy.confidence < 0.6 || freshness == .stale || freshness == .missing {
+                        EvidenceChip(label: "Evidence gap", color: PremiumColor.gold)
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(policy.keyFindings, id: \.self) { finding in
@@ -141,12 +282,19 @@ struct WeeklyOverviewCard: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(PremiumColor.gold.opacity(0.08))
+                .background(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: policy.confidence)))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(PremiumColor.gold.opacity(0.2), lineWidth: 1)
+                        .stroke(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: policy.confidence)), lineWidth: 1)
                 )
+
+                if policy.confidence < 0.75 || freshness == .stale || freshness == .missing {
+                    Text("Based on available HR-derived observations. Not a physiological diagnosis.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(16)
@@ -184,6 +332,23 @@ struct WeeklyOverviewCard: View {
                     .font(.headline.bold())
                     .foregroundStyle(.white)
             }
+        }
+    }
+
+    private var chipColor: Color {
+        switch authority {
+        case .observational: return PremiumColor.emerald
+        case .boundedInference: return PremiumColor.skyBlue
+        case .weakInference: return PremiumColor.gold
+        }
+    }
+
+    private var freshnessChipColor: Color {
+        switch freshness {
+        case .fresh: return PremiumColor.emerald
+        case .partial: return PremiumColor.skyBlue
+        case .stale: return PremiumColor.gold
+        case .missing: return .gray
         }
     }
 }
@@ -250,17 +415,56 @@ struct WeeklyDistributionCard: View {
     }
 }
 
+private struct EvidenceChip: View {
+    let label: String
+    let color: Color
+
+    var body: some View {
+        Text(label)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(color.opacity(0.28), lineWidth: 1)
+            )
+    }
+}
+
 // MARK: - Section 3: Advanced
 
 struct WeeklyAdvancedCard: View {
     let summary: WeeklyWorkoutSummary
     let policy: WeeklyLoadPolicy
+    let freshness: WeeklyDataFreshness
+    private var adaptation: WeeklyAdaptationSignal {
+        WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: freshness)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("進階")
                 .font(.headline.bold())
                 .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("適應方向")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white.opacity(0.8))
+                HStack(spacing: 8) {
+                    EvidenceChip(label: adaptation.authority.rawValue, color: adaptationChipColor)
+                    Text(adaptation.direction.localizedLabel)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                Text(adaptation.rationale)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider().background(PremiumColor.border)
 
             // Intent distribution
             VStack(alignment: .leading, spacing: 8) {
@@ -312,7 +516,7 @@ struct WeeklyAdvancedCard: View {
             // Confidence
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("資料信心指數")
+                    Text("資料完整度")
                         .font(.subheadline.bold())
                         .foregroundStyle(.white.opacity(0.8))
                     if policy.confidence < 0.6 {
@@ -337,5 +541,13 @@ struct WeeklyAdvancedCard: View {
         .background(PremiumColor.cardBg)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(PremiumColor.border, lineWidth: 1))
+    }
+
+    private var adaptationChipColor: Color {
+        switch adaptation.authority {
+        case .observational: return PremiumColor.emerald
+        case .boundedInference: return PremiumColor.skyBlue
+        case .weakInference: return PremiumColor.gold
+        }
     }
 }

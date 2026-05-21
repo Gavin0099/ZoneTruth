@@ -1095,11 +1095,96 @@ final class ZoneTruthAppTests: XCTestCase {
         _ = view.body
     }
 
+    func testWeeklyAuthorityRenderingDowngradesUnderLowConfidence() {
+        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .fresh), .observational)
+        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.7, freshness: .fresh), .boundedInference)
+        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.5, freshness: .fresh), .weakInference)
+        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .stale), .weakInference)
+        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .missing), .weakInference)
+
+        XCTAssertLessThan(
+            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: 0.5),
+            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: 0.85)
+        )
+        XCTAssertLessThan(
+            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: 0.5),
+            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: 0.85)
+        )
+    }
+
+    func testWeeklyAdaptationSignalUsesBoundedDirectionClasses() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 4,
+            totalDurationMinutes: 240,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 3, .vo2Interval: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 1,
+            strengthDays: 0,
+            restDays: 2,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 2
+        )
+        let policy = WeeklyLoadPolicy(
+            recoveryConcernLevel: .low,
+            loadTendency: .aerobicFocused,
+            keyFindings: [],
+            nextAction: "",
+            confidence: 0.85
+        )
+        let signal = WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: .fresh)
+
+        XCTAssertEqual(signal.direction, .enduranceBuild)
+        XCTAssertEqual(signal.authority, .observational)
+    }
+
+    func testWeeklyFreshnessSignalClassifiesFreshPartialStaleMissing() {
+        let weekStart = makeUTCDate(year: 2026, month: 5, day: 18)
+        let now = weekStart.addingTimeInterval(6 * 86400 + 20 * 3600) // Sun 20:00
+
+        let freshWorkouts = [
+            makeWorkoutForFreshness(startDate: now.addingTimeInterval(-6 * 3600))
+        ]
+        let partialWorkouts = [
+            makeWorkoutForFreshness(startDate: now.addingTimeInterval(-40 * 3600))
+        ]
+        let staleWorkouts = [
+            makeWorkoutForFreshness(startDate: weekStart.addingTimeInterval(36 * 3600)) // Tue 12:00
+        ]
+
+        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: freshWorkouts, weekStart: weekStart, now: now), .fresh)
+        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: partialWorkouts, weekStart: weekStart, now: now), .partial)
+        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: staleWorkouts, weekStart: weekStart, now: now), .stale)
+        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: [], weekStart: weekStart, now: now), .missing)
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         return directoryURL
+    }
+
+    private func makeUTCDate(year: Int, month: Int, day: Int) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal.date(from: DateComponents(year: year, month: month, day: day, hour: 0, minute: 0, second: 0))!
+    }
+
+    private func makeWorkoutForFreshness(startDate: Date) -> WorkoutInput {
+        WorkoutInput(
+            workoutType: .running,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(3600),
+            heartRateSamples: [
+                HeartRateSample(timestamp: startDate, bpm: 120),
+                HeartRateSample(timestamp: startDate.addingTimeInterval(600), bpm: 122),
+            ],
+            intent: .zone2
+        )
     }
 
     private func buildEvaluationFixtureRecords() -> [EvaluationFixtureRecord] {

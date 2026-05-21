@@ -541,3 +541,93 @@ P3 規劃：
 - P3c：Weekly policy confidence adjustment
 
 備註：P3 HRV 目前 deferred，先以 P2 guard 穩定性為優先。
+
+17. P3 Doctrine：Evidence-Bound Training Observatory（啟動）
+
+定位：
+
+- P3 不以「更多分析卡片」為目標，而是以 `training epistemology` 為目標。
+- 產品由「資料解釋型 UI」轉為「決策支援型 UI」。
+
+Doctrine（正式規格）：
+
+- 規格檔：`docs/TRAINING_PRODUCT_DOCTRINE.md`
+- 核心原則：
+  - Action-guiding, not action-authoritative
+  - State-transition, not binary verdict
+  - Evidence-typed output
+  - No-overclaim by Claim Authority Matrix
+
+P3b（下一步）：
+
+1. 導入 HRV uncertainty signal（coverage / sparsity）到 weekly decision surface。
+2. Weekly decision cards 顯示 evidence type（direct / derived / weak inference）。
+3. 低證據情境自動降語氣（避免 imperative wording）。
+
+P3c（其後）：
+
+1. 將 confidence semantics 改為 evidence-completeness 驅動。
+2. Weekly policy wording 受 uncertainty rendering rules 約束。
+3. 所有 claim 受 Claim Authority Matrix 與 coaching language contract 約束。
+
+Guard 要求：
+
+- 禁用語句與 overclaim 詞彙檢查
+- evidence layer mapping tests
+- uncertainty rendering 行為測試
+- snapshot drift + semantic annotation gate
+
+18. P3d-P3i：Authority & Epistemic Rendering（進行中）
+
+定位：
+
+- 將 wording governance 升級為 rendering governance。
+- 防止「語氣保守但視覺權威過強」造成心理層 overclaim。
+
+P3d：Authority Rendering System
+
+1. UI 元件綁定 authority layer（observation / interpretation / uncertainty）。
+2. 低證據時降低色彩強度與 CTA prominence。
+3. 禁止低證據卡片使用 hero-style 強權威視覺。
+
+P3e：Training State Machine
+
+1. 引入狀態機：
+   - recovered
+   - accumulating_load
+   - functional_fatigue
+   - possible_under_recovery
+   - recovery_normalizing
+2. 禁止 binary verdict 回退（fatigue != bad）。
+
+P3f：Data Freshness Authority
+
+1. freshness 分級：fresh / partial / stale / missing。
+2. stale/missing 必須自動降級 decision authority。
+3. 不可用 stale evidence 輸出高權威建議。
+
+P3g：Inference Stratification
+
+1. inference 分級：
+   - bounded_inference
+   - weak_inference
+   - unsupported_speculation
+2. 指標到 inference class 的 mapping 需有明確規則。
+
+P3h：Adaptation Direction Surface
+
+1. 首頁加入 adaptation direction（如 endurance build / maintenance / mixed / recovery-biased）。
+2. adaptation direction 僅能使用 7d/28d 趨勢，不得由單次活動直接推斷。
+
+P3i：Non-Authority Reminder
+
+1. 高解釋卡片顯示固定提醒：
+   - "Based on available HR-derived observations. Not a physiological diagnosis."
+2. partial/stale 情境下提高提醒可見性。
+
+Closeout Guards（新增）：
+
+- freshness downgrade tests
+- state-machine transition validity tests
+- authority-rendering tests（low evidence cannot render high-emphasis coach surface）
+- forbidden semantics + snapshot annotation gate 維持 fail-closed
