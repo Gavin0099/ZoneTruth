@@ -386,7 +386,7 @@ struct StravaAuthorizationParser {
 }
 
 struct SystemStravaOAuthClient: StravaOAuthClient {
-    private static let tokenURL = URL(string: "https://www.strava.com/oauth/v3/token")!
+    private static let tokenURL = URL(string: "https://www.strava.com/oauth/token")!
     private let urlSession: URLSession
 
     init(urlSession: URLSession = .shared) {
