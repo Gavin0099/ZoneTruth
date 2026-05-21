@@ -56,12 +56,20 @@ enum WeeklyAuthorityRendering {
         return .observational
     }
 
-    static func recommendationEmphasisOpacity(for confidence: Double) -> Double {
-        confidence < 0.6 ? 0.03 : 0.08
+    static func recommendationEmphasisOpacity(for authority: WeeklyDecisionAuthority) -> Double {
+        switch authority {
+        case .observational: return 0.08
+        case .boundedInference: return 0.06
+        case .weakInference: return 0.03
+        }
     }
 
-    static func recommendationStrokeOpacity(for confidence: Double) -> Double {
-        confidence < 0.6 ? 0.12 : 0.2
+    static func recommendationStrokeOpacity(for authority: WeeklyDecisionAuthority) -> Double {
+        switch authority {
+        case .observational: return 0.2
+        case .boundedInference: return 0.16
+        case .weakInference: return 0.12
+        }
     }
 }
 
@@ -501,11 +509,11 @@ struct WeeklyOverviewCard: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: policy.confidence)))
+                .background(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: authority)))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: policy.confidence)), lineWidth: 1)
+                        .stroke(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: authority)), lineWidth: 1)
                 )
 
                 if reminderLevel != .none {

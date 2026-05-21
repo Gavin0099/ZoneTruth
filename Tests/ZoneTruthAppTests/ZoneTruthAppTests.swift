@@ -1103,13 +1103,33 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .missing), .weakInference)
 
         XCTAssertLessThan(
-            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: 0.5),
-            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: 0.85)
+            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: .weakInference),
+            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: .observational)
         )
         XCTAssertLessThan(
-            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: 0.5),
-            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: 0.85)
+            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: .weakInference),
+            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: .observational)
         )
+    }
+
+    func testLowEvidenceCannotRenderHighAuthorityVisuals() {
+        // Low confidence with fresh data
+        let lowConfAuthority = WeeklyAuthorityRendering.authority(for: 0.5, freshness: .fresh)
+        XCTAssertEqual(lowConfAuthority, .weakInference)
+        XCTAssertEqual(WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: lowConfAuthority), 0.03)
+        XCTAssertEqual(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: lowConfAuthority), 0.12)
+        
+        // High confidence but stale data
+        let staleAuthority = WeeklyAuthorityRendering.authority(for: 0.9, freshness: .stale)
+        XCTAssertEqual(staleAuthority, .weakInference)
+        XCTAssertEqual(WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: staleAuthority), 0.03)
+        XCTAssertEqual(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: staleAuthority), 0.12)
+
+        // High confidence but missing data
+        let missingAuthority = WeeklyAuthorityRendering.authority(for: 0.9, freshness: .missing)
+        XCTAssertEqual(missingAuthority, .weakInference)
+        XCTAssertEqual(WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: missingAuthority), 0.03)
+        XCTAssertEqual(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: missingAuthority), 0.12)
     }
 
     func testWeeklyAdaptationSignalUsesBoundedDirectionClasses() {

@@ -136,6 +136,17 @@ if ! grep -q '部分訓練心率樣本不足，數據僅供參考' "$WEEKLY_UI_P
   exit 1
 fi
 
+if grep -q -E 'recommendationEmphasisOpacity\(for:[[:space:]]*policy\.confidence\)' "$WEEKLY_UI_PATH" || grep -q -E 'recommendationStrokeOpacity\(for:[[:space:]]*policy\.confidence\)' "$WEEKLY_UI_PATH"; then
+  weekly_ui_guard="visual_authority_bypass_detected"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "weekly_snapshot: ${weekly_snapshot}"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
 if ! git diff --quiet -- "$FIXTURE_PATH" || ! git diff --quiet --cached -- "$FIXTURE_PATH"; then
   snapshot_fixture="changed"
 fi
