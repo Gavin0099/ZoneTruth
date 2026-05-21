@@ -99,7 +99,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let result = Zone2QualityAnalyzer.analyze(workout: workout)
 
         XCTAssertEqual(result.verdict, .warning)
-        XCTAssertTrue(result.reasons.contains { $0.contains("10% and 20%") || $0.contains("5% and 8%") })
+        XCTAssertTrue(result.reasons.contains { $0.contains("10% 到 20%") || $0.contains("5% 到 8%") })
     }
 
     func testZone2AnalyzerFailsForHeavyLeakageAndHighDrift() {
@@ -111,7 +111,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let result = Zone2QualityAnalyzer.analyze(workout: workout)
 
         XCTAssertEqual(result.verdict, .fail)
-        XCTAssertTrue(result.reasons.contains { $0.contains("exceeded 20%") || $0.contains("exceeded 8%") })
+        XCTAssertTrue(result.reasons.contains { $0.contains("超過 20%") || $0.contains("超過 8%") })
     }
 
     func testActivityReviewReturnsDescriptivePass() {
@@ -123,7 +123,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let result = WorkoutIntentAnalyzer.analyze(workout)
 
         XCTAssertEqual(result.verdict, .pass)
-        XCTAssertTrue(result.reasons.contains { $0.contains("general activity") })
+        XCTAssertTrue(result.reasons.contains { $0.contains("一般活動") })
     }
 
     func testVO2IntervalAnalysis() {
@@ -172,7 +172,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let result = Zone2QualityAnalyzer.analyze(workout: workout)
 
         XCTAssertEqual(result.verdict, .fail)
-        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("too low") })
+        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("過低") })
         XCTAssertNil(result.stabilityStandardDeviation)
         XCTAssertNil(result.driftRatio)
     }
@@ -187,7 +187,7 @@ final class ZoneTruthCoreTests: XCTestCase {
 
         XCTAssertEqual(result.verdict, .fail)
         XCTAssertEqual(result.zoneDistribution.ratio(for: .zone3), 0.0)
-        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("exceeded 8%") })
+        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("超過 8%") })
     }
 
     func testZone2AnalyzerWarnsForHighVariabilityWithGoodZones() {
@@ -200,7 +200,7 @@ final class ZoneTruthCoreTests: XCTestCase {
 
         XCTAssertEqual(result.verdict, .warning)
         XCTAssertEqual(result.zoneDistribution.ratio(for: .zone3), 0.0)
-        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("variability was moderate") })
+        XCTAssertTrue(result.reasons.contains { $0.localizedCaseInsensitiveContains("變異度為中等") })
     }
 
     func testSanitizerRemovesWarmupCooldownAndSpikes() {
@@ -294,8 +294,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let records = buildZone2ObservationFixtureRecords()
         let fixtureURL = try zone2ObservationFixtureURL()
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.escapeSlashes = false
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let rendered = try encoder.encode(records)
 
         if ProcessInfo.processInfo.environment["UPDATE_ZONE2_OBSERVATION_FIXTURE"] == "1" {
@@ -428,8 +427,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let records = buildVO2ObservationFixtureRecords()
         let fixtureURL = try vo2ObservationFixtureURL()
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.escapeSlashes = false
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let rendered = try encoder.encode(records)
 
         if ProcessInfo.processInfo.environment["UPDATE_VO2_OBSERVATION_FIXTURE"] == "1" {
@@ -469,8 +467,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let records = buildStrengthObservationFixtureRecords()
         let fixtureURL = try strengthObservationFixtureURL()
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.escapeSlashes = false
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let rendered = try encoder.encode(records)
 
         if ProcessInfo.processInfo.environment["UPDATE_STRENGTH_OBSERVATION_FIXTURE"] == "1" {
@@ -510,8 +507,7 @@ final class ZoneTruthCoreTests: XCTestCase {
         let records = buildActivityObservationFixtureRecords()
         let fixtureURL = try activityObservationFixtureURL()
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.escapeSlashes = false
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let rendered = try encoder.encode(records)
 
         if ProcessInfo.processInfo.environment["UPDATE_ACTIVITY_OBSERVATION_FIXTURE"] == "1" {

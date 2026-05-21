@@ -187,7 +187,7 @@ private struct Zone2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationL
             tendency = "偏 Zone 2 但強度略高"
             score = 58
             findings = ["Zone 3 比例偏高，Zone 2 純度不足。", drift < 0.05 ? "心率飄移低，耐力穩定性仍不錯。" : "心率飄移略高，後段有強度上浮。"]
-            nextAction = "前段先保守 5-10 分鐘，將心率穩定控制在 Zone 2 上緣以下。"
+            nextAction = "前段先保守 5-10 分鐘，適度降低強度並將心率穩定控制在 Zone 2 上緣以下。"
         } else {
             tendency = "偏穩定有氧訓練"
             score = 82

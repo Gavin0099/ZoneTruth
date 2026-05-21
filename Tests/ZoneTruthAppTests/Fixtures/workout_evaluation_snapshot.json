@@ -1,108 +1,109 @@
 [
   {
-    "id": "zone2_deviation_stable_drift",
-    "evaluation": {
-      "primaryIntent": "zone2",
-      "trainingTendency": "偏 Zone 2 但強度略高",
-      "goalFitScore": 62,
-      "classificationConfidence": 72,
-      "evaluationConfidence": 72,
-      "keyFindings": [
-        "Zone 3 區間的時間比例介於 10% 到 20% 之間，對 Zone 2 訓練來說稍微偏高。",
-        "心率變異度為中等，這表示您的配速或阻力可能不太均勻。"
+    "evaluation" : {
+      "classificationConfidence" : 64,
+      "evaluationConfidence" : 64,
+      "goalFitScore" : 57,
+      "keyFindings" : [
+        "Zone 3 比例偏高，Zone 2 純度不足。",
+        "心率飄移略高，後段有強度上浮。"
       ],
-      "nextAction": "在前 10 分鐘稍微降低強度，以減少訓練後段的心率飄移現象。",
-      "secondarySignals": [
-        "Zone 3 比例 15%",
+      "legacyPassFail" : false,
+      "nextAction" : "前段先保守 5-10 分鐘，適度降低強度並將心率穩定控制在 Zone 2 上緣以下。",
+      "primaryIntent" : "zone2",
+      "secondarySignals" : [
+        "Zone 3 比例 17%",
         "Zone 4/5 比例 0%",
-        "心率飄移 5.9%",
-        "心率標準差 5.9 bpm"
+        "心率飄移 5.7%",
+        "心率標準差 3.7 bpm"
       ],
-      "legacyPassFail": false
-    }
+      "trainingTendency" : "偏 Zone 2 但強度略高"
+    },
+    "id" : "zone2_deviation_stable_drift"
   },
   {
-    "id": "vo2_pass",
-    "evaluation": {
-      "primaryIntent": "vo2Max",
-      "trainingTendency": "偏高強度間歇訓練",
-      "goalFitScore": 83,
-      "classificationConfidence": 80,
-      "evaluationConfidence": 80,
-      "keyFindings": [
-        "在高強度區間 (Zone 4/5) 停留的時間充足，這是一次達標的間歇訓練。"
+    "evaluation" : {
+      "classificationConfidence" : 80,
+      "evaluationConfidence" : 70,
+      "goalFitScore" : 84,
+      "keyFindings" : [
+        "Zone 4/5 佔比足夠，符合高強度刺激需求。"
       ],
-      "nextAction": "表現優異！您已達到刺激最大攝氧量 (VO2 Max) 所需的高強度區間。",
-      "secondarySignals": [
+      "legacyPassFail" : true,
+      "nextAction" : "維持間歇品質，下一次優先確保每組恢復完整。",
+      "primaryIntent" : "vo2Max",
+      "secondarySignals" : [
         "Zone 3 比例 0%",
-        "Zone 4/5 比例 53%",
+        "Zone 4/5 比例 100%",
         "心率飄移資料不足",
-        "心率標準差 23.8 bpm"
+        "心率標準差 3.3 bpm"
       ],
-      "legacyPassFail": true
-    }
+      "trainingTendency" : "偏高強度間歇訓練"
+    },
+    "id" : "vo2_pass"
   },
   {
-    "id": "strength_metabolic_circuit",
-    "evaluation": {
-      "primaryIntent": "strength",
-      "trainingTendency": "偏傳統肌力訓練",
-      "goalFitScore": 43,
-      "classificationConfidence": 80,
-      "evaluationConfidence": 80,
-      "keyFindings": [
-        "平均心率 (136 bpm) 非常高。這次訓練的實質效果比較像是體能代謝循環訓練，而不是傳統肌力訓練。"
+    "evaluation" : {
+      "classificationConfidence" : 80,
+      "evaluationConfidence" : 70,
+      "goalFitScore" : 46,
+      "keyFindings" : [
+        "高強度停留較多，整體較偏代謝循環刺激。"
       ],
-      "nextAction": "這筆紀錄的心率更像是代謝循環訓練或心肺有氧，而非傳統的肌力訓練。",
-      "secondarySignals": [
-        "Zone 3 比例 29%",
-        "Zone 4/5 比例 57%",
+      "legacyPassFail" : false,
+      "nextAction" : "若目標是純肌力，請拉長組間休息，降低連續高心率時間。",
+      "primaryIntent" : "strength",
+      "secondarySignals" : [
+        "Zone 3 比例 50%",
+        "Zone 4/5 比例 50%",
         "心率飄移資料不足",
-        "心率標準差 9.7 bpm"
+        "心率標準差 3.6 bpm"
       ],
-      "legacyPassFail": false
-    }
+      "trainingTendency" : "偏代謝循環訓練"
+    },
+    "id" : "strength_metabolic_circuit"
   },
   {
-    "id": "activity_general",
-    "evaluation": {
-      "primaryIntent": "activity",
-      "trainingTendency": "偏一般活動訓練",
-      "goalFitScore": 73,
-      "classificationConfidence": 50,
-      "evaluationConfidence": 50,
-      "keyFindings": [
-        "本次紀錄是以一般活動的方式進行檢視，並非進行嚴格的 Zone 2 指標分析。"
+    "evaluation" : {
+      "classificationConfidence" : 50,
+      "evaluationConfidence" : 50,
+      "goalFitScore" : 70,
+      "keyFindings" : [
+        "本次為一般活動型態，建議以描述性回顧為主。"
       ],
-      "nextAction": "如果您需要的是純粹的摘要而非嚴格的訓練品質判定，就可以使用這個目標模式。",
-      "secondarySignals": [
+      "legacyPassFail" : true,
+      "nextAction" : "若需要嚴格訓練品質評估，請改用明確訓練目標（Zone2/VO2/Strength）。",
+      "primaryIntent" : "activity",
+      "secondarySignals" : [
         "Zone 3 比例 0%",
         "Zone 4/5 比例 0%",
-        "心率飄移 -0.5%",
-        "心率標準差 5.7 bpm"
+        "心率飄移 -2.6%",
+        "心率標準差 6.8 bpm"
       ],
-      "legacyPassFail": true
-    }
+      "trainingTendency" : "偏一般活動訓練"
+    },
+    "id" : "activity_general"
   },
   {
-    "id": "sparse_hr_samples",
-    "evaluation": {
-      "primaryIntent": "zone2",
-      "trainingTendency": "偏穩定有氧訓練",
-      "goalFitScore": 30,
-      "classificationConfidence": 30,
-      "evaluationConfidence": 10,
-      "keyFindings": [
-        "心率樣本數過低（僅 7 筆）。您的裝置可能沒有完整記錄整個運動過程的心率。"
+    "evaluation" : {
+      "classificationConfidence" : 30,
+      "evaluationConfidence" : 10,
+      "goalFitScore" : 70,
+      "keyFindings" : [
+        "Zone 2 佔比為主，整體強度分布穩定。",
+        "心率飄移與波動在可接受範圍。"
       ],
-      "nextAction": "這次訓練可能已經偏離了穩定的 Zone 2 狀態。",
-      "secondarySignals": [
+      "legacyPassFail" : true,
+      "nextAction" : "維持目前節奏，下一次可小幅延長訓練時間。",
+      "primaryIntent" : "zone2",
+      "secondarySignals" : [
         "Zone 3 比例 0%",
         "Zone 4/5 比例 0%",
         "心率飄移資料不足",
         "心率穩定度資料不足"
       ],
-      "legacyPassFail": false
-    }
+      "trainingTendency" : "偏穩定有氧訓練"
+    },
+    "id" : "sparse_hr_samples"
   }
 ]

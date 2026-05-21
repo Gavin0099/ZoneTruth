@@ -19,7 +19,7 @@ public enum SampleWorkoutCases {
                     intent: .zone2
                 ),
                 expectedVerdict: .pass,
-                expectedReasonSnippets: ["below 10%", "below 5%"]
+                expectedReasonSnippets: ["10% 以下", "5% 以下"]
             ),
             LabeledWorkoutCase(
                 name: "leaky_zone2_run",
@@ -35,7 +35,7 @@ public enum SampleWorkoutCases {
                     intent: .zone2
                 ),
                 expectedVerdict: .warning,
-                expectedReasonSnippets: ["between 10% and 20%", "between 5% and 8%"]
+                expectedReasonSnippets: ["10% 到 20%", "5% 到 8%"]
             ),
             LabeledWorkoutCase(
                 name: "drifting_swim",
@@ -51,7 +51,7 @@ public enum SampleWorkoutCases {
                     intent: .zone2
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["exceeded 20%", "exceeded 8%"]
+                expectedReasonSnippets: ["超過 20%", "超過 8%"]
             ),
             LabeledWorkoutCase(
                 name: "badminton_activity_review",
@@ -67,7 +67,7 @@ public enum SampleWorkoutCases {
                     intent: .activityReview
                 ),
                 expectedVerdict: .pass,
-                expectedReasonSnippets: ["general activity"]
+                expectedReasonSnippets: ["一般活動"]
             ),
             LabeledWorkoutCase(
                 name: "sparse_hr_cycling",
@@ -84,7 +84,7 @@ public enum SampleWorkoutCases {
                     intent: .zone2
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["too low"]
+                expectedReasonSnippets: ["過低"]
             ),
             LabeledWorkoutCase(
                 name: "high_drift_zone2_ride",
@@ -103,7 +103,7 @@ public enum SampleWorkoutCases {
                     intent: .zone2
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["exceeded 8%"]
+                expectedReasonSnippets: ["超過 8%"]
             ),
             LabeledWorkoutCase(
                 name: "unstable_zone2_run",
@@ -122,7 +122,7 @@ public enum SampleWorkoutCases {
                     intent: .zone2
                 ),
                 expectedVerdict: .warning,
-                expectedReasonSnippets: ["variability was moderate"]
+                expectedReasonSnippets: ["變異度為中等"]
             ),
         ]
     }
@@ -150,7 +150,7 @@ public enum SampleWorkoutCases {
                     intent: .vo2Interval
                 ),
                 expectedVerdict: .pass,
-                expectedReasonSnippets: ["Sufficient time"]
+                expectedReasonSnippets: ["停留的時間充足"]
             ),
             LabeledWorkoutCase(
                 name: "low_intensity_intervals",
@@ -170,7 +170,7 @@ public enum SampleWorkoutCases {
                     intent: .vo2Interval
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["Minimal time"]
+                expectedReasonSnippets: ["時間過少"]
             )
         ]
     }
@@ -193,7 +193,7 @@ public enum SampleWorkoutCases {
                     intent: .strength
                 ),
                 expectedVerdict: .pass,
-                expectedReasonSnippets: ["typical range"]
+                expectedReasonSnippets: ["典型範圍"]
             ),
             LabeledWorkoutCase(
                 name: "metabolic_strength_circuit",
@@ -209,7 +209,7 @@ public enum SampleWorkoutCases {
                     intent: .strength
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["high", "metabolic"]
+                expectedReasonSnippets: ["非常高", "體能代謝"]
             )
         ]
     }

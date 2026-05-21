@@ -311,8 +311,20 @@ public enum WorkoutObservationPrimitiveBuilder {
             quality = .sufficient
         }
 
-        let highIntensityRatio = distribution.ratio(for: .zone4) + distribution.ratio(for: .zone5)
-        let peakZoneRatio = distribution.ratio(for: .zone5)
+        let isInsufficient = preparedCount < policy.minimumSampleCount
+        let finalDrift = isInsufficient ? nil : drift
+        let finalStability = isInsufficient ? nil : stability
+
+        let finalDistribution: ZoneDistribution
+        if quality == .sparse {
+            let emptyCounts = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { ($0, 0) })
+            finalDistribution = ZoneDistribution(counts: emptyCounts, ratios: [:])
+        } else {
+            finalDistribution = distribution
+        }
+
+        let highIntensityRatio = finalDistribution.ratio(for: .zone4) + finalDistribution.ratio(for: .zone5)
+        let peakZoneRatio = finalDistribution.ratio(for: .zone5)
         let averageHeartRate = preparedSamples.isEmpty
             ? nil
             : preparedSamples.map(\.bpm).reduce(0, +) / Double(preparedSamples.count)
@@ -321,14 +333,14 @@ public enum WorkoutObservationPrimitiveBuilder {
             : Double(preparedSamples.filter { $0.bpm >= policy.zoneBounds.zone4Threshold }.count) / Double(preparedSamples.count)
 
         return WorkoutObservationPrimitives(
-            zoneDistribution: distribution,
+            zoneDistribution: finalDistribution,
             sampleQuality: quality,
-            driftRatio: drift,
-            stabilityStandardDeviation: stability,
+            driftRatio: finalDrift,
+            stabilityStandardDeviation: finalStability,
             highIntensityRatio: highIntensityRatio,
             peakZoneRatio: peakZoneRatio,
             averageHeartRate: averageHeartRate,
-            highHrSustainedRatio: highHrSustainedRatio,
+            highHrSustainedRatio: highHrSustainedRatio
         )
     }
 }

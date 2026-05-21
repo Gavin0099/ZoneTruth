@@ -698,8 +698,7 @@ final class ZoneTruthAppTests: XCTestCase {
         let records = buildEvaluationFixtureRecords()
         let fixtureURL = try fixtureFileURL()
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.escapeSlashes = false
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let rendered = try encoder.encode(records)
 
         if ProcessInfo.processInfo.environment["UPDATE_WORKOUT_EVAL_FIXTURE"] == "1" {
@@ -732,6 +731,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(report.reviewStatus == .invalidReport)
     }
 
+    @MainActor
     func testSettingsManagerPersistsMigrationMode() {
         let suiteName = "test.migration.mode.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -745,6 +745,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(reloaded.migrationMode, .dualRun)
     }
 
+    @MainActor
     func testSettingsManagerPolicyPrimaryIsGatedToObserveOnly() {
         let suiteName = "test.migration.gate.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
