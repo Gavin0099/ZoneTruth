@@ -222,7 +222,7 @@ enum StravaClientError: Error, Equatable, Sendable {
     case unavailable
     case disconnected
     case expiredSession
-    case networkError
+    case networkError(statusCode: Int)
     case notImplemented
 }
 
@@ -315,8 +315,11 @@ struct SystemStravaClient: StravaClient {
     }
 
     private func validateHTTP(_ response: URLResponse) throws {
-        guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
-            throw StravaClientError.networkError
+        guard let http = response as? HTTPURLResponse else {
+            throw StravaClientError.networkError(statusCode: 0)
+        }
+        guard (200 ..< 300).contains(http.statusCode) else {
+            throw StravaClientError.networkError(statusCode: http.statusCode)
         }
     }
 
@@ -491,17 +494,40 @@ final class StravaActivityRepository: WorkoutRepository {
         case .connected:
             do {
                 cachedWorkouts = try await client.fetchRecentActivities(limit: activityLimit).map(\.toDomainWorkout)
+                let msg = cachedWorkouts.isEmpty
+                    ? "Strava 已連線，但找不到近期活動。若剛授權，請確認授權時已勾選 activity:read 權限，再重新連線。"
+                    : statusMessage(for: .connected, workoutCount: cachedWorkouts.count)
                 return WorkoutLoadResult(
                     workouts: cachedWorkouts,
                     source: .strava,
-                    statusMessage: statusMessage(for: .connected, workoutCount: cachedWorkouts.count)
+                    statusMessage: msg
+                )
+            } catch let err as StravaClientError {
+                cachedWorkouts = []
+                let detail: String
+                switch err {
+                case .networkError(let code) where code == 401:
+                    detail = "HTTP 401 – Access Token 無效或已過期，請重新連線 Strava。"
+                case .networkError(let code) where code == 403:
+                    detail = "HTTP 403 – 權限不足（缺少 activity:read），請重新授權並勾選活動存取權限。"
+                case .networkError(let code):
+                    detail = "HTTP \(code) – 網路錯誤，請稍後再試。"
+                case .expiredSession:
+                    detail = "Session 已過期，請重新連線 Strava。"
+                default:
+                    detail = "\(err)"
+                }
+                return WorkoutLoadResult(
+                    workouts: [],
+                    source: .strava,
+                    statusMessage: "Strava 活動載入失敗：\(detail)"
                 )
             } catch {
                 cachedWorkouts = []
                 return WorkoutLoadResult(
                     workouts: [],
                     source: .strava,
-                    statusMessage: "Strava is connected, but activities could not be loaded yet."
+                    statusMessage: "Strava 活動載入失敗：\(error.localizedDescription)"
                 )
             }
         }
