@@ -7,6 +7,12 @@ enum WeeklyDecisionAuthority: String {
     case weakInference = "Weak inference"
 }
 
+enum WeeklyInferenceClass: String {
+    case bounded = "Bounded inference"
+    case weak = "Weak inference"
+    case unsupported = "Unsupported speculation"
+}
+
 enum WeeklyDataFreshness: String {
     case fresh = "fresh"
     case partial = "partial"
@@ -59,6 +65,71 @@ enum WeeklyAuthorityRendering {
     }
 }
 
+enum WeeklyInferenceClassifier {
+    static func classify(
+        confidence: Double,
+        freshness: WeeklyDataFreshness,
+        workoutCount: Int,
+        elapsedDays: Int
+    ) -> WeeklyInferenceClass {
+        if freshness == .missing || workoutCount == 0 || elapsedDays == 0 {
+            return .unsupported
+        }
+        if freshness == .stale || confidence < 0.6 {
+            return .weak
+        }
+        return .bounded
+    }
+}
+
+enum NonAuthorityReminderLevel {
+    case none
+    case soft
+    case strong
+
+    var message: String {
+        switch self {
+        case .none:
+            return ""
+        case .soft:
+            return "Based on available HR-derived observations. Not a physiological diagnosis."
+        case .strong:
+            return "Evidence is limited or stale. Use this as directional guidance only, not a physiological diagnosis."
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .none: return .clear
+        case .soft: return .secondary
+        case .strong: return PremiumColor.gold
+        }
+    }
+
+    var backgroundOpacity: Double {
+        switch self {
+        case .none: return 0
+        case .soft: return 0.0
+        case .strong: return 0.08
+        }
+    }
+}
+
+enum NonAuthorityReminderPolicy {
+    static func level(
+        inference: WeeklyInferenceClass,
+        freshness: WeeklyDataFreshness
+    ) -> NonAuthorityReminderLevel {
+        if inference == .unsupported || freshness == .missing || freshness == .stale {
+            return .strong
+        }
+        if inference == .weak || freshness == .partial {
+            return .soft
+        }
+        return .none
+    }
+}
+
 enum WeeklyAdaptationDirection: String {
     case enduranceBuild = "Endurance build"
     case maintenance = "Maintenance"
@@ -75,21 +146,53 @@ enum WeeklyAdaptationDirection: String {
     }
 }
 
+enum AdaptationTemporalScope {
+    case short7d
+    case medium28dUnavailable
+
+    var label: String {
+        switch self {
+        case .short7d: return "7d signal"
+        case .medium28dUnavailable: return "28d unavailable"
+        }
+    }
+}
+
 struct WeeklyAdaptationSignal {
     let direction: WeeklyAdaptationDirection
     let authority: WeeklyDecisionAuthority
+    let inferenceClass: WeeklyInferenceClass
+    let temporalScopes: [AdaptationTemporalScope]
     let rationale: String
 
     static func from(summary: WeeklyWorkoutSummary, policy: WeeklyLoadPolicy, freshness: WeeklyDataFreshness) -> WeeklyAdaptationSignal {
         let authority = WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+        let inferenceClass = WeeklyInferenceClassifier.classify(
+            confidence: policy.confidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            elapsedDays: summary.elapsedDays
+        )
         let total = summary.workoutCount
         let z2Count = summary.intentDistribution[.zone2, default: 0]
         let z2Ratio = total > 0 ? Double(z2Count) / Double(total) : 0
+
+        if inferenceClass == .unsupported {
+            return WeeklyAdaptationSignal(
+                direction: .recoveryBiased,
+                authority: authority,
+                inferenceClass: inferenceClass,
+                temporalScopes: [.short7d, .medium28dUnavailable],
+                rationale: "目前觀測不足，無法形成可靠的適應方向推論。"
+            )
+        }
 
         if total == 0 {
             return WeeklyAdaptationSignal(
                 direction: .recoveryBiased,
                 authority: authority,
+                inferenceClass: inferenceClass,
+                temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "本週尚無有效訓練觀測，方向訊號偏向恢復優先。"
             )
         }
@@ -97,6 +200,8 @@ struct WeeklyAdaptationSignal {
             return WeeklyAdaptationSignal(
                 direction: .recoveryBiased,
                 authority: authority,
+                inferenceClass: inferenceClass,
+                temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "休息日比例偏高，整體負荷偏向恢復導向。"
             )
         }
@@ -104,6 +209,8 @@ struct WeeklyAdaptationSignal {
             return WeeklyAdaptationSignal(
                 direction: .enduranceBuild,
                 authority: authority,
+                inferenceClass: inferenceClass,
+                temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "低中強度佔比較高，與有氧建設期型態一致。"
             )
         }
@@ -111,12 +218,16 @@ struct WeeklyAdaptationSignal {
             return WeeklyAdaptationSignal(
                 direction: .mixedAdaptation,
                 authority: authority,
+                inferenceClass: inferenceClass,
+                temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "高強度與連續負荷並存，訊號偏向混合適應。"
             )
         }
         return WeeklyAdaptationSignal(
             direction: .maintenance,
             authority: authority,
+            inferenceClass: inferenceClass,
+            temporalScopes: [.short7d, .medium28dUnavailable],
             rationale: "負荷分布中性，方向訊號偏向維持期。"
         )
     }
@@ -229,6 +340,17 @@ struct WeeklyOverviewCard: View {
     private var authority: WeeklyDecisionAuthority {
         WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
     }
+    private var inferenceClass: WeeklyInferenceClass {
+        WeeklyInferenceClassifier.classify(
+            confidence: policy.confidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            elapsedDays: summary.elapsedDays
+        )
+    }
+    private var reminderLevel: NonAuthorityReminderLevel {
+        NonAuthorityReminderPolicy.level(inference: inferenceClass, freshness: freshness)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -251,6 +373,7 @@ struct WeeklyOverviewCard: View {
 
                 HStack(spacing: 8) {
                     EvidenceChip(label: authority.rawValue, color: chipColor)
+                    EvidenceChip(label: inferenceClass.rawValue, color: inferenceChipColor)
                     EvidenceChip(label: freshness.label, color: freshnessChipColor)
                     if policy.confidence < 0.6 || freshness == .stale || freshness == .missing {
                         EvidenceChip(label: "Evidence gap", color: PremiumColor.gold)
@@ -289,10 +412,13 @@ struct WeeklyOverviewCard: View {
                         .stroke(PremiumColor.gold.opacity(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: policy.confidence)), lineWidth: 1)
                 )
 
-                if policy.confidence < 0.75 || freshness == .stale || freshness == .missing {
-                    Text("Based on available HR-derived observations. Not a physiological diagnosis.")
+                if reminderLevel != .none {
+                    Text(reminderLevel.message)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(reminderLevel.color)
+                        .padding(reminderLevel == .strong ? 8 : 0)
+                        .background(PremiumColor.gold.opacity(reminderLevel.backgroundOpacity))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -349,6 +475,14 @@ struct WeeklyOverviewCard: View {
         case .partial: return PremiumColor.skyBlue
         case .stale: return PremiumColor.gold
         case .missing: return .gray
+        }
+    }
+
+    private var inferenceChipColor: Color {
+        switch inferenceClass {
+        case .bounded: return PremiumColor.skyBlue
+        case .weak: return PremiumColor.gold
+        case .unsupported: return .gray
         }
     }
 }
@@ -442,6 +576,9 @@ struct WeeklyAdvancedCard: View {
     private var adaptation: WeeklyAdaptationSignal {
         WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: freshness)
     }
+    private var reminderLevel: NonAuthorityReminderLevel {
+        NonAuthorityReminderPolicy.level(inference: adaptation.inferenceClass, freshness: freshness)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -455,6 +592,10 @@ struct WeeklyAdvancedCard: View {
                     .foregroundStyle(.white.opacity(0.8))
                 HStack(spacing: 8) {
                     EvidenceChip(label: adaptation.authority.rawValue, color: adaptationChipColor)
+                    EvidenceChip(label: adaptation.inferenceClass.rawValue, color: adaptationInferenceChipColor)
+                    ForEach(adaptation.temporalScopes.map(\.label), id: \.self) { label in
+                        EvidenceChip(label: label, color: .gray)
+                    }
                     Text(adaptation.direction.localizedLabel)
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
@@ -462,6 +603,15 @@ struct WeeklyAdvancedCard: View {
                 Text(adaptation.rationale)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if reminderLevel != .none {
+                    Text(reminderLevel.message)
+                        .font(.caption2)
+                        .foregroundStyle(reminderLevel.color)
+                        .padding(reminderLevel == .strong ? 8 : 0)
+                        .background(PremiumColor.gold.opacity(reminderLevel.backgroundOpacity))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
 
             Divider().background(PremiumColor.border)
@@ -548,6 +698,14 @@ struct WeeklyAdvancedCard: View {
         case .observational: return PremiumColor.emerald
         case .boundedInference: return PremiumColor.skyBlue
         case .weakInference: return PremiumColor.gold
+        }
+    }
+
+    private var adaptationInferenceChipColor: Color {
+        switch adaptation.inferenceClass {
+        case .bounded: return PremiumColor.skyBlue
+        case .weak: return PremiumColor.gold
+        case .unsupported: return .gray
         }
     }
 }

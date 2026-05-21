@@ -1139,6 +1139,8 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertEqual(signal.direction, .enduranceBuild)
         XCTAssertEqual(signal.authority, .observational)
+        XCTAssertEqual(signal.inferenceClass, .bounded)
+        XCTAssertEqual(signal.temporalScopes.map(\.label), ["7d signal", "28d unavailable"])
     }
 
     func testWeeklyFreshnessSignalClassifiesFreshPartialStaleMissing() {
@@ -1159,6 +1161,59 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: partialWorkouts, weekStart: weekStart, now: now), .partial)
         XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: staleWorkouts, weekStart: weekStart, now: now), .stale)
         XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: [], weekStart: weekStart, now: now), .missing)
+    }
+
+    func testWeeklyInferenceClassifierReturnsUnsupportedWhenEvidenceMissing() {
+        XCTAssertEqual(
+            WeeklyInferenceClassifier.classify(
+                confidence: 0.9,
+                freshness: .missing,
+                workoutCount: 0,
+                elapsedDays: 7
+            ),
+            .unsupported
+        )
+        XCTAssertEqual(
+            WeeklyInferenceClassifier.classify(
+                confidence: 0.5,
+                freshness: .fresh,
+                workoutCount: 2,
+                elapsedDays: 7
+            ),
+            .weak
+        )
+        XCTAssertEqual(
+            WeeklyInferenceClassifier.classify(
+                confidence: 0.85,
+                freshness: .fresh,
+                workoutCount: 4,
+                elapsedDays: 7
+            ),
+            .bounded
+        )
+    }
+
+    func testNonAuthorityReminderPolicyLevels() {
+        XCTAssertEqual(
+            NonAuthorityReminderPolicy.level(inference: .bounded, freshness: .fresh),
+            .none
+        )
+        XCTAssertEqual(
+            NonAuthorityReminderPolicy.level(inference: .weak, freshness: .fresh),
+            .soft
+        )
+        XCTAssertEqual(
+            NonAuthorityReminderPolicy.level(inference: .bounded, freshness: .partial),
+            .soft
+        )
+        XCTAssertEqual(
+            NonAuthorityReminderPolicy.level(inference: .unsupported, freshness: .fresh),
+            .strong
+        )
+        XCTAssertEqual(
+            NonAuthorityReminderPolicy.level(inference: .bounded, freshness: .stale),
+            .strong
+        )
     }
 
     private func makeTemporaryDirectory() throws -> URL {
