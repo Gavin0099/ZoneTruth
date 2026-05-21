@@ -137,6 +137,7 @@ final class WorkoutListViewModel: ObservableObject {
     }
 
     private func apply(_ result: WorkoutLoadResult) {
+        print("[ViewModel] apply: source=\(result.source), count=\(result.workouts.count), msg=\(result.statusMessage ?? "nil")")
         workouts = result.workouts
         currentSource = result.source
         statusMessage = result.statusMessage
@@ -144,6 +145,7 @@ final class WorkoutListViewModel: ObservableObject {
         if let intent = result.workouts.first?.intent {
             selectedIntent = intent
         }
+        print("[ViewModel] after apply: workouts.count=\(workouts.count)")
         triggerCalibrationCheck()
     }
 
