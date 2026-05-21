@@ -67,9 +67,16 @@ final class WorkoutListViewModel: ObservableObject {
         do {
             let callbackURL = try await coordinator.authenticate(url: url, callbackScheme: "zonetruth")
             let handled = await handler.handle(callbackURL)
-            if handled { await refreshWorkouts() }
+            // Always refresh so the UI reflects the latest state,
+            // even if handle returned false (e.g. token exchange failed).
+            if handled {
+                statusMessage = "Strava 授權成功，正在載入活動…"
+            } else {
+                statusMessage = "Strava 授權收到但 token 交換失敗，請重試。"
+            }
+            await refreshWorkouts()
         } catch {
-            // 使用者取消或授權失敗，靜默處理
+            // User cancelled — no refresh needed.
         }
     }
 
