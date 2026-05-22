@@ -38,6 +38,7 @@ final class WorkoutListViewModel: ObservableObject {
     @Published private(set) var statusMessage: String?
     @Published private(set) var weeklySummary: WeeklyWorkoutSummary
     @Published private(set) var weeklyPolicy: WeeklyLoadPolicy
+    let bodyCompositionLedger: BodyCompositionLedger?
 
     let stravaAuthorizationURL: URL?
     private let repository: WorkoutRepository
@@ -49,12 +50,14 @@ final class WorkoutListViewModel: ObservableObject {
         repository: WorkoutRepository,
         settingsManager: SettingsManager,
         stravaAuthorizationURL: URL? = nil,
-        callbackHandler: StravaCallbackHandler? = nil
+        callbackHandler: StravaCallbackHandler? = nil,
+        bodyCompositionLedger: BodyCompositionLedger? = nil
     ) {
         self.repository = repository
         self.settingsManager = settingsManager
         self.stravaAuthorizationURL = stravaAuthorizationURL
         self.callbackHandler = callbackHandler
+        self.bodyCompositionLedger = bodyCompositionLedger
         let monday = Self.currentWeekMonday()
         let emptySummary = WeeklyObservationBuilder.build(workouts: [], weekStart: monday)
         self.weeklySummary = emptySummary

@@ -123,6 +123,22 @@ enum NonAuthorityReminderLevel {
     }
 }
 
+// CTA wording ceiling: stronger directives require higher-authority evidence.
+// The base text is preserved so the content signal stays intact;
+// only the epistemic framing changes.
+enum WeeklyCTAPresenter {
+    static func render(_ base: String, for authority: WeeklyDecisionAuthority) -> String {
+        switch authority {
+        case .observational:
+            return base
+        case .boundedInference:
+            return base + "（建議觀察體感後再決定。）"
+        case .weakInference:
+            return "訊號有限，僅供方向參考：" + base
+        }
+    }
+}
+
 enum NonAuthorityReminderPolicy {
     static func level(
         inference: WeeklyInferenceClass,
@@ -143,13 +159,50 @@ enum WeeklyAdaptationDirection: String {
     case maintenance = "Maintenance"
     case mixedAdaptation = "Mixed adaptation"
     case recoveryBiased = "Recovery-biased"
+    case noSignal = "No clear direction"
 
     var localizedLabel: String {
         switch self {
         case .enduranceBuild: return "有氧建設期"
-        case .maintenance: return "維持期"
+        case .maintenance: return "訓練負荷穩定維持中"
         case .mixedAdaptation: return "混合適應"
         case .recoveryBiased: return "恢復優先週"
+        case .noSignal: return "目前無明顯訓練方向訊號"
+        }
+    }
+
+    // Claim ceiling: displayed wording is constrained by evidence authority level.
+    // Higher claims require higher-quality evidence; residual classification
+    // (.noSignal) is always rendered as an explicit evidence gap, never as a
+    // positive direction label regardless of authority.
+    func admissibleLabel(for authority: WeeklyDecisionAuthority) -> String {
+        switch self {
+        case .noSignal:
+            return "目前沒有足夠訊號判定適應方向"
+        case .enduranceBuild:
+            switch authority {
+            case .observational:   return "有氧建設期"
+            case .boundedInference: return "偏向有氧建設方向"
+            case .weakInference:   return "觀察到部分有氧偏重訊號"
+            }
+        case .maintenance:
+            switch authority {
+            case .observational:   return "訓練負荷穩定維持中"
+            case .boundedInference: return "偏向負荷維持態勢"
+            case .weakInference:   return "訊號偏中性，方向不明確"
+            }
+        case .mixedAdaptation:
+            switch authority {
+            case .observational:   return "混合強度適應"
+            case .boundedInference: return "偏向混合強度適應"
+            case .weakInference:   return "觀察到強度混合現象"
+            }
+        case .recoveryBiased:
+            switch authority {
+            case .observational:   return "恢復優先週"
+            case .boundedInference: return "偏向恢復導向"
+            case .weakInference:   return "負荷偏輕，休息機會較多"
+            }
         }
     }
 }
@@ -168,6 +221,38 @@ enum TrainingState: String {
         case .functionalFatigue: return "功能性疲勞"
         case .possibleUnderRecovery: return "可能恢復不足"
         case .recoveryNormalizing: return "恢復回穩中"
+        }
+    }
+
+    // Claim ceiling for training state labels.
+    // .functionalFatigue requires longitudinal performance degradation data which
+    // this system does not collect; the internal classification fires on
+    // consecutiveTrainingDays alone, so the rendered wording is always
+    // downgraded to reflect the actual evidence level.
+    func admissibleLabel(for authority: WeeklyDecisionAuthority) -> String {
+        switch self {
+        case .recovered:
+            return "恢復穩定"
+        case .accumulatingLoad:
+            switch authority {
+            case .observational:   return "負荷累積中"
+            case .boundedInference: return "偏向負荷累積狀態"
+            case .weakInference:   return "持續訓練中，負荷持平"
+            }
+        case .functionalFatigue:
+            // Never renders clinical term; evidence only supports load-frequency observation.
+            switch authority {
+            case .observational, .boundedInference: return "恢復壓力偏高"
+            case .weakInference:                    return "負荷連續，恢復機會受限"
+            }
+        case .possibleUnderRecovery:
+            switch authority {
+            case .observational:   return "可能恢復不足"
+            case .boundedInference: return "恢復壓力上升"
+            case .weakInference:   return "強度積累，留意恢復狀況"
+            }
+        case .recoveryNormalizing:
+            return "恢復回穩中"
         }
     }
 }
@@ -328,11 +413,11 @@ struct WeeklyAdaptationSignal {
             )
         }
         return WeeklyAdaptationSignal(
-            direction: .maintenance,
+            direction: .noSignal,
             authority: authority,
             inferenceClass: inferenceClass,
             temporalScopes: [.short7d, .medium28dUnavailable],
-            rationale: "負荷分布中性，方向訊號偏向維持期。"
+            rationale: "目前訓練型態無法對應到特定適應方向，僅能觀察負荷分布。"
         )
     }
 }
@@ -407,7 +492,8 @@ struct WeeklyDashboardView: View {
                     WeeklyAdvancedCard(
                         summary: viewModel.weeklySummary,
                         policy: viewModel.weeklyPolicy,
-                        freshness: freshness
+                        freshness: freshness,
+                        bodyCompositionLedger: viewModel.bodyCompositionLedger
                     )
                 }
                 .padding(16)
@@ -476,7 +562,6 @@ struct WeeklyOverviewCard: View {
                 Divider().background(PremiumColor.border)
 
                 HStack(spacing: 8) {
-                    EvidenceChip(label: authority.rawValue, color: chipColor)
                     EvidenceChip(label: inferenceClass.rawValue, color: inferenceChipColor)
                     EvidenceChip(label: freshness.label, color: freshnessChipColor)
                     if policy.confidence < 0.6 || freshness == .stale || freshness == .missing {
@@ -502,7 +587,7 @@ struct WeeklyOverviewCard: View {
                     Image(systemName: "lightbulb.fill")
                         .foregroundStyle(PremiumColor.gold)
                         .font(.subheadline)
-                    Text(policy.nextAction)
+                    Text(WeeklyCTAPresenter.render(policy.nextAction, for: authority))
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
@@ -562,14 +647,6 @@ struct WeeklyOverviewCard: View {
                     .font(.headline.bold())
                     .foregroundStyle(.white)
             }
-        }
-    }
-
-    private var chipColor: Color {
-        switch authority {
-        case .observational: return PremiumColor.emerald
-        case .boundedInference: return PremiumColor.skyBlue
-        case .weakInference: return PremiumColor.gold
         }
     }
 
@@ -677,6 +754,7 @@ struct WeeklyAdvancedCard: View {
     let summary: WeeklyWorkoutSummary
     let policy: WeeklyLoadPolicy
     let freshness: WeeklyDataFreshness
+    let bodyCompositionLedger: BodyCompositionLedger?
     private var adaptation: WeeklyAdaptationSignal {
         WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: freshness)
     }
@@ -697,15 +775,18 @@ struct WeeklyAdvancedCard: View {
                 Text("適應方向")
                     .font(.subheadline.bold())
                     .foregroundStyle(.white.opacity(0.8))
+                // Claim layer: single inference-class chip + direction label
                 HStack(spacing: 8) {
-                    EvidenceChip(label: adaptation.authority.rawValue, color: adaptationChipColor)
                     EvidenceChip(label: adaptation.inferenceClass.rawValue, color: adaptationInferenceChipColor)
+                    Text(adaptation.direction.admissibleLabel(for: adaptation.authority))
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                // Coverage layer: temporal scope chips (evidence window transparency)
+                HStack(spacing: 6) {
                     ForEach(adaptation.temporalScopes.map(\.label), id: \.self) { label in
                         EvidenceChip(label: label, color: .gray)
                     }
-                    Text(adaptation.direction.localizedLabel)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.white)
                 }
                 Text(adaptation.rationale)
                     .font(.caption)
@@ -728,9 +809,8 @@ struct WeeklyAdvancedCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.white.opacity(0.8))
                 HStack(spacing: 8) {
-                    EvidenceChip(label: trainingState.authority.rawValue, color: stateAuthorityChipColor)
                     EvidenceChip(label: trainingState.inferenceClass.rawValue, color: stateInferenceChipColor)
-                    Text(trainingState.state.localizedLabel)
+                    Text(trainingState.state.admissibleLabel(for: trainingState.authority))
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
                 }
@@ -788,6 +868,12 @@ struct WeeklyAdvancedCard: View {
 
             Divider().background(PremiumColor.border)
 
+            // Long-term body composition context
+            if let ledger = bodyCompositionLedger {
+                BodyCompositionContextSection(ledger: ledger)
+                Divider().background(PremiumColor.border)
+            }
+
             // Confidence
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -818,27 +904,11 @@ struct WeeklyAdvancedCard: View {
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(PremiumColor.border, lineWidth: 1))
     }
 
-    private var adaptationChipColor: Color {
-        switch adaptation.authority {
-        case .observational: return PremiumColor.emerald
-        case .boundedInference: return PremiumColor.skyBlue
-        case .weakInference: return PremiumColor.gold
-        }
-    }
-
     private var adaptationInferenceChipColor: Color {
         switch adaptation.inferenceClass {
         case .bounded: return PremiumColor.skyBlue
         case .weak: return PremiumColor.gold
         case .unsupported: return .gray
-        }
-    }
-
-    private var stateAuthorityChipColor: Color {
-        switch trainingState.authority {
-        case .observational: return PremiumColor.emerald
-        case .boundedInference: return PremiumColor.skyBlue
-        case .weakInference: return PremiumColor.gold
         }
     }
 

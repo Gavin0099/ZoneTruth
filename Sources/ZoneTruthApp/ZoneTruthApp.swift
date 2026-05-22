@@ -14,7 +14,8 @@ public struct ZoneTruthMainView: View {
             repository: environment.repository,
             settingsManager: settings,
             stravaAuthorizationURL: environment.stravaAuthorizationURL,
-            callbackHandler: handler
+            callbackHandler: handler,
+            bodyCompositionLedger: environment.bodyCompositionLedger
         ))
         callbackHandler = handler
     }

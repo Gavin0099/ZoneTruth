@@ -194,9 +194,8 @@ struct WorkoutListView: View {
             await viewModel.refreshWorkouts()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                Task { await viewModel.refreshWorkouts() }
-            }
+            guard newPhase == .active, !viewModel.isRequestingAuthorization else { return }
+            Task { await viewModel.refreshWorkouts() }
         }
     }
 }

@@ -5,6 +5,7 @@ struct AppEnvironment {
     let repository: WorkoutRepository
     let stravaCallbackHandler: StravaCallbackHandler?
     let stravaAuthorizationURL: URL?
+    let bodyCompositionLedger: BodyCompositionLedger?
 
     static func live(fileManager: FileManager = .default) -> AppEnvironment {
         let sessionStore = FileStravaSessionStore(
@@ -29,6 +30,11 @@ struct AppEnvironment {
             StravaCallbackHandler(configuration: $0, sessionStore: sessionStore)
         }
 
+        let compositionRepo = BodyCompositionRepository(
+            fileURL: bodyCompositionFileURL(fileManager: fileManager),
+            fileManager: fileManager
+        )
+
         return AppEnvironment(
             repository: CompositeWorkoutRepository(
                 repositories: [
@@ -39,7 +45,8 @@ struct AppEnvironment {
                 ]
             ),
             stravaCallbackHandler: callbackHandler,
-            stravaAuthorizationURL: stravaConfig?.mobileAuthorizationURL
+            stravaAuthorizationURL: stravaConfig?.mobileAuthorizationURL,
+            bodyCompositionLedger: compositionRepo.loadLedger()
         )
     }
 

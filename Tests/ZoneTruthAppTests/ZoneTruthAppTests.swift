@@ -1357,6 +1357,56 @@ final class ZoneTruthAppTests: XCTestCase {
         )
     }
 
+    // MARK: - Claim Ceiling Tests
+
+    func testAdaptationResidualDefaultIsNoSignalNotMaintenance() {
+        // A training week that doesn't match any positive direction condition
+        // (low zone2 ratio, no high-intensity surge, no rest bias) must produce
+        // .noSignal — not .maintenance — to avoid "residual label as observation".
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 5,
+            totalDurationMinutes: 300,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 1, .activityReview: 4],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 0,
+            strengthDays: 0,
+            restDays: 0,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 5
+        )
+        let policy = WeeklyLoadPolicy(
+            recoveryConcernLevel: .moderate,
+            loadTendency: .mixed,
+            keyFindings: [],
+            nextAction: "",
+            confidence: 0.80
+        )
+        let signal = WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: .fresh)
+        XCTAssertEqual(signal.direction, .noSignal, "Low zone2 + no high intensity → no positive direction, must be .noSignal")
+    }
+
+    func testFunctionalFatigueNeverRendersClinicalTerm() {
+        // .functionalFatigue internal state must never render "功能性疲勞"
+        // because consecutive-days data alone cannot support that clinical claim.
+        XCTAssertNotEqual(TrainingState.functionalFatigue.admissibleLabel(for: .observational), "功能性疲勞")
+        XCTAssertNotEqual(TrainingState.functionalFatigue.admissibleLabel(for: .boundedInference), "功能性疲勞")
+        XCTAssertNotEqual(TrainingState.functionalFatigue.admissibleLabel(for: .weakInference), "功能性疲勞")
+        XCTAssertEqual(TrainingState.functionalFatigue.admissibleLabel(for: .boundedInference), "恢復壓力偏高")
+        XCTAssertEqual(TrainingState.functionalFatigue.admissibleLabel(for: .weakInference), "負荷連續，恢復機會受限")
+    }
+
+    func testNoSignalDirectionAlwaysRendersEvidenceGapLabel() {
+        // .noSignal must always render the evidence-gap phrase regardless of authority.
+        let label = "目前沒有足夠訊號判定適應方向"
+        XCTAssertEqual(WeeklyAdaptationDirection.noSignal.admissibleLabel(for: .observational), label)
+        XCTAssertEqual(WeeklyAdaptationDirection.noSignal.admissibleLabel(for: .boundedInference), label)
+        XCTAssertEqual(WeeklyAdaptationDirection.noSignal.admissibleLabel(for: .weakInference), label)
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)

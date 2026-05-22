@@ -106,7 +106,14 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
     }
 
     func requestHealthAccess() async -> WorkoutLoadResult {
-        _ = await requestAuthorizationIfNeeded()
+        guard store.isAvailable else {
+            return WorkoutLoadResult(workouts: [], source: .healthKit, statusMessage: "此裝置不支援 Apple Health。")
+        }
+        // Always call requestAuthorization directly. iOS shows the dialog only for
+        // types not yet decided by the user; it silently no-ops for already-determined
+        // types. Using the "if needed" guard caused the dialog to never appear after
+        // the first auth because HK returns .sharingDenied for read-only types.
+        _ = await store.requestAuthorization()
 
         do {
             cachedWorkouts = try await store.fetchRecentWorkouts(limit: workoutLimit).map(\.toDomainWorkout)
