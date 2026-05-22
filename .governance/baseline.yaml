@@ -11,17 +11,17 @@
 # ── PROVENANCE ────────────────────────────────────────────────────────────────
 schema_version: "1"
 baseline_version: 1.0.0
-source_commit: 4e07a7f1c09e896ef65d97d8e962a9d4a95113f5
-framework_root: /Users/gavin_wu/Desktop/ZoneTruth
-initialized_at: 2026-05-20T05:07:30Z
+source_commit: 3cdd1b6fdbc5f13748935008a82f1d9c994df725
+framework_root: /Users/gavin_wu/Desktop/ai-governance-framework-temp
+initialized_at: 2026-05-22T01:33:48Z
 initialized_by: governance_tools/adopt_governance.py
 
 # ── INTEGRITY ─────────────────────────────────────────────────────────────────
 # sha256.<file>: hash recorded at init/refresh time; "protected" files are hash-verified
 # overridable.<file>: protected = must not change | overridable = repo may extend freely
 sha256.AGENTS.base.md: d3c025e3cffa9c00e3f38d0a104b4767a5ca15eb343dc7d03d8654c37cef8509
-sha256.PLAN.md: 3b3053321a380df0ecec1c0231d8ef16be73afbf3f806a5d68d66dadb588829e
-sha256.contract.yaml: 750ee6153ceb7a1db444cc2af6200e75aeb14c714cbb032a44cf588b62f66e6a
+sha256.PLAN.md: fb228c1f3366af0360853d44cb2fb615e9876fba64da1db362480db7a5093092
+sha256.contract.yaml: 1dfe2819fe0fa5e824f5b1f372ec438e1d4f2a68c8d988f5f4bcad3acfc3537b
 sha256.AGENTS.md: 08d9ae77d6587f5ae5d45f08eb084fe696c51cf783d060bd6d8c6f44e9611d68
 overridable.AGENTS.base.md: protected
 overridable.PLAN.md: overridable
@@ -46,6 +46,7 @@ contract_required_fields:
 # plan_section_inventory: ## headings detected in PLAN.md at adoption/refresh time.
 #   Drift checker surfaces these for visibility but never fails on missing inventory items.
 plan_section_inventory:
+  - "## 0. 實作現況對齊（2026-05-20）"
   - "## 1. 專案定位"
   - "## 2. 核心問題"
   - "## 3. MVP 目標"

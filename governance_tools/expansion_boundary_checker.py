@@ -173,10 +173,20 @@ _CORE_POST_TASK_KEYS: frozenset[str] = frozenset({
 })
 
 # assumption check + phase classification — admitted 154ad4d / governance-runtime-policy
+# consumption pattern visibility (visibility-only, no enforcement) — admitted 3cdd1b6 / ai-governance-framework-sync-2026-05-22
 _TRANSITIONAL_POST_TASK_KEYS: dict[str, dict] = {
     "assumption_advisories": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
     "assumption_check":      {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
     "phase_classification":  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    # _build_consumption_pattern_visibility() helper return keys — visibility-only, no decision authority
+    "by_consumer":                              {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "by_field":                                 {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "by_type":                                  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "contract_version":                         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "high_frequency_misuse_triggers_enforcement": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "notice":                                   {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "total_violations":                         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
+    "visibility_only":                          {"status": "transitional", "expected": "core", "admitted_date": "2026-05-22", "source_commit": "3cdd1b6"},
 }
 
 KNOWN_POST_TASK_KEYS = _CORE_POST_TASK_KEYS | frozenset(_TRANSITIONAL_POST_TASK_KEYS)

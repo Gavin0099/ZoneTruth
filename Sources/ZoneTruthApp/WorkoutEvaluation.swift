@@ -15,6 +15,31 @@ struct WorkoutObservation: Equatable, Sendable {
     let zoneDistribution: ZoneDistribution
     let stabilityStandardDeviation: Double?
     let driftRatio: Double?
+    let maxHeartRateBPM: Double?
+    let activeCaloriesKcal: Double?
+    let totalDistanceMeters: Double?
+
+    init(
+        primaryIntent: PrimaryIntent,
+        classificationConfidence: Int,
+        evaluationConfidence: Int,
+        zoneDistribution: ZoneDistribution,
+        stabilityStandardDeviation: Double?,
+        driftRatio: Double?,
+        maxHeartRateBPM: Double? = nil,
+        activeCaloriesKcal: Double? = nil,
+        totalDistanceMeters: Double? = nil
+    ) {
+        self.primaryIntent = primaryIntent
+        self.classificationConfidence = classificationConfidence
+        self.evaluationConfidence = evaluationConfidence
+        self.zoneDistribution = zoneDistribution
+        self.stabilityStandardDeviation = stabilityStandardDeviation
+        self.driftRatio = driftRatio
+        self.maxHeartRateBPM = maxHeartRateBPM
+        self.activeCaloriesKcal = activeCaloriesKcal
+        self.totalDistanceMeters = totalDistanceMeters
+    }
 }
 
 struct WorkoutEvaluation: Codable, Equatable, Sendable {
@@ -77,7 +102,10 @@ enum ObservationBridge {
             evaluationConfidence: evaluationConfidence,
             zoneDistribution: primitives.zoneDistribution,
             stabilityStandardDeviation: primitives.stabilityStandardDeviation,
-            driftRatio: primitives.driftRatio
+            driftRatio: primitives.driftRatio,
+            maxHeartRateBPM: primitives.maxHeartRateBPM,
+            activeCaloriesKcal: primitives.activeCaloriesKcal,
+            totalDistanceMeters: primitives.totalDistanceMeters
         )
     }
 }
@@ -152,6 +180,22 @@ private extension SharedEvaluationLogic {
             signals.append(String(format: "心率標準差 %.1f bpm", stability))
         } else {
             signals.append("心率穩定度資料不足")
+        }
+
+        if let maxHR = observation.maxHeartRateBPM {
+            signals.append(String(format: "最高心率 %.0f bpm", maxHR))
+        }
+
+        if let kcal = observation.activeCaloriesKcal {
+            signals.append(String(format: "消耗 %.0f 大卡", kcal))
+        }
+
+        if let meters = observation.totalDistanceMeters, meters > 0 {
+            if meters >= 1000 {
+                signals.append(String(format: "距離 %.2f km", meters / 1000))
+            } else {
+                signals.append(String(format: "距離 %.0f m", meters))
+            }
         }
 
         return signals

@@ -345,6 +345,7 @@ public enum WorkoutObservationPrimitiveBuilder {
         let averageHeartRate = preparedSamples.isEmpty
             ? nil
             : preparedSamples.map(\.bpm).reduce(0, +) / Double(preparedSamples.count)
+        let maxHeartRateBPM = preparedSamples.isEmpty ? nil : preparedSamples.map(\.bpm).max()
         let highHrSustainedRatio = preparedSamples.isEmpty
             ? 0
             : Double(preparedSamples.filter { $0.bpm >= policy.zoneBounds.zone4Threshold }.count) / Double(preparedSamples.count)
@@ -357,7 +358,10 @@ public enum WorkoutObservationPrimitiveBuilder {
             highIntensityRatio: highIntensityRatio,
             peakZoneRatio: peakZoneRatio,
             averageHeartRate: averageHeartRate,
-            highHrSustainedRatio: highHrSustainedRatio
+            maxHeartRateBPM: maxHeartRateBPM,
+            highHrSustainedRatio: highHrSustainedRatio,
+            activeCaloriesKcal: workout.activeCaloriesKcal,
+            totalDistanceMeters: workout.totalDistanceMeters
         )
     }
 }
@@ -600,12 +604,17 @@ public enum WeeklyObservationBuilder {
             }
         }
 
+        let totalActiveCalories: Double? = {
+            let values = weekWorkouts.compactMap(\.activeCaloriesKcal)
+            return values.isEmpty ? nil : values.reduce(0, +)
+        }()
+
         return WeeklyWorkoutSummary(
             weekStart: weekStart,
             weekEnd: weekEnd,
             workoutCount: weekWorkouts.count,
             totalDurationMinutes: totalDurationMinutes,
-            totalActiveCalories: nil,
+            totalActiveCalories: totalActiveCalories,
             intentDistribution: intentDistribution,
             zoneDistribution: zoneDistribution,
             highIntensityDays: highIntensityDays,

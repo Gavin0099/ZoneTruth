@@ -125,6 +125,8 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let hrvSDNNMilliseconds: Double?
     public let intent: TrainingIntent
     public let dataSource: String?
+    public let activeCaloriesKcal: Double?
+    public let totalDistanceMeters: Double?
 
     public init(
         id: UUID = UUID(),
@@ -135,7 +137,9 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         heartRateSamples: [HeartRateSample],
         hrvSDNNMilliseconds: Double? = nil,
         intent: TrainingIntent,
-        dataSource: String? = nil
+        dataSource: String? = nil,
+        activeCaloriesKcal: Double? = nil,
+        totalDistanceMeters: Double? = nil
     ) {
         self.id = id
         self.workoutType = workoutType
@@ -146,6 +150,8 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         self.hrvSDNNMilliseconds = hrvSDNNMilliseconds
         self.intent = intent
         self.dataSource = dataSource
+        self.activeCaloriesKcal = activeCaloriesKcal
+        self.totalDistanceMeters = totalDistanceMeters
     }
 }
 
@@ -252,7 +258,10 @@ public struct WorkoutObservationPrimitives: Equatable, Sendable {
     public let highIntensityRatio: Double
     public let peakZoneRatio: Double
     public let averageHeartRate: Double?
+    public let maxHeartRateBPM: Double?
     public let highHrSustainedRatio: Double
+    public let activeCaloriesKcal: Double?
+    public let totalDistanceMeters: Double?
 
     public init(
         zoneDistribution: ZoneDistribution,
@@ -262,7 +271,10 @@ public struct WorkoutObservationPrimitives: Equatable, Sendable {
         highIntensityRatio: Double,
         peakZoneRatio: Double,
         averageHeartRate: Double?,
-        highHrSustainedRatio: Double
+        maxHeartRateBPM: Double? = nil,
+        highHrSustainedRatio: Double,
+        activeCaloriesKcal: Double? = nil,
+        totalDistanceMeters: Double? = nil
     ) {
         self.zoneDistribution = zoneDistribution
         self.sampleQuality = sampleQuality
@@ -271,7 +283,10 @@ public struct WorkoutObservationPrimitives: Equatable, Sendable {
         self.highIntensityRatio = highIntensityRatio
         self.peakZoneRatio = peakZoneRatio
         self.averageHeartRate = averageHeartRate
+        self.maxHeartRateBPM = maxHeartRateBPM
         self.highHrSustainedRatio = highHrSustainedRatio
+        self.activeCaloriesKcal = activeCaloriesKcal
+        self.totalDistanceMeters = totalDistanceMeters
     }
 }
 

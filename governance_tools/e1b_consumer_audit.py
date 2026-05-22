@@ -7,11 +7,12 @@ Scans consumer text (summaries, reports, comments, scripts) for violations
 of the semantic limits defined in docs/e1b-classification-semantic-limits.md
 and docs/e1b-consumer-audit-checklist.md.
 
-Four forbidden patterns:
+Five forbidden patterns:
   P1  transitioning_active implied as improvement / positive trend
   P2  lifecycle classification count used in numeric risk/score formula
   P3  temporal accumulation implied to improve model classification accuracy
   P4  READY gate verdict equated with classifier validated / safe to promote
+    P5  cross-provider convergence/correlation implied as semantic or aggregation equivalence
 
 Usage
 -----
@@ -46,7 +47,7 @@ from typing import Any
 
 
 # ── Pattern registry ──────────────────────────────────────────────────────────
-# Each entry maps to one of the 4 forbidden patterns in the checklist.
+# Each entry maps to one of the 5 forbidden patterns in the checklist.
 # "regexes": list of patterns (any match → violation).
 # All patterns are case-insensitive.
 
@@ -114,6 +115,24 @@ _PATTERNS: list[dict[str, Any]] = [
             # READY + classifier reliable / classification validated / can promote
             r"(?i)\bREADY\b.{0,80}"
             r"(classifier.{0,10}reliable|classification.{0,10}valid|safe.{0,5}promot|can\s+promot)",
+        ],
+    },
+    {
+        "pattern_id": "P5",
+        "description": (
+            "cross-provider convergence/correlation used to imply semantic equivalence, "
+            "measurement equivalence, or aggregation admissibility "
+            "(forbidden — behavioral similarity does not authorize equivalence or aggregation)"
+        ),
+        "regexes": [
+            # cross-provider + convergence/correlation + equivalence/admissibility
+            r"(?i)(cross[-\s]?provider|multi[-\s]?provider|claude.{0,40}codex|codex.{0,40}claude|providers?)"
+            r".{0,120}(converg|correlat|aligned\s+trend|similar\s+trend)"
+            r".{0,120}(semantic.{0,15}equiv|measurement.{0,15}equiv|equivalent|aggregation.{0,30}(admissib|allow|safe|valid)|aggregate.{0,30}(allow|safe|valid))",
+            # reverse order
+            r"(?i)(semantic.{0,15}equiv|measurement.{0,15}equiv|equivalent|aggregation.{0,30}(admissib|allow|safe|valid)|aggregate.{0,30}(allow|safe|valid))"
+            r".{0,120}(converg|correlat|aligned\s+trend|similar\s+trend)"
+            r".{0,120}(cross[-\s]?provider|multi[-\s]?provider|claude.{0,40}codex|codex.{0,40}claude|providers?)",
         ],
     },
 ]
@@ -191,6 +210,16 @@ _REVIEWER_PATTERNS: list[dict[str, Any]] = [
 ]
 
 
+def _is_explicit_non_equivalence_statement(excerpt: str) -> bool:
+    """Return True when text explicitly denies equivalence/admissibility inference."""
+    return bool(re.search(
+        r"(?i)(does\s+not|do\s+not|must\s+not|cannot|can't|should\s+not|not)\s+"
+        r"(imply|establish|prove|mean).{0,80}"
+        r"(semantic.{0,15}equiv|measurement.{0,15}equiv|aggregation.{0,30}(admissib|allow|safe|valid)|aggregate.{0,30}(allow|safe|valid))",
+        excerpt,
+    ))
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def scan_consumer_text(text: str) -> list[dict[str, str]]:
@@ -206,7 +235,7 @@ def scan_consumer_text(text: str) -> list[dict[str, str]]:
     -------
     list[dict]
         Each dict has:
-          pattern_id  : "P1" | "P2" | "P3" | "P4"
+          pattern_id  : "P1" | "P2" | "P3" | "P4" | "P5"
           description : human-readable rule that was violated
           excerpt     : the matched text (truncated to 120 chars)
 
@@ -214,7 +243,7 @@ def scan_consumer_text(text: str) -> list[dict[str, str]]:
 
     Design boundary
     ---------------
-    Detection scope: the four forbidden patterns from the checklist.
+    Detection scope: the five forbidden patterns from the checklist.
     False negatives (missed violations) are acceptable.
     False positives must be minimized — patterns require the forbidden
     combination, not individual words in isolation.
@@ -223,10 +252,13 @@ def scan_consumer_text(text: str) -> list[dict[str, str]]:
     for entry in _PATTERNS:
         for regex in entry["regexes"]:
             for match in re.finditer(regex, text):
+                excerpt = match.group(0)
+                if entry["pattern_id"] == "P5" and _is_explicit_non_equivalence_statement(excerpt):
+                    continue
                 violations.append({
                     "pattern_id": entry["pattern_id"],
                     "description": entry["description"],
-                    "excerpt": match.group(0)[:120],
+                    "excerpt": excerpt[:120],
                 })
     return violations
 

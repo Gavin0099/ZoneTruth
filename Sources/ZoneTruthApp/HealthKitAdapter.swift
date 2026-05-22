@@ -25,6 +25,8 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
     let heartRateSamples: [HeartRateSample]
     let hrvSDNNMilliseconds: Double?
     let defaultIntent: TrainingIntent
+    let activeCaloriesKcal: Double?
+    let totalDistanceMeters: Double?
 
     init(
         workoutType: WorkoutType,
@@ -32,7 +34,9 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
         endDate: Date,
         heartRateSamples: [HeartRateSample],
         hrvSDNNMilliseconds: Double? = nil,
-        defaultIntent: TrainingIntent = .activityReview
+        defaultIntent: TrainingIntent = .activityReview,
+        activeCaloriesKcal: Double? = nil,
+        totalDistanceMeters: Double? = nil
     ) {
         self.workoutType = workoutType
         self.startDate = startDate
@@ -40,6 +44,8 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
         self.heartRateSamples = heartRateSamples
         self.hrvSDNNMilliseconds = hrvSDNNMilliseconds
         self.defaultIntent = defaultIntent
+        self.activeCaloriesKcal = activeCaloriesKcal
+        self.totalDistanceMeters = totalDistanceMeters
     }
 
     var toDomainWorkout: WorkoutInput {
@@ -50,7 +56,9 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
             heartRateSamples: heartRateSamples,
             hrvSDNNMilliseconds: hrvSDNNMilliseconds,
             intent: defaultIntent,
-            dataSource: "healthkit"
+            dataSource: "healthkit",
+            activeCaloriesKcal: activeCaloriesKcal,
+            totalDistanceMeters: totalDistanceMeters
         )
     }
 }
@@ -213,6 +221,10 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
                 HKObjectType.workoutType(),
                 heartRateType,
                 HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
+                HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
+                HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
+                HKObjectType.quantityType(forIdentifier: .distanceCycling),
+                HKObjectType.quantityType(forIdentifier: .distanceSwimming),
             ].compactMap { $0 })
 
             do {
@@ -240,12 +252,17 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
             return try await workouts.asyncMap { workout in
                 let heartRateSamples = try await heartRateSamples(for: workout, from: store)
                 let hrvSDNNMilliseconds = try await averageHRVSDNN(for: workout, from: store)
+                let wType = domainWorkoutType(for: workout.workoutActivityType)
+                let calories = workoutActiveCalories(workout)
+                let distance = workoutDistance(workout, workoutType: wType)
                 return HealthKitWorkoutSnapshot(
-                    workoutType: domainWorkoutType(for: workout.workoutActivityType),
+                    workoutType: wType,
                     startDate: workout.startDate,
                     endDate: workout.endDate,
                     heartRateSamples: heartRateSamples,
-                    hrvSDNNMilliseconds: hrvSDNNMilliseconds
+                    hrvSDNNMilliseconds: hrvSDNNMilliseconds,
+                    activeCaloriesKcal: calories,
+                    totalDistanceMeters: distance
                 )
             }
         }
@@ -361,6 +378,27 @@ private func averageHRVSDNN(for workout: HKWorkout, from store: HKHealthStore) a
         partial + sample.quantity.doubleValue(for: unit)
     }
     return sum / Double(quantitySamples.count)
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+private func workoutActiveCalories(_ workout: HKWorkout) -> Double? {
+    guard let statsType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) else { return nil }
+    return workout.statistics(for: statsType)?.sumQuantity()?.doubleValue(for: .kilocalorie())
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+private func workoutDistance(_ workout: HKWorkout, workoutType: WorkoutType) -> Double? {
+    let identifier: HKQuantityTypeIdentifier
+    switch workoutType {
+    case .cycling:
+        identifier = .distanceCycling
+    case .swimming:
+        identifier = .distanceSwimming
+    default:
+        identifier = .distanceWalkingRunning
+    }
+    guard let statsType = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
+    return workout.statistics(for: statsType)?.sumQuantity()?.doubleValue(for: .meter())
 }
 
 @available(iOS 17.0, macOS 14.0, *)

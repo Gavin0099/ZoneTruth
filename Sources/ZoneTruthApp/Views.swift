@@ -404,16 +404,103 @@ struct WorkoutDetailView: View {
     let evaluation: WorkoutEvaluation
     let onIntentChanged: (TrainingIntent) -> Void
     @ObservedObject var settingsManager: SettingsManager
+    @State private var showDetailedData = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SummaryCardView(workout: workout, selectedIntent: selectedIntent, result: result, evaluation: evaluation)
-                
+                HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
+
                 IntentPickerView(selectedIntent: selectedIntent, onIntentChanged: onIntentChanged)
-                
-                AnalysisResultView(result: result, evaluation: evaluation)
-                
+
+                KeyFindingsSectionView(evaluation: evaluation)
+
+                DisclosureGroup(isExpanded: $showDetailedData) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        MetricsGridSectionView(workout: workout, result: result, evaluation: evaluation)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("心率區間分佈", systemImage: "chart.bar.xaxis")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            ZoneDistributionChartView(distribution: result.zoneDistribution)
+                        }
+                        .padding(14)
+                        .background(Color.white.opacity(0.03))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.05), lineWidth: 1))
+
+                        if !result.reasons.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Label("判定理由說明", systemImage: "info.circle.fill")
+                                    .font(.headline)
+                                    .foregroundStyle(PremiumColor.skyBlue)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(result.reasons, id: \.self) { reason in
+                                        HStack(alignment: .top, spacing: 8) {
+                                            Text("•").foregroundStyle(PremiumColor.skyBlue)
+                                            Text(reason).font(.caption).foregroundStyle(.white.opacity(0.85)).lineSpacing(4)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(PremiumColor.skyBlue.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(PremiumColor.skyBlue.opacity(0.15), lineWidth: 1))
+                        }
+
+                        if !result.recommendations.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Label("教練建議回饋", systemImage: "sparkles")
+                                    .font(.headline)
+                                    .foregroundStyle(PremiumColor.emerald)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(result.recommendations, id: \.self) { rec in
+                                        HStack(alignment: .top, spacing: 8) {
+                                            Text("💡")
+                                            Text(rec).font(.caption).foregroundStyle(.white.opacity(0.85)).lineSpacing(4)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(PremiumColor.emerald.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(PremiumColor.emerald.opacity(0.15), lineWidth: 1))
+                        }
+
+                        DisclosureGroup("進階分析（技術細節）") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("分類信心：\(evaluation.classificationConfidence)%")
+                                Text("評估信心：\(evaluation.evaluationConfidence)%")
+                                ForEach(evaluation.secondarySignals, id: \.self) { signal in
+                                    Text("• \(signal)")
+                                }
+                                Text("舊版判定：\(result.verdict.localizedName)")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.top, 8)
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    }
+                    .padding(.top, 4)
+                } label: {
+                    Label("詳細數據", systemImage: "chart.bar.doc.horizontal")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                .padding(14)
+                .background(PremiumColor.cardBg)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(PremiumColor.border, lineWidth: 1))
+                .tint(.white)
+
                 SettingsView(settingsManager: settingsManager)
             }
             .padding(20)
@@ -421,6 +508,131 @@ struct WorkoutDetailView: View {
         .background(PremiumColor.bgDark)
         .navigationTitle("運動紀錄詳情")
         .iosDetailNavigationBarStyling()
+    }
+}
+
+// MARK: - Phase D: Hero Decision Card (主決策卡)
+
+struct HeroDecisionCardView: View {
+    let workout: WorkoutInput
+    let result: AnalysisResult
+    let evaluation: WorkoutEvaluation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: workout.workoutType.iconName)
+                    .font(.headline)
+                    .foregroundStyle(PremiumColor.skyBlue)
+                Text(workout.workoutType.localizedName)
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Text(workout.startDate.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider().background(Color.white.opacity(0.12))
+
+            HStack(spacing: 8) {
+                Image(systemName: "figure.run.square.stack")
+                    .font(.subheadline.bold())
+                Text(evaluation.trainingTendency)
+                    .font(.subheadline.bold())
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(PremiumColor.skyBlue.opacity(0.15))
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(evaluation.goalFitScore)%")
+                    .font(.system(.title, design: .rounded).bold())
+                    .foregroundStyle(goalFitColor)
+                Text("目標符合度")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "arrow.forward.circle.fill")
+                    .foregroundStyle(PremiumColor.emerald)
+                    .font(.subheadline)
+                Text(evaluation.nextAction)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineSpacing(3)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(PremiumColor.emerald.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 20).fill(PremiumColor.cardBg))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(PremiumColor.border, lineWidth: 1))
+    }
+
+    private var goalFitColor: Color {
+        switch evaluation.goalFitScore {
+        case 75...: return PremiumColor.emerald
+        case 50..<75: return PremiumColor.gold
+        default: return PremiumColor.redOrange
+        }
+    }
+}
+
+// MARK: - Key Findings Section (主要發現，永遠可見)
+
+struct KeyFindingsSectionView: View {
+    let evaluation: WorkoutEvaluation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("主要發現", systemImage: "lightbulb.fill")
+                .font(.headline)
+                .foregroundStyle(PremiumColor.gold)
+            ForEach(evaluation.keyFindings, id: \.self) { finding in
+                HStack(alignment: .top, spacing: 8) {
+                    Text("•").foregroundStyle(PremiumColor.gold)
+                    Text(finding).font(.caption).foregroundStyle(.white.opacity(0.9))
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PremiumColor.gold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(PremiumColor.gold.opacity(0.2), lineWidth: 1))
+    }
+}
+
+// MARK: - Metrics Grid Section (移入詳細數據區塊)
+
+struct MetricsGridSectionView: View {
+    let workout: WorkoutInput
+    let result: AnalysisResult
+    let evaluation: WorkoutEvaluation
+
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 12) {
+            MetricGridCell(icon: "clock.fill", color: PremiumColor.skyBlue, title: "持續時間",
+                           value: "\(Int(workout.durationSeconds / 60)) 分鐘")
+            MetricGridCell(icon: "waveform.path.ecg", color: .red, title: "心率樣本",
+                           value: "\(workout.heartRateSamples.count) 筆")
+            if let stability = result.stabilityStandardDeviation {
+                MetricGridCell(icon: "waveform.path.ecg.rectangle", color: PremiumColor.gold,
+                               title: "心率穩定度 (標差)", value: String(format: "%.1f bpm", stability))
+            }
+            if let drift = result.driftRatio {
+                MetricGridCell(icon: "chart.xyaxis.line", color: PremiumColor.neonPurple,
+                               title: "心率飄移", value: String(format: "%.1f%%", drift * 100))
+            }
+        }
     }
 }
 
