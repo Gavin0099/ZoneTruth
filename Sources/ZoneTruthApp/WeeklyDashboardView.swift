@@ -71,6 +71,14 @@ enum WeeklyAuthorityRendering {
         case .weakInference: return 0.12
         }
     }
+
+    static func cardSurfaceOpacity(for authority: WeeklyDecisionAuthority) -> Double {
+        switch authority {
+        case .observational: return 1.0
+        case .boundedInference: return 0.95
+        case .weakInference: return 0.88
+        }
+    }
 }
 
 enum WeeklyInferenceClassifier {
@@ -764,6 +772,9 @@ struct WeeklyAdvancedCard: View {
     private var trainingState: WeeklyTrainingStateSignal {
         WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: freshness)
     }
+    private var advancedAuthority: WeeklyDecisionAuthority {
+        minimumAuthority(adaptation.authority, trainingState.authority)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -801,6 +812,7 @@ struct WeeklyAdvancedCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
+            .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: adaptation.authority))
 
             Divider().background(PremiumColor.border)
 
@@ -818,6 +830,7 @@ struct WeeklyAdvancedCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: trainingState.authority))
 
             Divider().background(PremiumColor.border)
 
@@ -848,6 +861,7 @@ struct WeeklyAdvancedCard: View {
                     }
                 }
             }
+            .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
 
             Divider().background(PremiumColor.border)
 
@@ -865,6 +879,7 @@ struct WeeklyAdvancedCard: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
 
             Divider().background(PremiumColor.border)
 
@@ -881,6 +896,7 @@ struct WeeklyAdvancedCard: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
             Divider().background(PremiumColor.border)
 
             // Confidence
@@ -927,5 +943,14 @@ struct WeeklyAdvancedCard: View {
         case .weak: return PremiumColor.gold
         case .unsupported: return .gray
         }
+    }
+
+    private func minimumAuthority(_ lhs: WeeklyDecisionAuthority, _ rhs: WeeklyDecisionAuthority) -> WeeklyDecisionAuthority {
+        let rank: [WeeklyDecisionAuthority: Int] = [
+            .weakInference: 0,
+            .boundedInference: 1,
+            .observational: 2
+        ]
+        return (rank[lhs, default: 0] <= rank[rhs, default: 0]) ? lhs : rhs
     }
 }

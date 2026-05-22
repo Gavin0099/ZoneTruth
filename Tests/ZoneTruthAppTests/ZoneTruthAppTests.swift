@@ -1160,6 +1160,16 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(WeeklyAuthorityRendering.recommendationStrokeOpacity(for: missingAuthority), 0.12)
     }
 
+    func testCardSurfaceOpacityMonotonicByAuthority() {
+        let observational = WeeklyAuthorityRendering.cardSurfaceOpacity(for: .observational)
+        let bounded = WeeklyAuthorityRendering.cardSurfaceOpacity(for: .boundedInference)
+        let weak = WeeklyAuthorityRendering.cardSurfaceOpacity(for: .weakInference)
+
+        XCTAssertGreaterThan(observational, bounded)
+        XCTAssertGreaterThan(bounded, weak)
+        XCTAssertEqual(observational, 1.0, accuracy: 0.0001)
+    }
+
     func testWeeklyAdaptationSignalUsesBoundedDirectionClasses() {
         let monday = makeUTCDate(year: 2026, month: 5, day: 18)
         let summary = WeeklyWorkoutSummary(
@@ -1383,6 +1393,20 @@ final class ZoneTruthAppTests: XCTestCase {
             WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: .missing).state,
             .recoveryNormalizing
         )
+    }
+
+    func testTrainingStateRenderingAvoidsBinaryGoodBadTerms() {
+        let labels = [
+            TrainingState.recovered.admissibleLabel(for: .observational),
+            TrainingState.accumulatingLoad.admissibleLabel(for: .boundedInference),
+            TrainingState.functionalFatigue.admissibleLabel(for: .weakInference),
+            TrainingState.possibleUnderRecovery.admissibleLabel(for: .boundedInference),
+            TrainingState.recoveryNormalizing.admissibleLabel(for: .weakInference),
+        ]
+        let combined = labels.joined(separator: " ")
+        XCTAssertFalse(combined.contains("好"))
+        XCTAssertFalse(combined.contains("壞"))
+        XCTAssertFalse(combined.contains("正常/異常"))
     }
 
     // MARK: - Claim Ceiling Tests
