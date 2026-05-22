@@ -1534,6 +1534,27 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(WeeklyAdaptationDirection.noSignal.admissibleLabel(for: .weakInference), label)
     }
 
+    func testWeeklyCTAPresenterUsesGoalAwareActionWhenGoalSignalDiverges() {
+        let rendered = WeeklyCTAPresenter.render(
+            base: "本週訓練節奏尚可，下週視體感微調強度。",
+            for: .observational,
+            goal: .strengthFocus,
+            goalSignal: .divergent
+        )
+        XCTAssertTrue(rendered.contains("安排至少一堂肌力課"))
+    }
+
+    func testWeeklyCTAPresenterKeepsWeakEvidencePrefixOnGoalAwareAction() {
+        let rendered = WeeklyCTAPresenter.render(
+            base: "本週訓練節奏尚可，下週視體感微調強度。",
+            for: .weakInference,
+            goal: .aerobicBase,
+            goalSignal: .divergent
+        )
+        XCTAssertTrue(rendered.hasPrefix("訊號有限，僅供方向參考："))
+        XCTAssertTrue(rendered.contains("優先補低強度有氧時段"))
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)

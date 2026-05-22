@@ -223,14 +223,64 @@ enum NonAuthorityReminderLevel {
 // The base text is preserved so the content signal stays intact;
 // only the epistemic framing changes.
 enum WeeklyCTAPresenter {
-    static func render(_ base: String, for authority: WeeklyDecisionAuthority) -> String {
+    static func render(
+        base: String,
+        for authority: WeeklyDecisionAuthority,
+        goal: UserTrainingGoal?,
+        goalSignal: GoalAlignmentSignal?
+    ) -> String {
+        let goalAware = goalAwareBaseAction(
+            fallback: base,
+            goal: goal,
+            signal: goalSignal
+        )
         switch authority {
         case .observational:
-            return base
+            return goalAware
         case .boundedInference:
-            return base + "（建議觀察體感後再決定。）"
+            return goalAware + "（建議觀察體感後再決定。）"
         case .weakInference:
-            return "訊號有限，僅供方向參考：" + base
+            return "訊號有限，僅供方向參考：" + goalAware
+        }
+    }
+
+    private static func goalAwareBaseAction(
+        fallback: String,
+        goal: UserTrainingGoal?,
+        signal: GoalAlignmentSignal?
+    ) -> String {
+        guard let goal, let signal else { return fallback }
+        switch signal {
+        case .aligned:
+            return fallback
+        case .partiallyAligned:
+            switch goal {
+            case .aerobicBase:
+                return "下週可再增加一次低強度有氧時段，讓訓練型態更貼近有氧基礎方向。"
+            case .strengthFocus:
+                return "下週可增加一堂肌力課，讓訓練型態更貼近肌力為主方向。"
+            case .fatLossRecomp:
+                return "下週可維持目前頻率並補一堂中等強度課，逐步貼近體脂調整方向。"
+            case .performancePeak:
+                return "下週可保留高強度課並補足恢復，逐步貼近競技準備節奏。"
+            case .activeRecovery:
+                return "下週可再降低一堂中高強度課，讓週期更接近主動恢復安排。"
+            }
+        case .divergent:
+            switch goal {
+            case .aerobicBase:
+                return "下週建議先降低高強度課比例，優先補低強度有氧時段。"
+            case .strengthFocus:
+                return "下週建議先安排至少一堂肌力課，修正本週與目標的型態偏差。"
+            case .fatLossRecomp:
+                return "下週建議提高規律訓練頻率，並保留一堂混合刺激課。"
+            case .performancePeak:
+                return "下週建議補足訓練量與關鍵強度課，逐步回到競技準備節奏。"
+            case .activeRecovery:
+                return "下週建議優先減少高強度課次，讓週負荷回到恢復導向。"
+            }
+        case .insufficientEvidence:
+            return "本週訓練樣本不足，先以輕量規律訓練累積觀測，再調整目標方向。"
         }
     }
 }
@@ -683,6 +733,10 @@ struct WeeklyOverviewCard: View {
     private var reminderLevel: NonAuthorityReminderLevel {
         NonAuthorityReminderPolicy.level(inference: inferenceClass, freshness: freshness)
     }
+    private var goalAlignmentSignal: GoalAlignmentSignal? {
+        guard let trainingGoal else { return nil }
+        return GoalAlignmentEngine.evaluate(goal: trainingGoal, summary: summary)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -714,8 +768,7 @@ struct WeeklyOverviewCard: View {
                 }
 
                 // Goal alignment: only shown when user has declared a training goal
-                if let goal = trainingGoal {
-                    let signal = GoalAlignmentEngine.evaluate(goal: goal, summary: summary)
+                if let goal = trainingGoal, let signal = goalAlignmentSignal {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             EvidenceChip(label: goal.chipLabel, color: PremiumColor.skyBlue)
@@ -746,7 +799,12 @@ struct WeeklyOverviewCard: View {
                     Image(systemName: "lightbulb.fill")
                         .foregroundStyle(PremiumColor.gold)
                         .font(.subheadline)
-                    Text(WeeklyCTAPresenter.render(policy.nextAction, for: authority))
+                    Text(WeeklyCTAPresenter.render(
+                        base: policy.nextAction,
+                        for: authority,
+                        goal: trainingGoal,
+                        goalSignal: goalAlignmentSignal
+                    ))
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)

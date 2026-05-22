@@ -141,8 +141,9 @@ if ! swift test --filter testMultiWeekAdaptation; then
   exit 1
 fi
 
-# Goal alignment wording must never contain achievement/predictive/causal language
-if grep -E -q '目標達成|將會達到|已達成|必定|診斷' "$WEEKLY_UI_PATH"; then
+# Goal alignment wording must never contain achievement/predictive language.
+# Keep this scoped to overclaim verbs; generic "診斷" appears in bounded disclaimers elsewhere.
+if grep -E -q '目標達成|將會達到|已達成|必定|保證|預測|必然' "$WEEKLY_UI_PATH"; then
   goal_alignment_guard="forbidden_goal_claim_detected"
   echo "weekly_ui_guard: ${weekly_ui_guard}"
   echo "goal_alignment_guard: ${goal_alignment_guard}"
