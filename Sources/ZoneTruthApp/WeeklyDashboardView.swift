@@ -196,9 +196,9 @@ enum NonAuthorityReminderLevel {
         case .none:
             return ""
         case .soft:
-            return "Based on available HR-derived observations. Not a physiological diagnosis."
+            return "依目前可用的心率觀測訊號提供方向參考，非生理診斷。"
         case .strong:
-            return "Evidence is limited or stale. Use this as directional guidance only, not a physiological diagnosis."
+            return "目前證據有限或偏舊，僅供方向參考，非生理診斷。"
         }
     }
 
@@ -217,6 +217,11 @@ enum NonAuthorityReminderLevel {
         case .strong: return 0.08
         }
     }
+}
+
+enum WeeklyTemporalScopeLabel {
+    static let signal7d = "7d 訊號"
+    static let unavailable28d = "28d 不可用"
 }
 
 // CTA wording ceiling: stronger directives require higher-authority evidence.
@@ -1057,11 +1062,11 @@ struct WeeklyAdvancedCard: View {
                 }
                 // Coverage layer: 7d chip always present; 28d chip shows actual trend if available
                 HStack(spacing: 6) {
-                    EvidenceChip(label: "7d signal", color: .gray)
+                    EvidenceChip(label: WeeklyTemporalScopeLabel.signal7d, color: .gray)
                     if let trend = adaptationTrend28d {
                         EvidenceChip(label: trend.chipLabel, color: trend.chipColor)
                     } else {
-                        EvidenceChip(label: "28d unavailable", color: .gray)
+                        EvidenceChip(label: WeeklyTemporalScopeLabel.unavailable28d, color: .gray)
                     }
                 }
                 Text(adaptation.rationale)

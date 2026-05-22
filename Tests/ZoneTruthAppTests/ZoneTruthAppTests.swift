@@ -1657,6 +1657,21 @@ final class ZoneTruthAppTests: XCTestCase {
         )
     }
 
+    func testWeeklyTemporalScopeLabelsAreLocalized() {
+        XCTAssertEqual(WeeklyTemporalScopeLabel.signal7d, "7d 訊號")
+        XCTAssertEqual(WeeklyTemporalScopeLabel.unavailable28d, "28d 不可用")
+        XCTAssertFalse(WeeklyTemporalScopeLabel.signal7d.contains("signal"))
+        XCTAssertFalse(WeeklyTemporalScopeLabel.unavailable28d.contains("unavailable"))
+    }
+
+    func testNonAuthorityReminderMessagesAreLocalized() {
+        XCTAssertEqual(NonAuthorityReminderLevel.none.message, "")
+        XCTAssertTrue(NonAuthorityReminderLevel.soft.message.contains("心率觀測訊號"))
+        XCTAssertTrue(NonAuthorityReminderLevel.soft.message.contains("非生理診斷"))
+        XCTAssertTrue(NonAuthorityReminderLevel.strong.message.contains("證據有限或偏舊"))
+        XCTAssertTrue(NonAuthorityReminderLevel.strong.message.contains("僅供方向參考"))
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
