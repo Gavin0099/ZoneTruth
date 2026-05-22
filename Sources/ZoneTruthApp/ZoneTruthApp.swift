@@ -28,7 +28,7 @@ public struct ZoneTruthMainView: View {
                 }
 
             NavigationStack {
-                WeeklyDashboardView(viewModel: viewModel)
+                WeeklyDashboardView(viewModel: viewModel, settingsManager: settingsManager)
             }
             .tabItem {
                 Label("本週", systemImage: "calendar")

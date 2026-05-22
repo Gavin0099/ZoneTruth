@@ -13,6 +13,7 @@ semantic_guard="passed"
 snapshot_fixture="matched"
 weekly_snapshot="matched"
 weekly_ui_guard="passed"
+goal_alignment_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -124,6 +125,20 @@ if ! swift test --filter testBodyCompositionSeedLedgerHasExpectedCoverage; then
   echo "weekly_ui_guard: ${weekly_ui_guard}"
   echo "working_tree_clean: ${working_tree_clean}"
   echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! swift test --filter GoalAlignmentEngineTests; then
+  goal_alignment_guard="failed"
+  echo "goal_alignment_guard: ${goal_alignment_guard}"
+  exit 1
+fi
+
+# Goal alignment wording must never contain achievement/predictive/causal language
+if grep -E -q '目標達成|將會達到|已達成|必定|診斷' "$WEEKLY_UI_PATH"; then
+  goal_alignment_guard="forbidden_goal_claim_detected"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "goal_alignment_guard: ${goal_alignment_guard}"
   exit 1
 fi
 
@@ -296,6 +311,7 @@ echo "semantic_guard: ${semantic_guard}"
 echo "snapshot_fixture: ${snapshot_fixture}"
 echo "weekly_snapshot: ${weekly_snapshot}"
 echo "weekly_ui_guard: ${weekly_ui_guard}"
+echo "goal_alignment_guard: ${goal_alignment_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"

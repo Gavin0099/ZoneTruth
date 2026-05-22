@@ -1185,6 +1185,39 @@ struct SettingsView: View {
             Divider()
                 .background(Color.white.opacity(0.1))
 
+            // Training goal selection
+            VStack(alignment: .leading, spacing: 12) {
+                Label("訓練目標方向", systemImage: "target")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                Text("設定後，本週概況將顯示訓練型態與目標方向的一致性（僅描述型態符合程度，不代表目標達成。）")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Picker(
+                    "訓練目標",
+                    selection: Binding(
+                        get: { settingsManager.trainingGoal },
+                        set: { settingsManager.updateTrainingGoal($0) }
+                    )
+                ) {
+                    Text("未設定").tag(UserTrainingGoal?.none)
+                    ForEach(UserTrainingGoal.allCases, id: \.self) { goal in
+                        Text(goal.localizedLabel).tag(UserTrainingGoal?.some(goal))
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(PremiumColor.skyBlue)
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.02))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Divider()
+                .background(Color.white.opacity(0.1))
+
             VStack(alignment: .leading, spacing: 8) {
                 Label("固定核心策略 (不可變更)", systemImage: "lock.fill")
                     .font(.caption.bold())

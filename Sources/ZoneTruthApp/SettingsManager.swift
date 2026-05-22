@@ -6,14 +6,16 @@ final class SettingsManager: ObservableObject {
     @Published var policy: AnalysisPolicy
     @Published var pendingSuggestion: CalibrationSuggestion?
     @Published var migrationMode: MigrationMode
+    @Published var trainingGoal: UserTrainingGoal?
 
     private let userDefaults: UserDefaults
     private let policyKey = "com.zonetruth.analysisPolicy"
     private let migrationModeKey = "com.zonetruth.migrationMode"
+    private let trainingGoalKey = "com.zonetruth.trainingGoal"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
-        
+
         if let data = userDefaults.data(forKey: policyKey),
            let decoded = try? JSONDecoder().decode(AnalysisPolicy.self, from: data) {
             self.policy = decoded
@@ -26,6 +28,13 @@ final class SettingsManager: ObservableObject {
             self.migrationMode = decoded
         } else {
             self.migrationMode = .observeOnly
+        }
+
+        if let raw = userDefaults.string(forKey: trainingGoalKey),
+           let decoded = UserTrainingGoal(rawValue: raw) {
+            self.trainingGoal = decoded
+        } else {
+            self.trainingGoal = nil
         }
     }
 
@@ -80,6 +89,15 @@ final class SettingsManager: ObservableObject {
     private func save() {
         if let encoded = try? JSONEncoder().encode(policy) {
             userDefaults.set(encoded, forKey: policyKey)
+        }
+    }
+
+    func updateTrainingGoal(_ goal: UserTrainingGoal?) {
+        trainingGoal = goal
+        if let goal {
+            userDefaults.set(goal.rawValue, forKey: trainingGoalKey)
+        } else {
+            userDefaults.removeObject(forKey: trainingGoalKey)
         }
     }
 

@@ -590,6 +590,7 @@ extension LoadTendency {
 
 struct WeeklyDashboardView: View {
     @ObservedObject var viewModel: WorkoutListViewModel
+    @ObservedObject var settingsManager: SettingsManager
     private var freshness: WeeklyDataFreshness {
         WeeklyFreshnessSignal.classify(
             workouts: viewModel.workouts,
@@ -606,7 +607,8 @@ struct WeeklyDashboardView: View {
                     WeeklyOverviewCard(
                         summary: viewModel.weeklySummary,
                         policy: viewModel.weeklyPolicy,
-                        freshness: freshness
+                        freshness: freshness,
+                        trainingGoal: settingsManager.trainingGoal
                     )
                     WeeklyAdvancedCard(
                         summary: viewModel.weeklySummary,
@@ -647,6 +649,7 @@ struct WeeklyOverviewCard: View {
     let summary: WeeklyWorkoutSummary
     let policy: WeeklyLoadPolicy
     let freshness: WeeklyDataFreshness
+    let trainingGoal: UserTrainingGoal?
     private var semanticConfidence: Double {
         WeeklyConfidenceSemantics.calibrated(
             baseConfidence: policy.confidence,
@@ -706,6 +709,21 @@ struct WeeklyOverviewCard: View {
                     EvidenceChip(label: authority.localizedLabel, color: authorityChipColor)
                     if semanticConfidence < 0.6 || freshness == .stale || freshness == .missing {
                         EvidenceChip(label: "證據缺口", color: PremiumColor.gold)
+                    }
+                }
+
+                // Goal alignment: only shown when user has declared a training goal
+                if let goal = trainingGoal {
+                    let signal = GoalAlignmentEngine.evaluate(goal: goal, summary: summary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            EvidenceChip(label: goal.chipLabel, color: PremiumColor.skyBlue)
+                            EvidenceChip(label: signal.localizedLabel, color: signal.chipColor)
+                        }
+                        Text(signal.observationalLabel(for: goal))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -1195,6 +1213,65 @@ private struct StateProgressionBar: View {
                 }
             }
             .padding(.vertical, 2)
+        }
+    }
+}
+
+// MARK: - Goal alignment UI helpers
+
+extension UserTrainingGoal {
+    var localizedLabel: String {
+        switch self {
+        case .aerobicBase:    return "有氧基礎"
+        case .strengthFocus:  return "肌力為主"
+        case .fatLossRecomp:  return "體脂調整"
+        case .performancePeak: return "競技準備"
+        case .activeRecovery: return "主動恢復"
+        }
+    }
+
+    var chipLabel: String { "目標：\(localizedLabel)" }
+}
+
+extension GoalAlignmentSignal {
+    var localizedLabel: String {
+        switch self {
+        case .aligned:              return "型態一致"
+        case .partiallyAligned:     return "部分一致"
+        case .divergent:            return "型態偏差"
+        case .insufficientEvidence: return "訓練不足"
+        }
+    }
+
+    var chipColor: Color {
+        switch self {
+        case .aligned:              return PremiumColor.emerald
+        case .partiallyAligned:     return PremiumColor.gold
+        case .divergent:            return PremiumColor.redOrange
+        case .insufficientEvidence: return .gray
+        }
+    }
+
+    // Observational wording: describes pattern consistency only.
+    // No achievement, prediction, or causal claim.
+    func observationalLabel(for goal: UserTrainingGoal) -> String {
+        switch (self, goal) {
+        case (.aligned, .aerobicBase):     return "本週低強度佔比偏高，與有氧基礎方向一致"
+        case (.aligned, .strengthFocus):   return "本週肌力訓練頻率符合以肌力為主的方向"
+        case (.aligned, .fatLossRecomp):   return "本週訓練刺激與頻率與體脂調整型態一致"
+        case (.aligned, .performancePeak): return "本週負荷量與強度與競技準備期型態一致"
+        case (.aligned, .activeRecovery):  return "本週休息比例偏高，符合主動恢復期安排"
+        case (.partiallyAligned, .aerobicBase):     return "有氧偏重訊號部分符合，強度分布仍有調整空間"
+        case (.partiallyAligned, .strengthFocus):   return "肌力訓練頻率偏低，可增加肌力課次比例"
+        case (.partiallyAligned, .fatLossRecomp):   return "訓練刺激部分符合，可適度提高訓練頻率"
+        case (.partiallyAligned, .performancePeak): return "負荷量或強度低於競技準備期預期"
+        case (.partiallyAligned, .activeRecovery):  return "仍有部分中高強度課次，可再調低負荷"
+        case (.divergent, .aerobicBase):     return "本週高強度比例偏高，與有氧基礎週期化方向有偏差"
+        case (.divergent, .strengthFocus):   return "本週無肌力訓練課次，與目標方向不一致"
+        case (.divergent, .fatLossRecomp):   return "訓練頻率不足，週次刺激偏少"
+        case (.divergent, .performancePeak): return "本週訓練量偏少，與競技準備強度不符"
+        case (.divergent, .activeRecovery):  return "高強度或高頻率訓練，與主動恢復期型態不符"
+        case (.insufficientEvidence, _):     return "本週訓練量不足，無法判定型態一致性"
         }
     }
 }

@@ -90,6 +90,7 @@ Interpretation notes:
 | HR + HRV (sparse) | recovery trend signal (bounded) | definitive readiness verdict |
 | Power meter (future) | pacing efficiency, external load structure | injury risk diagnosis |
 | RPE + HR (future) | internal load estimate, perceived strain trend | neuromuscular adaptation diagnosis |
+| User-declared goal + weekly summary | weekly pattern alignment tendency (aligned/partial/divergent) | goal achievement prediction, causal attribution, progress claim |
 
 ## 7) Decision Surface Priority
 

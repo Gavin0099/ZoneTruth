@@ -1088,7 +1088,7 @@ final class ZoneTruthAppTests: XCTestCase {
             repository: MockWorkoutRepository(),
             settingsManager: settings
         )
-        let view = WeeklyDashboardView(viewModel: viewModel)
+        let view = WeeklyDashboardView(viewModel: viewModel, settingsManager: settings)
 
         XCTAssertNotNil(viewModel.weeklySummary.weekStart)
         XCTAssertFalse(viewModel.weeklyPolicy.keyFindings.isEmpty)
