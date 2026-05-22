@@ -351,15 +351,40 @@ private func averageHRVSDNN(for workout: HKWorkout, from store: HKHealthStore) a
         return nil
     }
 
-    let predicate = HKQuery.predicateForSamples(
+    let strictWorkoutPredicate = HKQuery.predicateForSamples(
         withStart: workout.startDate,
         end: workout.endDate,
         options: [.strictStartDate, .strictEndDate]
     )
-    let sortDescriptors = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
-    let unit = HKUnit.secondUnit(with: .milli)
+    let strictSamples = try await queryHRVSamples(from: store, hrvType: hrvType, predicate: strictWorkoutPredicate)
+    if let value = averageHRV(samples: strictSamples) {
+        return value
+    }
 
-    let quantitySamples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+    // Fallback: many Apple Health HRV samples are recorded outside workout intervals.
+    // If strict workout window has no samples, use same-day HRV observation as bounded fallback.
+    let calendar = Calendar.current
+    let dayStart = calendar.startOfDay(for: workout.startDate)
+    guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+        return nil
+    }
+    let sameDayPredicate = HKQuery.predicateForSamples(
+        withStart: dayStart,
+        end: dayEnd,
+        options: [.strictStartDate]
+    )
+    let sameDaySamples = try await queryHRVSamples(from: store, hrvType: hrvType, predicate: sameDayPredicate)
+    return averageHRV(samples: sameDaySamples)
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+private func queryHRVSamples(
+    from store: HKHealthStore,
+    hrvType: HKQuantityType,
+    predicate: NSPredicate
+) async throws -> [HKQuantitySample] {
+    let sortDescriptors = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+    return try await withCheckedThrowingContinuation { continuation in
         let query = HKSampleQuery(
             sampleType: hrvType,
             predicate: predicate,
@@ -370,21 +395,20 @@ private func averageHRVSDNN(for workout: HKWorkout, from store: HKHealthStore) a
                 continuation.resume(throwing: error)
                 return
             }
-
             continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
         }
-
         store.execute(query)
     }
+}
 
-    guard !quantitySamples.isEmpty else {
-        return nil
-    }
-
-    let sum = quantitySamples.reduce(0.0) { partial, sample in
+@available(iOS 17.0, macOS 14.0, *)
+private func averageHRV(samples: [HKQuantitySample]) -> Double? {
+    guard !samples.isEmpty else { return nil }
+    let unit = HKUnit.secondUnit(with: .milli)
+    let sum = samples.reduce(0.0) { partial, sample in
         partial + sample.quantity.doubleValue(for: unit)
     }
-    return sum / Double(quantitySamples.count)
+    return sum / Double(samples.count)
 }
 
 @available(iOS 17.0, macOS 14.0, *)

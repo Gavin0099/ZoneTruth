@@ -1118,6 +1118,9 @@ struct WeeklyAdvancedCard: View {
                     Text("本週尚無可用 HRV（SDNN）樣本。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    Text("若健康已有 HRV，請刷新資料與健康授權；系統會優先抓訓練時段，無樣本時回退同日觀測。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary.opacity(0.85))
                 }
             }
             .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
