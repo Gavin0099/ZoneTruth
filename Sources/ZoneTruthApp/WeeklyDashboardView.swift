@@ -81,6 +81,39 @@ enum WeeklyAuthorityRendering {
     }
 }
 
+enum WeeklyConfidenceSemantics {
+    static func calibrated(
+        baseConfidence: Double,
+        freshness: WeeklyDataFreshness,
+        workoutCount: Int,
+        hrvSampledWorkoutCount: Int,
+        hrvCoverageRatio: Double
+    ) -> Double {
+        var value = baseConfidence
+
+        switch freshness {
+        case .missing, .stale:
+            value = min(value, 0.55)
+        case .partial:
+            value = min(value, 0.70)
+        case .fresh:
+            break
+        }
+
+        if workoutCount >= 3 {
+            if hrvSampledWorkoutCount == 0 {
+                value = min(value, 0.58)
+            } else if hrvCoverageRatio < 0.34 {
+                value = min(value, 0.60)
+            } else if hrvCoverageRatio < 0.67 {
+                value = min(value, 0.72)
+            }
+        }
+
+        return max(0.1, min(0.95, value))
+    }
+}
+
 enum WeeklyInferenceClassifier {
     static func classify(
         confidence: Double,
@@ -310,10 +343,16 @@ struct WeeklyTrainingStateSignal {
     let inferenceClass: WeeklyInferenceClass
     let rationale: String
 
-    static func from(summary: WeeklyWorkoutSummary, policy: WeeklyLoadPolicy, freshness: WeeklyDataFreshness) -> WeeklyTrainingStateSignal {
-        let authority = WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+    static func from(
+        summary: WeeklyWorkoutSummary,
+        policy: WeeklyLoadPolicy,
+        freshness: WeeklyDataFreshness,
+        confidenceOverride: Double? = nil
+    ) -> WeeklyTrainingStateSignal {
+        let confidence = confidenceOverride ?? policy.confidence
+        let authority = WeeklyAuthorityRendering.authority(for: confidence, freshness: freshness)
         let inferenceClass = WeeklyInferenceClassifier.classify(
-            confidence: policy.confidence,
+            confidence: confidence,
             freshness: freshness,
             workoutCount: summary.workoutCount,
             elapsedDays: summary.elapsedDays,
@@ -403,10 +442,16 @@ struct WeeklyAdaptationSignal {
     let temporalScopes: [AdaptationTemporalScope]
     let rationale: String
 
-    static func from(summary: WeeklyWorkoutSummary, policy: WeeklyLoadPolicy, freshness: WeeklyDataFreshness) -> WeeklyAdaptationSignal {
-        let authority = WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+    static func from(
+        summary: WeeklyWorkoutSummary,
+        policy: WeeklyLoadPolicy,
+        freshness: WeeklyDataFreshness,
+        confidenceOverride: Double? = nil
+    ) -> WeeklyAdaptationSignal {
+        let confidence = confidenceOverride ?? policy.confidence
+        let authority = WeeklyAuthorityRendering.authority(for: confidence, freshness: freshness)
         let inferenceClass = WeeklyInferenceClassifier.classify(
-            confidence: policy.confidence,
+            confidence: confidence,
             freshness: freshness,
             workoutCount: summary.workoutCount,
             elapsedDays: summary.elapsedDays,
@@ -578,12 +623,21 @@ struct WeeklyOverviewCard: View {
     let summary: WeeklyWorkoutSummary
     let policy: WeeklyLoadPolicy
     let freshness: WeeklyDataFreshness
+    private var semanticConfidence: Double {
+        WeeklyConfidenceSemantics.calibrated(
+            baseConfidence: policy.confidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
+        )
+    }
     private var authority: WeeklyDecisionAuthority {
-        WeeklyAuthorityRendering.authority(for: policy.confidence, freshness: freshness)
+        WeeklyAuthorityRendering.authority(for: semanticConfidence, freshness: freshness)
     }
     private var inferenceClass: WeeklyInferenceClass {
         WeeklyInferenceClassifier.classify(
-            confidence: policy.confidence,
+            confidence: semanticConfidence,
             freshness: freshness,
             workoutCount: summary.workoutCount,
             elapsedDays: summary.elapsedDays,
@@ -625,7 +679,7 @@ struct WeeklyOverviewCard: View {
                     EvidenceChip(label: inferenceClass.rawValue, color: inferenceChipColor)
                     EvidenceChip(label: freshness.label, color: freshnessChipColor)
                     EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
-                    if policy.confidence < 0.6 || freshness == .stale || freshness == .missing {
+                    if semanticConfidence < 0.6 || freshness == .stale || freshness == .missing {
                         EvidenceChip(label: "Evidence gap", color: PremiumColor.gold)
                     }
                 }
@@ -816,14 +870,33 @@ struct WeeklyAdvancedCard: View {
     let policy: WeeklyLoadPolicy
     let freshness: WeeklyDataFreshness
     let bodyCompositionLedger: BodyCompositionLedger?
+    private var semanticConfidence: Double {
+        WeeklyConfidenceSemantics.calibrated(
+            baseConfidence: policy.confidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
+        )
+    }
     private var adaptation: WeeklyAdaptationSignal {
-        WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: freshness)
+        WeeklyAdaptationSignal.from(
+            summary: summary,
+            policy: policy,
+            freshness: freshness,
+            confidenceOverride: semanticConfidence
+        )
     }
     private var reminderLevel: NonAuthorityReminderLevel {
         NonAuthorityReminderPolicy.level(inference: adaptation.inferenceClass, freshness: freshness)
     }
     private var trainingState: WeeklyTrainingStateSignal {
-        WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: freshness)
+        WeeklyTrainingStateSignal.from(
+            summary: summary,
+            policy: policy,
+            freshness: freshness,
+            confidenceOverride: semanticConfidence
+        )
     }
     private var advancedAuthority: WeeklyDecisionAuthority {
         minimumAuthority(adaptation.authority, trainingState.authority)
@@ -1008,7 +1081,7 @@ struct WeeklyAdvancedCard: View {
                     Text("資料完整度")
                         .font(.subheadline.bold())
                         .foregroundStyle(.white.opacity(0.8))
-                    if policy.confidence < 0.6 {
+                    if semanticConfidence < 0.6 {
                         HStack(spacing: 5) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.caption)
@@ -1021,8 +1094,8 @@ struct WeeklyAdvancedCard: View {
                 }
                 Spacer()
                 ConfidenceRingView(
-                    confidence: policy.confidence,
-                    color: policy.confidence < 0.6 ? PremiumColor.gold : PremiumColor.emerald
+                    confidence: semanticConfidence,
+                    color: semanticConfidence < 0.6 ? PremiumColor.gold : PremiumColor.emerald
                 )
             }
         }

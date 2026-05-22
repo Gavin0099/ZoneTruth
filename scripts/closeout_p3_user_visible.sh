@@ -70,6 +70,18 @@ if ! swift test --filter testWeeklyInferenceClassifierReturnsUnsupportedWhenEvid
   fail
 fi
 
+if ! swift test --filter testWeeklyConfidenceSemanticsDowngradesWithSparseHRV; then
+  freshness_tests="failed"
+  p3_user_visible_guard="freshness_tests_failed"
+  fail
+fi
+
+if ! swift test --filter testWeeklyConfidenceSemanticsDowngradesWithStaleFreshness; then
+  freshness_tests="failed"
+  p3_user_visible_guard="freshness_tests_failed"
+  fail
+fi
+
 if ! swift test --filter testWeeklyTrainingStateSignalCoversStateProgression; then
   state_machine_tests="failed"
   p3_user_visible_guard="state_machine_tests_failed"

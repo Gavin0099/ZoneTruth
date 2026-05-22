@@ -1170,6 +1170,28 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(observational, 1.0, accuracy: 0.0001)
     }
 
+    func testWeeklyConfidenceSemanticsDowngradesWithSparseHRV() {
+        let calibrated = WeeklyConfidenceSemantics.calibrated(
+            baseConfidence: 0.85,
+            freshness: .fresh,
+            workoutCount: 5,
+            hrvSampledWorkoutCount: 1,
+            hrvCoverageRatio: 0.2
+        )
+        XCTAssertEqual(calibrated, 0.60, accuracy: 0.001)
+    }
+
+    func testWeeklyConfidenceSemanticsDowngradesWithStaleFreshness() {
+        let calibrated = WeeklyConfidenceSemantics.calibrated(
+            baseConfidence: 0.9,
+            freshness: .stale,
+            workoutCount: 5,
+            hrvSampledWorkoutCount: 5,
+            hrvCoverageRatio: 1.0
+        )
+        XCTAssertEqual(calibrated, 0.55, accuracy: 0.001)
+    }
+
     func testWeeklyAdaptationSignalUsesBoundedDirectionClasses() {
         let monday = makeUTCDate(year: 2026, month: 5, day: 18)
         let summary = WeeklyWorkoutSummary(

@@ -538,7 +538,7 @@ P3 規劃：
 
 - P3a：HRV observation import（完成）
 - P3b：HRV uncertainty signal（完成）
-- P3c：Weekly policy confidence adjustment
+- P3c：Weekly policy confidence adjustment（完成）
 
 備註：P3 HRV 目前 deferred，先以 P2 guard 穩定性為優先。
 
