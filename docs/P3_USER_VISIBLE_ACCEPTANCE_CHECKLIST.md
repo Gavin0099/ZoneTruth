@@ -69,3 +69,19 @@ This checklist validates user-visible behavior for:
 ## H) Release Gate
 
 Ship P3d/P3e user-visible changes only when all checklist items above are complete.
+
+## Execution Command
+
+Run:
+
+`bash scripts/closeout_p3_user_visible.sh`
+
+Expected final lines:
+
+- `p3_user_visible_guard: passed`
+- `authority_tests: passed`
+- `freshness_tests: passed`
+- `state_machine_tests: passed`
+- `adaptation_guard_tests: passed`
+- `body_context_tests: passed`
+- `forbidden_semantics_guard: passed`
