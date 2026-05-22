@@ -217,6 +217,7 @@ struct StravaActivitySnapshot: Equatable, Sendable {
 protocol StravaClient {
     var connectionStatus: StravaConnectionStatus { get }
     func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot]
+    func fetchActivities(after: Date, limit: Int) async throws -> [StravaActivitySnapshot]
 }
 
 enum StravaClientError: Error, Equatable, Sendable {
@@ -253,12 +254,24 @@ struct SystemStravaClient: StravaClient {
     }
 
     func fetchRecentActivities(limit: Int) async throws -> [StravaActivitySnapshot] {
+        try await fetchActivities(after: nil, limit: limit)
+    }
+
+    func fetchActivities(after: Date, limit: Int) async throws -> [StravaActivitySnapshot] {
+        try await fetchActivities(after: after as Date?, limit: limit)
+    }
+
+    private func fetchActivities(after: Date?, limit: Int) async throws -> [StravaActivitySnapshot] {
         guard let session = sessionStore.loadSession() else {
             throw StravaClientError.disconnected
         }
 
         let validSession = session.isExpired ? try await refreshed(from: session) : session
-        let summaries = try await fetchActivitySummaries(accessToken: validSession.accessToken, limit: limit)
+        let summaries = try await fetchActivitySummaries(
+            accessToken: validSession.accessToken,
+            limit: limit,
+            after: after
+        )
 
         return try await withThrowingTaskGroup(of: (Int, StravaActivitySnapshot).self) { group in
             for (index, summary) in summaries.enumerated() {
@@ -284,10 +297,18 @@ struct SystemStravaClient: StravaClient {
         }
     }
 
-    private func fetchActivitySummaries(accessToken: String, limit: Int) async throws -> [StravaActivitySummary] {
+    private func fetchActivitySummaries(
+        accessToken: String,
+        limit: Int,
+        after: Date? = nil
+    ) async throws -> [StravaActivitySummary] {
         let url = Self.apiBase.appendingPathComponent("athlete/activities")
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "per_page", value: String(limit))]
+        var queryItems = [URLQueryItem(name: "per_page", value: String(limit))]
+        if let after {
+            queryItems.append(URLQueryItem(name: "after", value: String(Int(after.timeIntervalSince1970))))
+        }
+        components.queryItems = queryItems
 
         let (data, response) = try await urlSession.data(for: authorized(components.url!, token: accessToken))
         try validateHTTP(response)
@@ -507,7 +528,30 @@ final class StravaActivityRepository: WorkoutRepository {
             )
         case .connected:
             do {
-                cachedWorkouts = try await client.fetchRecentActivities(limit: activityLimit).map(\.toDomainWorkout)
+                let newSnapshots: [StravaActivitySnapshot]
+                if let latestDate = cachedWorkouts.map(\.startDate).max() {
+                    newSnapshots = try await client.fetchActivities(after: latestDate, limit: activityLimit)
+                } else {
+                    newSnapshots = try await client.fetchRecentActivities(limit: activityLimit)
+                }
+
+                if newSnapshots.isEmpty {
+                    // No new activities — keep existing cache unchanged.
+                } else {
+                    let existingIDs = Set(cachedWorkouts.compactMap(\.id.uuidString))
+                    let merged = newSnapshots.map(\.toDomainWorkout) + cachedWorkouts
+                    // Deduplicate by startDate+workoutType, keep most recent activityLimit entries.
+                    var seen = Set<String>()
+                    cachedWorkouts = merged.filter { w in
+                        let key = "\(w.workoutType.rawValue)|\(w.startDate.timeIntervalSince1970)"
+                        return seen.insert(key).inserted
+                    }
+                    .sorted { $0.startDate > $1.startDate }
+                    .prefix(activityLimit)
+                    .map { $0 }
+                    _ = existingIDs // suppress unused warning
+                }
+
                 let msg = cachedWorkouts.isEmpty
                     ? "Strava 已連線，但找不到近期活動。若剛授權，請確認授權時已勾選 activity:read 權限，再重新連線。"
                     : statusMessage(for: .connected, workoutCount: cachedWorkouts.count)

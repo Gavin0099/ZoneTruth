@@ -1502,6 +1502,11 @@ private struct StubStravaClient: StravaClient {
         _ = limit
         return activities
     }
+
+    func fetchActivities(after: Date, limit: Int) async throws -> [StravaActivitySnapshot] {
+        _ = limit
+        return activities.filter { $0.startDate > after }
+    }
 }
 
 private struct StubStravaOAuthClient: StravaOAuthClient {

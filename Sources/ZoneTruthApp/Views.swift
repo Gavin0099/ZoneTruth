@@ -98,6 +98,7 @@ enum PremiumColor {
 struct WorkoutListView: View {
     @ObservedObject var viewModel: WorkoutListViewModel
     @ObservedObject var settingsManager: SettingsManager
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationSplitView {
@@ -191,6 +192,11 @@ struct WorkoutListView: View {
         .tint(PremiumColor.skyBlue)
         .task {
             await viewModel.refreshWorkouts()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await viewModel.refreshWorkouts() }
+            }
         }
     }
 }
