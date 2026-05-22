@@ -170,7 +170,7 @@ if ! grep -q 'Text("身體組成脈絡")' "$WEEKLY_UI_PATH"; then
   exit 1
 fi
 
-if grep -E -q '診斷|神經疲勞|肌肥大效果|必須' "$BODY_UI_PATH"; then
+if grep -E -q '神經疲勞|肌肥大效果|必須|可診斷|診斷結果|確定診斷' "$BODY_UI_PATH"; then
   weekly_ui_guard="body_composition_forbidden_term_detected"
   echo "semantic_guard: ${semantic_guard}"
   echo "snapshot_fixture: ${snapshot_fixture}"
