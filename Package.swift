@@ -31,7 +31,10 @@ let package = Package(
         ),
         .testTarget(
             name: "ZoneTruthCoreTests",
-            dependencies: ["ZoneTruthCore"]
+            dependencies: ["ZoneTruthCore"],
+            resources: [
+                .process("Fixtures")
+            ]
         ),
         .testTarget(
             name: "ZoneTruthAppTests",
