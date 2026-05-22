@@ -609,6 +609,15 @@ public enum WeeklyObservationBuilder {
             return values.isEmpty ? nil : values.reduce(0, +)
         }()
 
+        let hrvSamples = weekWorkouts.compactMap(\.hrvSDNNMilliseconds)
+        let hrvSampledWorkoutCount = hrvSamples.count
+        let hrvCoverageRatio = weekWorkouts.isEmpty
+            ? 0
+            : Double(hrvSampledWorkoutCount) / Double(weekWorkouts.count)
+        let averageHRVSDNNMilliseconds: Double? = hrvSamples.isEmpty
+            ? nil
+            : hrvSamples.reduce(0, +) / Double(hrvSamples.count)
+
         return WeeklyWorkoutSummary(
             weekStart: weekStart,
             weekEnd: weekEnd,
@@ -621,7 +630,10 @@ public enum WeeklyObservationBuilder {
             strengthDays: strengthDays,
             restDays: restDays,
             elapsedDays: elapsedDays,
-            consecutiveTrainingDays: consecutiveTrainingDays
+            consecutiveTrainingDays: consecutiveTrainingDays,
+            hrvSampledWorkoutCount: hrvSampledWorkoutCount,
+            hrvCoverageRatio: hrvCoverageRatio,
+            averageHRVSDNNMilliseconds: averageHRVSDNNMilliseconds
         )
     }
 }

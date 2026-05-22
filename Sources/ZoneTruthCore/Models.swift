@@ -402,6 +402,9 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
     public let restDays: Int
     public let elapsedDays: Int
     public let consecutiveTrainingDays: Int
+    public let hrvSampledWorkoutCount: Int
+    public let hrvCoverageRatio: Double
+    public let averageHRVSDNNMilliseconds: Double?
 
     public init(
         weekStart: Date,
@@ -415,7 +418,10 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
         strengthDays: Int,
         restDays: Int,
         elapsedDays: Int,
-        consecutiveTrainingDays: Int
+        consecutiveTrainingDays: Int,
+        hrvSampledWorkoutCount: Int = 0,
+        hrvCoverageRatio: Double = 0,
+        averageHRVSDNNMilliseconds: Double? = nil
     ) {
         self.weekStart = weekStart
         self.weekEnd = weekEnd
@@ -429,6 +435,9 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
         self.restDays = restDays
         self.elapsedDays = elapsedDays
         self.consecutiveTrainingDays = consecutiveTrainingDays
+        self.hrvSampledWorkoutCount = hrvSampledWorkoutCount
+        self.hrvCoverageRatio = hrvCoverageRatio
+        self.averageHRVSDNNMilliseconds = averageHRVSDNNMilliseconds
     }
 }
 

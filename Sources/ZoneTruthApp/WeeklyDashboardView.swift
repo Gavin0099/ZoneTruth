@@ -883,6 +883,47 @@ struct WeeklyAdvancedCard: View {
 
             Divider().background(PremiumColor.border)
 
+            // HRV observation import (P3a): observation-only, no policy coupling.
+            VStack(alignment: .leading, spacing: 8) {
+                Text("HRV 觀測")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white.opacity(0.8))
+
+                if let avg = summary.averageHRVSDNNMilliseconds {
+                    HStack {
+                        Text("平均 SDNN")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(String(format: "%.1f ms", avg))
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                    }
+                    HStack {
+                        Text("覆蓋率")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(summary.hrvSampledWorkoutCount)/\(max(summary.workoutCount, 0))")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                        Text(String(format: "(%.0f%%)", summary.hrvCoverageRatio * 100))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("僅顯示 HRV 觀測訊號，不直接輸出恢復診斷。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("本週尚無可用 HRV（SDNN）樣本。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
+
+            Divider().background(PremiumColor.border)
+
             // Long-term body composition context
             VStack(alignment: .leading, spacing: 8) {
                 if let ledger = bodyCompositionLedger {

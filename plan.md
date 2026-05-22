@@ -536,7 +536,7 @@ P2f（closeout guard）已納入：
 
 P3 規劃：
 
-- P3a：HRV observation import
+- P3a：HRV observation import（完成）
 - P3b：HRV uncertainty signal
 - P3c：Weekly policy confidence adjustment
 

@@ -113,6 +113,41 @@ final class WeeklyObservationTests: XCTestCase {
         XCTAssertEqual(summary.weekEnd, lastSundayMoment)
     }
 
+    func testWeeklySummaryIncludesHRVObservationCoverageAndAverage() {
+        let monday = weekMonday
+        let workouts = [
+            WorkoutInput(
+                workoutType: .running,
+                startDate: monday,
+                endDate: monday + 3600,
+                heartRateSamples: makeSamples([118, 120, 121]),
+                hrvSDNNMilliseconds: 40,
+                intent: .zone2
+            ),
+            WorkoutInput(
+                workoutType: .cycling,
+                startDate: monday + 86400,
+                endDate: monday + 86400 + 3600,
+                heartRateSamples: makeSamples([122, 124, 125]),
+                hrvSDNNMilliseconds: nil,
+                intent: .zone2
+            ),
+            WorkoutInput(
+                workoutType: .walking,
+                startDate: monday + 2 * 86400,
+                endDate: monday + 2 * 86400 + 3600,
+                heartRateSamples: makeSamples([105, 108, 110]),
+                hrvSDNNMilliseconds: 50,
+                intent: .activityReview
+            )
+        ]
+
+        let summary = WeeklyObservationBuilder.build(workouts: workouts, weekStart: monday, calendar: utcCalendar, asOf: weekEndAsOf)
+        XCTAssertEqual(summary.hrvSampledWorkoutCount, 2)
+        XCTAssertEqual(summary.hrvCoverageRatio, 2.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(summary.averageHRVSDNNMilliseconds ?? -1, 45.0, accuracy: 0.001)
+    }
+
     func testCurrentWeekUsesElapsedDaysInsteadOfFullWeek() {
         let monday = weekMonday
         let asOf = monday + 3 * 86400 + 12 * 3600 // Thursday noon (day 4)
