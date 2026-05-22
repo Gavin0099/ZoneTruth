@@ -24,7 +24,10 @@ let package = Package(
         .target(
             name: "ZoneTruthApp",
             dependencies: ["ZoneTruthCore"],
-            exclude: ["Info.plist"]
+            exclude: ["Info.plist"],
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "ZoneTruthCoreTests",

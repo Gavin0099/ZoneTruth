@@ -42,6 +42,7 @@ public enum BodyCompositionTrendAnalyzer {
         let isBodyRecomposition = fatDeclining && musclePreserved && sorted.count >= 3
 
         return BodyCompositionLedger(
+            measurements: sorted,
             measurementCount: sorted.count,
             earliestDate: first.date,
             latestDate: last.date,

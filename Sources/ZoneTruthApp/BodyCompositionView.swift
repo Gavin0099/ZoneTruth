@@ -252,6 +252,7 @@ private struct TrendRow: View {
 
 struct BodyCompositionContextSection: View {
     let ledger: BodyCompositionLedger
+    @State private var showDetails = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -314,6 +315,43 @@ struct BodyCompositionContextSection: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+
+            if !ledger.measurements.isEmpty {
+                DisclosureGroup(isExpanded: $showDetails) {
+                    VStack(spacing: 8) {
+                        ForEach(Array(ledger.measurements.enumerated().reversed()), id: \.offset) { idx, item in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("測量 \(idx)")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.secondary)
+                                Text(
+                                    "\(dateLabel(item.date))  體重 \(fmt1(item.weightKg))kg  骨骼肌 \(fmt1(item.skeletalMuscleKg))kg  體脂 \(fmt1(item.bodyFatKg))kg"
+                                )
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.85))
+                                Text(
+                                    "體脂率 \(fmt1(item.bodyFatPercent))%  BMI \(fmt1(item.bmi))  內臟脂肪 \(fmt1(item.visceralFatCm2))cm²  健康分數 \(item.healthScore.map(fmt1) ?? "-")"
+                                )
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                            .background(Color.white.opacity(0.04))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+                    .padding(.top, 8)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "list.bullet.rectangle")
+                            .font(.caption)
+                        Text("查看每筆量測明細")
+                            .font(.caption.bold())
+                    }
+                    .foregroundStyle(PremiumColor.skyBlue)
+                }
+            }
         }
     }
 
@@ -321,6 +359,16 @@ struct BodyCompositionContextSection: View {
         let days = ledger.spanDays
         if days >= 365 { return "跨度約 \(days / 30) 個月" }
         return "跨度 \(days) 天"
+    }
+
+    private func dateLabel(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yy.MM.dd"
+        return f.string(from: date)
+    }
+
+    private func fmt1(_ value: Double) -> String {
+        String(format: "%.1f", value)
     }
 
     private func compositionChip(

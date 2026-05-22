@@ -488,13 +488,13 @@ struct WeeklyDashboardView: View {
                         policy: viewModel.weeklyPolicy,
                         freshness: freshness
                     )
-                    WeeklyDistributionCard(summary: viewModel.weeklySummary)
                     WeeklyAdvancedCard(
                         summary: viewModel.weeklySummary,
                         policy: viewModel.weeklyPolicy,
                         freshness: freshness,
                         bodyCompositionLedger: viewModel.bodyCompositionLedger
                     )
+                    WeeklyDistributionCard(summary: viewModel.weeklySummary)
                 }
                 .padding(16)
             }
@@ -869,10 +869,19 @@ struct WeeklyAdvancedCard: View {
             Divider().background(PremiumColor.border)
 
             // Long-term body composition context
-            if let ledger = bodyCompositionLedger {
-                BodyCompositionContextSection(ledger: ledger)
-                Divider().background(PremiumColor.border)
+            VStack(alignment: .leading, spacing: 8) {
+                if let ledger = bodyCompositionLedger {
+                    BodyCompositionContextSection(ledger: ledger)
+                } else {
+                    Text("身體組成脈絡")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white.opacity(0.8))
+                    Text("尚無可用的身體組成資料，請確認 seed 載入或匯入資料。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
+            Divider().background(PremiumColor.border)
 
             // Confidence
             HStack {

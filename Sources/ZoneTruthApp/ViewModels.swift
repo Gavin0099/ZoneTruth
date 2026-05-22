@@ -90,7 +90,13 @@ final class WorkoutListViewModel: ObservableObject {
             }
             await refreshWorkouts()
         } catch {
-            // User cancelled — no refresh needed.
+            let nsError = error as NSError
+            if nsError.domain == ASWebAuthenticationSessionError.errorDomain,
+               nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                statusMessage = "已取消 Strava 登入。"
+            } else {
+                statusMessage = "Strava 登入失敗：\(nsError.localizedDescription)"
+            }
         }
     }
 

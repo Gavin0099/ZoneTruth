@@ -34,6 +34,7 @@ struct AppEnvironment {
             fileURL: bodyCompositionFileURL(fileManager: fileManager),
             fileManager: fileManager
         )
+        let resolvedLedger = compositionRepo.loadLedger() ?? BodyCompositionRepository.defaultSeedLedger()
 
         return AppEnvironment(
             repository: CompositeWorkoutRepository(
@@ -46,7 +47,7 @@ struct AppEnvironment {
             ),
             stravaCallbackHandler: callbackHandler,
             stravaAuthorizationURL: stravaConfig?.mobileAuthorizationURL,
-            bodyCompositionLedger: compositionRepo.loadLedger()
+            bodyCompositionLedger: resolvedLedger
         )
     }
 

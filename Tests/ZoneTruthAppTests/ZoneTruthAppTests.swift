@@ -1095,6 +1095,34 @@ final class ZoneTruthAppTests: XCTestCase {
         _ = view.body
     }
 
+    func testBodyCompositionSeedLedgerHasExpectedCoverage() {
+        let measurements = BodyCompositionRepository.seedMeasurements()
+        XCTAssertGreaterThanOrEqual(measurements.count, 12, "Seed data should include complete baseline history.")
+
+        let dates = measurements.map(\.date)
+        XCTAssertEqual(dates, dates.sorted(), "Seed measurements must be chronological.")
+
+        XCTAssertTrue(measurements.allSatisfy { $0.weightKg > 0 })
+        XCTAssertTrue(measurements.allSatisfy { $0.skeletalMuscleKg > 0 })
+        XCTAssertTrue(measurements.allSatisfy { $0.bodyFatKg >= 0 })
+        XCTAssertTrue(measurements.allSatisfy { $0.visceralFatCm2 >= 0 })
+
+        let ledger = BodyCompositionRepository.defaultSeedLedger()
+        XCTAssertNotNil(ledger, "Seed measurements should always produce a valid ledger.")
+        XCTAssertEqual(ledger?.measurementCount, measurements.count)
+        XCTAssertEqual(ledger?.measurements.count, measurements.count)
+    }
+
+    @MainActor
+    func testBodyCompositionContextSectionSmokeCompiles() {
+        guard let ledger = BodyCompositionRepository.defaultSeedLedger() else {
+            XCTFail("Expected default seed ledger.")
+            return
+        }
+        let section = BodyCompositionContextSection(ledger: ledger)
+        _ = section.body
+    }
+
     func testWeeklyAuthorityRenderingDowngradesUnderLowConfidence() {
         XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .fresh), .observational)
         XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.7, freshness: .fresh), .boundedInference)

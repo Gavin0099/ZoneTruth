@@ -7,6 +7,7 @@ cd "$ROOT_DIR"
 FIXTURE_PATH="Tests/ZoneTruthAppTests/Fixtures/workout_evaluation_snapshot.json"
 WEEKLY_FIXTURE_PATH="Tests/ZoneTruthCoreTests/Fixtures/weekly_load_policy_snapshot.json"
 WEEKLY_UI_PATH="Sources/ZoneTruthApp/WeeklyDashboardView.swift"
+BODY_UI_PATH="Sources/ZoneTruthApp/BodyCompositionView.swift"
 
 semantic_guard="passed"
 snapshot_fixture="matched"
@@ -103,6 +104,28 @@ if ! swift test --filter testWeeklyDashboardViewSmokeCompiles; then
 fi
 ui_smoke="passed"
 
+if ! swift test --filter testBodyCompositionContextSectionSmokeCompiles; then
+  ui_smoke="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "weekly_snapshot: ${weekly_snapshot}"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! swift test --filter testBodyCompositionSeedLedgerHasExpectedCoverage; then
+  semantic_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "weekly_snapshot: ${weekly_snapshot}"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
 if grep -E -q '過度訓練|overtraining|休息不足' "$WEEKLY_UI_PATH"; then
   weekly_ui_guard="forbidden_term_detected"
   echo "semantic_guard: ${semantic_guard}"
@@ -127,6 +150,28 @@ fi
 
 if ! grep -q '部分訓練心率樣本不足，數據僅供參考' "$WEEKLY_UI_PATH"; then
   weekly_ui_guard="missing_sparse_confidence_warning"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "weekly_snapshot: ${weekly_snapshot}"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! grep -q 'Text("身體組成脈絡")' "$WEEKLY_UI_PATH"; then
+  weekly_ui_guard="missing_body_composition_context_label"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "weekly_snapshot: ${weekly_snapshot}"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if grep -E -q '診斷|神經疲勞|肌肥大效果|必須' "$BODY_UI_PATH"; then
+  weekly_ui_guard="body_composition_forbidden_term_detected"
   echo "semantic_guard: ${semantic_guard}"
   echo "snapshot_fixture: ${snapshot_fixture}"
   echo "weekly_snapshot: ${weekly_snapshot}"

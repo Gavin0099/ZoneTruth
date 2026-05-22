@@ -94,6 +94,7 @@ public struct MetricTrend: Equatable, Sendable {
 // evidence-qualified trend claims. Claims are only admitted when
 // the underlying trend magnitude exceeds the instrument noise band.
 public struct BodyCompositionLedger: Equatable, Sendable {
+    public let measurements: [BodyCompositionMeasurement]
     public let measurementCount: Int
     public let earliestDate: Date
     public let latestDate: Date
@@ -108,6 +109,7 @@ public struct BodyCompositionLedger: Equatable, Sendable {
     public let isBodyRecomposition: Bool
 
     public init(
+        measurements: [BodyCompositionMeasurement] = [],
         measurementCount: Int,
         earliestDate: Date,
         latestDate: Date,
@@ -118,6 +120,7 @@ public struct BodyCompositionLedger: Equatable, Sendable {
         weightTrend: MetricTrend,
         isBodyRecomposition: Bool
     ) {
+        self.measurements = measurements
         self.measurementCount = measurementCount
         self.earliestDate = earliestDate
         self.latestDate = latestDate
