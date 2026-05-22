@@ -1184,7 +1184,10 @@ final class ZoneTruthAppTests: XCTestCase {
             strengthDays: 0,
             restDays: 2,
             elapsedDays: 7,
-            consecutiveTrainingDays: 2
+            consecutiveTrainingDays: 2,
+            hrvSampledWorkoutCount: 4,
+            hrvCoverageRatio: 1.0,
+            averageHRVSDNNMilliseconds: 42
         )
         let policy = WeeklyLoadPolicy(
             recoveryConcernLevel: .low,
@@ -1245,9 +1248,59 @@ final class ZoneTruthAppTests: XCTestCase {
                 confidence: 0.85,
                 freshness: .fresh,
                 workoutCount: 4,
-                elapsedDays: 7
+                elapsedDays: 7,
+                hrvSampledWorkoutCount: 4,
+                hrvCoverageRatio: 1.0
             ),
             .bounded
+        )
+    }
+
+    func testWeeklyInferenceClassifierDowngradesWhenHRVCoverageIsSparse() {
+        XCTAssertEqual(
+            WeeklyInferenceClassifier.classify(
+                confidence: 0.85,
+                freshness: .fresh,
+                workoutCount: 4,
+                elapsedDays: 7,
+                hrvSampledWorkoutCount: 0,
+                hrvCoverageRatio: 0
+            ),
+            .weak
+        )
+        XCTAssertEqual(
+            WeeklyInferenceClassifier.classify(
+                confidence: 0.85,
+                freshness: .fresh,
+                workoutCount: 4,
+                elapsedDays: 7,
+                hrvSampledWorkoutCount: 1,
+                hrvCoverageRatio: 0.25
+            ),
+            .weak
+        )
+    }
+
+    func testWeeklyHRVCoverageSignalClassifiesCoverageBands() {
+        XCTAssertEqual(
+            WeeklyHRVCoverageSignal.classify(workoutCount: 0, sampledCount: 0, coverageRatio: 0),
+            .missing
+        )
+        XCTAssertEqual(
+            WeeklyHRVCoverageSignal.classify(workoutCount: 5, sampledCount: 0, coverageRatio: 0),
+            .missing
+        )
+        XCTAssertEqual(
+            WeeklyHRVCoverageSignal.classify(workoutCount: 5, sampledCount: 1, coverageRatio: 0.2),
+            .sparse
+        )
+        XCTAssertEqual(
+            WeeklyHRVCoverageSignal.classify(workoutCount: 5, sampledCount: 2, coverageRatio: 0.4),
+            .partial
+        )
+        XCTAssertEqual(
+            WeeklyHRVCoverageSignal.classify(workoutCount: 5, sampledCount: 4, coverageRatio: 0.8),
+            .good
         )
     }
 

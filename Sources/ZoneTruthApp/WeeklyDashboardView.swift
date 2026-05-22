@@ -86,15 +86,54 @@ enum WeeklyInferenceClassifier {
         confidence: Double,
         freshness: WeeklyDataFreshness,
         workoutCount: Int,
-        elapsedDays: Int
+        elapsedDays: Int,
+        hrvSampledWorkoutCount: Int = 0,
+        hrvCoverageRatio: Double = 0
     ) -> WeeklyInferenceClass {
         if freshness == .missing || workoutCount == 0 || elapsedDays == 0 {
             return .unsupported
+        }
+        if workoutCount >= 3 {
+            if hrvSampledWorkoutCount == 0 { return .weak }
+            if hrvCoverageRatio < 0.34 { return .weak }
         }
         if freshness == .stale || confidence < 0.6 {
             return .weak
         }
         return .bounded
+    }
+}
+
+enum WeeklyHRVCoverageSignal: Equatable {
+    case missing
+    case sparse
+    case partial
+    case good
+
+    static func classify(workoutCount: Int, sampledCount: Int, coverageRatio: Double) -> WeeklyHRVCoverageSignal {
+        guard workoutCount > 0 else { return .missing }
+        if sampledCount == 0 { return .missing }
+        if sampledCount == 1 || coverageRatio < 0.34 { return .sparse }
+        if coverageRatio < 0.67 { return .partial }
+        return .good
+    }
+
+    var label: String {
+        switch self {
+        case .missing: return "HRV missing"
+        case .sparse: return "HRV sparse"
+        case .partial: return "HRV partial"
+        case .good: return "HRV good"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .missing: return .gray
+        case .sparse: return PremiumColor.gold
+        case .partial: return PremiumColor.skyBlue
+        case .good: return PremiumColor.emerald
+        }
     }
 }
 
@@ -277,7 +316,9 @@ struct WeeklyTrainingStateSignal {
             confidence: policy.confidence,
             freshness: freshness,
             workoutCount: summary.workoutCount,
-            elapsedDays: summary.elapsedDays
+            elapsedDays: summary.elapsedDays,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
         )
 
         if inferenceClass == .unsupported {
@@ -368,7 +409,9 @@ struct WeeklyAdaptationSignal {
             confidence: policy.confidence,
             freshness: freshness,
             workoutCount: summary.workoutCount,
-            elapsedDays: summary.elapsedDays
+            elapsedDays: summary.elapsedDays,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
         )
         let total = summary.workoutCount
         let z2Count = summary.intentDistribution[.zone2, default: 0]
@@ -543,7 +586,16 @@ struct WeeklyOverviewCard: View {
             confidence: policy.confidence,
             freshness: freshness,
             workoutCount: summary.workoutCount,
-            elapsedDays: summary.elapsedDays
+            elapsedDays: summary.elapsedDays,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
+        )
+    }
+    private var hrvCoverageSignal: WeeklyHRVCoverageSignal {
+        WeeklyHRVCoverageSignal.classify(
+            workoutCount: summary.workoutCount,
+            sampledCount: summary.hrvSampledWorkoutCount,
+            coverageRatio: summary.hrvCoverageRatio
         )
     }
     private var reminderLevel: NonAuthorityReminderLevel {
@@ -572,6 +624,7 @@ struct WeeklyOverviewCard: View {
                 HStack(spacing: 8) {
                     EvidenceChip(label: inferenceClass.rawValue, color: inferenceChipColor)
                     EvidenceChip(label: freshness.label, color: freshnessChipColor)
+                    EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
                     if policy.confidence < 0.6 || freshness == .stale || freshness == .missing {
                         EvidenceChip(label: "Evidence gap", color: PremiumColor.gold)
                     }
@@ -775,6 +828,13 @@ struct WeeklyAdvancedCard: View {
     private var advancedAuthority: WeeklyDecisionAuthority {
         minimumAuthority(adaptation.authority, trainingState.authority)
     }
+    private var hrvCoverageSignal: WeeklyHRVCoverageSignal {
+        WeeklyHRVCoverageSignal.classify(
+            workoutCount: summary.workoutCount,
+            sampledCount: summary.hrvSampledWorkoutCount,
+            coverageRatio: summary.hrvCoverageRatio
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -890,6 +950,7 @@ struct WeeklyAdvancedCard: View {
                     .foregroundStyle(.white.opacity(0.8))
 
                 if let avg = summary.averageHRVSDNNMilliseconds {
+                    EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
                     HStack {
                         Text("平均 SDNN")
                             .font(.subheadline)
@@ -915,6 +976,7 @@ struct WeeklyAdvancedCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
+                    EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
                     Text("本週尚無可用 HRV（SDNN）樣本。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
