@@ -1,4 +1,4 @@
-Í›---
+---
 audience: agent-on-demand
 authority: reference
 can_override: false

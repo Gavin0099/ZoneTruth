@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn -- Codex CLI Artifact Surface Research</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn -- Codex CLI Artifact Surface Research</div>
+  <div class="meta">Source: CODEBURN_CODEX_ARTIFACT_SURFACE_RESEARCH.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-codex-cli-artifact-surface-research">CodeBurn -- Codex CLI Artifact Surface Research</a><a href="#research-scope-declaration">연구 한계 선언 (Research Scope Declaration)</a><a href="#">아티팩트 저장 위치 및 구조</a><a href="#">기본 저장 경로</a><a href="#session-index-jsonl">세션 인덱스 형식 (session_index.jsonl)</a><a href="#">세션 로그 파일 형식</a><a href="#">레코드 타입 분류</a><a href="#token">Token 데이터 구조 (핵심 발견)</a><a href="#token">Token 데이터의 위치</a><a href="#token-usage">두 개의 Token Usage 객체</a><a href="#codex-reasoning-output-tokens">Codex 전용 필드: reasoning_output_tokens</a><a href="#sqlite">SQLite 표면 (보조 데이터)</a><a href="#state-5-sqlite-threads">state_5.sqlite -- threads 테이블</a><a href="#logs-2-sqlite">logs_2.sqlite</a><a href="#admissible-inadmissible">admissible/inadmissible 필드 예비 분류</a><a href="#admissible">Admissible 후보 (제한적)</a><a href="#inadmissible">Inadmissible 후보</a><a href="#claude-schema-projection-bias">Claude Schema Projection Bias 위험</a><a href="#1-vs">위험 1: 동일 필드명, 다른 의미 (누적 vs 단위)</a><a href="#2-cached-input-tokens">위험 2: cached_input_tokens 필드명 차이</a><a href="#3-reasoning-output-tokens">위험 3: reasoning_output_tokens 의 비대칭</a><a href="#4-total-tokens">위험 4: total_tokens 의 가용성 차이</a><a href="#5-acquisition-surface">위험 5: 두 개의 acquisition surface 존재</a><a href="#malformed-record">Malformed Record 가능성</a><a href="#">이 연구가 답하지 않은 것</a><a href="#">연구 결론</a></div>
+<h1 id="codeburn-codex-cli-artifact-surface-research">CodeBurn -- Codex CLI Artifact Surface Research</h1>
+<blockquote>
+<p>Written: 2026-05-21</p>
+<p>Status: P5-admission.0 -- surface research only</p>
+<p>Scope: Codex CLI session artifact format, storage, token structure</p>
+<p>Role: admission evidence preparation -- does NOT authorize ingestion</p>
+<p>Observed version: cli<em>version=0.130.0-alpha.5, model</em>provider=openai</p>
+<p>Source: live inspection of ~/.codex/ on local machine</p>
+</blockquote>
+<hr>
+<h2 id="research-scope-declaration">연구 한계 선언 (Research Scope Declaration)</h2>
+<p>이 문서는 <strong>admission evidence preparation</strong> 이다.</p>
+<p>이 문서의 결과는:</p>
+<ul>
+<li>P5-admission.1 (Codex artifact contract) 의 입력으로 사용될 수 있다</li>
+<li>P5-admission.2 (AG-6 adversarial review) 의 대상이 되어야 한다</li>
+<li><strong>P5.0 (Codex ingestor) 를 승인하지 않는다</strong></li>
+</ul>
+<pre><code>research may inform admission
+research does not authorize ingestion</code></pre>
+<hr>
+<h2 id="">아티팩트 저장 위치 및 구조</h2>
+<h3 id="">기본 저장 경로</h3>
+<pre><code>~/.codex/
+  session_index.jsonl          -- 세션 목록 인덱스 (경량)
+  sessions/
+    YYYY/
+      MM/
+        DD/
+          rollout-{timestamp}-{uuid}.jsonl  -- 세션 로그 본체
+  logs_2.sqlite                -- 운영 로그 DB
+  state_5.sqlite               -- 세션 상태 DB
+  config.toml                  -- 설정 파일
+  auth.json                    -- 인증 정보</code></pre>
+<h3 id="session-index-jsonl">세션 인덱스 형식 (session_index.jsonl)</h3>
+<p>각 줄이 하나의 세션을 나타낸다:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;019e4836-53c8-76c3-b394-955438e9cc06&quot;,
+  &quot;thread_name&quot;: &quot;...&quot;,
+  &quot;updated_at&quot;: &quot;2026-05-21T01:20:54.222Z&quot;
+}</code></pre>
+<p>이 파일은 token 데이터를 포함하지 않는다.</p>
+<h3 id="">세션 로그 파일 형식</h3>
+<p>파일명 패턴:</p>
+<pre><code>rollout-{ISO8601_timestamp}-{UUID_v7}.jsonl</code></pre>
+<p>Claude Code 와 동일하게 JSONL 형식이다.</p>
+<p>각 줄이 하나의 JSON 레코드이며, line/offset 추적이 기술적으로 가능하다.</p>
+<hr>
+<h2 id="">레코드 타입 분류</h2>
+<p>실제 세션 로그에서 관찰된 레코드 타입:</p>
+<table>
+<tr><th>type</th><th>설명</th><th>token 데이터 포함</th></tr>
+<tr><td><code>session_meta</code></td><td>세션 메타데이터 (cwd, cli_version, model 등)</td><td>아니오</td></tr>
+<tr><td><code>event_msg</code></td><td>이벤트 메시지 (token_count, 기타)</td><td><strong>일부</strong> (<code>token_count</code> subtype)</td></tr>
+<tr><td><code>response_item</code></td><td>응답 내용 (message content, tool calls 등)</td><td>아니오</td></tr>
+<tr><td><code>turn_context</code></td><td>턴 컨텍스트 정보</td><td>아니오</td></tr>
+</table>
+
+<p>Claude Code 와의 차이점: token 데이터가 <strong>assistant 레코드가 아닌 별도 event_msg 레코드에</strong> 존재한다.</p>
+<hr>
+<h2 id="token">Token 데이터 구조 (핵심 발견)</h2>
+<h3 id="token">Token 데이터의 위치</h3>
+<p>token 데이터는 <code>event<em>msg</code> 레코드 중 <code>payload.type == &amp;quot;token</em>count&amp;quot;</code> 인 레코드에 있다:</p>
+<pre><code class="language-json">{
+  &quot;timestamp&quot;: &quot;...&quot;,
+  &quot;type&quot;: &quot;event_msg&quot;,
+  &quot;payload&quot;: {
+    &quot;type&quot;: &quot;token_count&quot;,
+    &quot;info&quot;: {
+      &quot;total_token_usage&quot;: { ... },
+      &quot;last_token_usage&quot;: { ... },
+      &quot;model_context_window&quot;: 258400
+    },
+    &quot;rate_limits&quot;: { ... }
+  }
+}</code></pre>
+<h3 id="token-usage">두 개의 Token Usage 객체</h3>
+<p><code>token_count</code> 레코드는 <strong>두 개의 token usage 객체</strong>를 포함한다:</p>
+<p><strong><code>total<em>token</em>usage</code></strong> -- <strong>세션 누적 합계</strong>:</p>
+<pre><code class="language-json">{
+  &quot;input_tokens&quot;: 19980,
+  &quot;cached_input_tokens&quot;: 7552,
+  &quot;output_tokens&quot;: 384,
+  &quot;reasoning_output_tokens&quot;: 48,
+  &quot;total_tokens&quot;: 20364
+}</code></pre>
+<p><strong><code>last<em>token</em>usage</code></strong> -- <strong>직전 turn 의 사용량</strong>:</p>
+<pre><code class="language-json">{
+  &quot;input_tokens&quot;: 19980,
+  &quot;cached_input_tokens&quot;: 7552,
+  &quot;output_tokens&quot;: 384,
+  &quot;reasoning_output_tokens&quot;: 48,
+  &quot;total_tokens&quot;: 20364
+}</code></pre>
+<p>이 두 객체는 동일한 필드명을 가지지만 의미가 전혀 다르다.</p>
+<p>첫 번째 turn 에서는 두 값이 동일하게 보이지만, 이후 turn 에서는 누적 vs 단위가 분기된다.</p>
+<h3 id="codex-reasoning-output-tokens">Codex 전용 필드: reasoning<em>output</em>tokens</h3>
+<pre><code class="language-json">&quot;reasoning_output_tokens&quot;: 48</code></pre>
+<p>Claude Code 의 session log 에는 이 필드가 존재하지 않는다.</p>
+<p>이것은 OpenAI reasoning model (o-series, GPT-5 등) 에 특유한 필드다.</p>
+<hr>
+<h2 id="sqlite">SQLite 표면 (보조 데이터)</h2>
+<h3 id="state-5-sqlite-threads">state_5.sqlite -- threads 테이블</h3>
+<pre><code class="language-sql">threads.tokens_used INTEGER</code></pre>
+<p>이 필드는 세션 누적 token 수를 저장한다.</p>
+<p>이것은 JSONL 의 <code>total<em>token</em>usage</code> 와 동일한 누적 값으로 추정되며,</p>
+<p>JSONL 과 독립적인 두 번째 acquisition surface 다.</p>
+<h3 id="logs-2-sqlite">logs_2.sqlite</h3>
+<p>운영 로그를 저장하며 token 데이터를 포함하지 않는다.</p>
+<p>schema: <code>id, ts, level, target, feedback<em>log</em>body, ...</code></p>
+<hr>
+<h2 id="admissible-inadmissible">admissible/inadmissible 필드 예비 분류</h2>
+<p>이것은 예비 분류이며, P5-admission.1 (artifact contract) 에서 확정되어야 한다.</p>
+<h3 id="admissible">Admissible 후보 (제한적)</h3>
+<table>
+<tr><th>필드</th><th>위치</th><th>비고</th></tr>
+<tr><td><code>last<em>token</em>usage.input_tokens</code></td><td>event_msg.payload.info</td><td>단위 turn 입력 -- Claude 의 <code>input_tokens</code> 에 대응 가능성 있음</td></tr>
+<tr><td><code>last<em>token</em>usage.output_tokens</code></td><td>event_msg.payload.info</td><td>단위 turn 출력</td></tr>
+<tr><td>timestamp</td><td>레코드 최상위</td><td>타임스탬프</td></tr>
+<tr><td>session id</td><td>session_meta.payload.id</td><td>세션 식별자</td></tr>
+</table>
+
+<h3 id="inadmissible">Inadmissible 후보</h3>
+<table>
+<tr><th>필드</th><th>위치</th><th>이유</th></tr>
+<tr><td><code>total<em>token</em>usage.*</code></td><td>event_msg.payload.info</td><td>세션 누적 값 -- 중복 집계 위험</td></tr>
+<tr><td><code>reasoning<em>output</em>tokens</code></td><td>last<em>/total</em>token_usage</td><td>OpenAI 전용 -- Claude 에 동등 개념 없음</td></tr>
+<tr><td><code>total_tokens</code></td><td>last<em>/total</em>token_usage</td><td>집계 합산 -- CodeBurn 은 집계 계산 비승인</td></tr>
+<tr><td><code>cached<em>input</em>tokens</code></td><td>last<em>/total</em>token_usage</td><td>청구 계산 금지 (CODEBURN<em>CLAUDE</em>ARTIFACT_CONTRACT.md 정책과 일치)</td></tr>
+<tr><td><code>model<em>context</em>window</code></td><td>payload.info</td><td>운영 메타데이터</td></tr>
+<tr><td><code>rate_limits.*</code></td><td>payload</td><td>운영 메타데이터 (used<em>percent, resets</em>at 등)</td></tr>
+<tr><td><code>threads.tokens_used</code></td><td>state_5.sqlite</td><td>SQLite 표면 -- JSONL 과 중복, 다른 acquisition path</td></tr>
+<tr><td><code>cwd</code>, <code>cli_version</code>, <code>source</code></td><td>session_meta.payload</td><td>운영 메타데이터</td></tr>
+<tr><td><code>model_provider</code>, <code>originator</code></td><td>session_meta.payload</td><td>운영 메타데이터</td></tr>
+</table>
+
+<hr>
+<h2 id="claude-schema-projection-bias">Claude Schema Projection Bias 위험</h2>
+<p>이것이 이 연구에서 가장 중요한 발견이다.</p>
+<h3 id="1-vs">위험 1: 동일 필드명, 다른 의미 (누적 vs 단위)</h3>
+<p>Claude Code:</p>
+<pre><code class="language-json">// type=assistant 레코드의 message.usage
+&quot;input_tokens&quot;: 10   // 이 turn 의 입력 (단위 turn)</code></pre>
+<p>Codex:</p>
+<pre><code class="language-json">// token_count 레코드
+&quot;total_token_usage&quot;: {
+  &quot;input_tokens&quot;: 19980   // 세션 누적 합계 !!!
+}
+&quot;last_token_usage&quot;: {
+  &quot;input_tokens&quot;: 19980   // 이 turn 의 입력 (단위 turn)
+}</code></pre>
+<p>Claude 용 ingestor 를 Codex 에 적용하면:</p>
+<p><code>total<em>token</em>usage.input_tokens</code> 를 읽을 수 있으며, 이것은 누적 값이다.</p>
+<p>이것은 단위 turn 값처럼 보이지만 완전히 다른 의미다.</p>
+<h3 id="2-cached-input-tokens">위험 2: cached<em>input</em>tokens 필드명 차이</h3>
+<p>Claude:</p>
+<pre><code class="language-json">&quot;cache_read_input_tokens&quot;: 9364   // 필드명</code></pre>
+<p>Codex:</p>
+<pre><code class="language-json">&quot;cached_input_tokens&quot;: 7552   // 다른 필드명, 유사한 개념</code></pre>
+<p>필드명이 다르다. 그러나 의미가 유사하다.</p>
+<p>이것은 &quot;같은 개념이므로 합산 가능&quot; 추론을 유발할 수 있다 (FSP-3 위반).</p>
+<h3 id="3-reasoning-output-tokens">위험 3: reasoning<em>output</em>tokens 의 비대칭</h3>
+<p>Claude 에는 <code>reasoning<em>output</em>tokens</code> 가 없다.</p>
+<p>Codex 에는 있다.</p>
+<p>이 비대칭을 무시하면:</p>
+<ul>
+<li>Claude session 의 &quot;output tokens&quot; = completion 전체</li>
+<li>Codex session 의 &quot;output tokens&quot; = completion - reasoning</li>
+</ul>
+<p>두 값은 동일한 작업에 대해 다른 숫자를 반환한다.</p>
+<p>이것은 비교 가능성을 파괴하며, FSP-3 의 schema 차원 표현이다.</p>
+<h3 id="4-total-tokens">위험 4: total_tokens 의 가용성 차이</h3>
+<p>Claude: <code>total_tokens = NULL</code> (CodeBurn 정책 -- 집계 계산 비승인)</p>
+<p>Codex: <code>total_tokens = 20364</code> (명시적으로 기록됨)</p>
+<p>Codex 에 <code>total_tokens</code> 가 있다고 해서 그것을 저장하거나 사용하는 것이 승인되지 않는다.</p>
+<p>그러나 그 존재가 &quot;이번엔 저장해도 되지 않을까&quot; 추론 압력을 생성한다.</p>
+<h3 id="5-acquisition-surface">위험 5: 두 개의 acquisition surface 존재</h3>
+<p>Codex 는 JSONL + SQLite 두 개의 surface 를 가진다.</p>
+<p>두 surface 모두에서 token 데이터를 읽는 것은:</p>
+<ul>
+<li>서로 다른 acquisition path 에서 동일한 증거를 두 번 추출하는 것</li>
+<li>두 surface 가 항상 일치하는지 보장되지 않음</li>
+</ul>
+<hr>
+<h2 id="malformed-record">Malformed Record 가능성</h2>
+<p>JSONL 형식이므로 Claude Code 와 동일한 malformed record 위험이 존재한다:</p>
+<ul>
+<li>JSON parse failure</li>
+<li>필수 필드 부재 (type, payload)</li>
+<li>payload.type 이 &quot;token<em>count&quot; 가 아닌 event</em>msg</li>
+<li>부분 기록 (write 중단으로 인한 truncation)</li>
+</ul>
+<p>Line/offset 추적은 기술적으로 가능하며 Claude 와 동일한 방식으로 구현 가능하다.</p>
+<hr>
+<h2 id="">이 연구가 답하지 않은 것</h2>
+<p>다음 질문들은 P5-admission.1 (artifact contract) 에서 결정되어야 한다:</p>
+<ol>
+<li><code>last<em>token</em>usage</code> 가 항상 존재하는가, 아니면 조건부인가?</li>
+<li>세션 내 token_count 레코드의 수가 turn 수와 1:1 인가?</li>
+<li>session_meta 레코드가 항상 첫 번째 줄인가?</li>
+<li>다른 event_msg subtype 들이 token 관련 정보를 포함하는가?</li>
+<li>Codex 의 epistemic class 는 <span class="class-c">Class C</span> 인가, 아니면 다른 class 인가?</li>
+</ol>
+<p>(Claude 가 <span class="class-c">Class C</span> 이기 때문에 Codex 도 <span class="class-c">Class C</span> 라는 추론은 허용되지 않음)</p>
+<hr>
+<h2 id="">연구 결론</h2>
+<table>
+<tr><th>질문</th><th>답변</th></tr>
+<tr><td>Codex CLI 에 session artifact 가 있는가?</td><td>예 (JSONL + SQLite)</td></tr>
+<tr><td>주요 artifact 위치</td><td><code>~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl</code></td></tr>
+<tr><td>형식</td><td>JSONL (Claude Code 와 동일)</td></tr>
+<tr><td>Token usage 가 존재하는가?</td><td>예 (<code>event<em>msg</code> 의 <code>token</em>count</code> subtype)</td></tr>
+<tr><td>Line/offset 추적 가능한가?</td><td>예 (JSONL 형식)</td></tr>
+<tr><td>Malformed record 가능성</td><td>예 (Claude 와 동일)</td></tr>
+<tr><td>Claude schema 직접 재사용 가능한가?</td><td><strong>아니오</strong> -- 레코드 타입, 필드 위치, 누적/단위 구분이 모두 다름</td></tr>
+<tr><td>Claude projection bias 위험 수준</td><td><strong>높음</strong> -- 동일 필드명에 다른 의미 (특히 누적 vs 단위)</td></tr>
+</table>
+
+<hr>
+<p><em>이 연구는 Codex CLI 의 artifact surface 를 설명한다.</em></p>
+<p><em>이 연구는 Codex acquisition 을 승인하지 않는다.</em></p>
+<p><em>승인은 P5-admission.1 ~ P5-admission.3 을 완료한 후에만 가능하다.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CODEX_ARTIFACT_SURFACE_RESEARCH.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

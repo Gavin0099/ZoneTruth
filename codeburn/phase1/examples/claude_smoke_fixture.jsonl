@@ -1,0 +1,10 @@
+{"type":"queue-operation","operation":"enqueue","timestamp":"2026-05-20T00:00:00.000Z","sessionId":"smoke-fixture-session-001"}
+{"type":"system","sessionId":"smoke-fixture-session-001","timestamp":"2026-05-20T00:00:01.000Z","message":{"role":"system","content":"You are a helpful assistant."}}
+{"type":"user","sessionId":"smoke-fixture-session-001","uuid":"user-rec-001","timestamp":"2026-05-20T00:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"Hello"}]}}
+{"type":"assistant","sessionId":"smoke-fixture-session-001","uuid":"asst-rec-001","timestamp":"2026-05-20T00:00:03.000Z","message":{"role":"assistant","content":[{"type":"text","text":"Hi there!"}],"usage":{"input_tokens":10,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","inference_geo":"not_available"}}}
+{"type":"user","sessionId":"smoke-fixture-session-001","uuid":"user-rec-002","timestamp":"2026-05-20T00:00:04.000Z","message":{"role":"user","content":[{"type":"text","text":"What is 2+2?"}]}}
+{"type":"assistant","sessionId":"smoke-fixture-session-001","uuid":"asst-rec-002","timestamp":"2026-05-20T00:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"4"}],"usage":{"input_tokens":3,"cache_creation_input_tokens":5808,"cache_read_input_tokens":9364,"output_tokens":1,"service_tier":"standard","inference_geo":"not_available"}}}
+{"type":"assistant","sessionId":"smoke-fixture-session-001","uuid":"asst-rec-003","timestamp":"2026-05-20T00:00:06.000Z","message":{"role":"assistant","content":[]}}
+{"type":"progress","sessionId":"smoke-fixture-session-001","timestamp":"2026-05-20T00:00:07.000Z","content":"streaming..."}
+{this is not valid json and should be quarantined}
+{"type":"file-history-snapshot","sessionId":"smoke-fixture-session-001","timestamp":"2026-05-20T00:00:09.000Z","snapshot":{}}

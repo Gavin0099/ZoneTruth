@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn -- Claude Log Replay / Provenance Verification Contract</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn -- Claude Log Replay / Provenance Verification Contract</div>
+  <div class="meta">Source: CODEBURN_CLAUDE_REPLAY_PROVENANCE_CONTRACT.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-claude-log-replay-provenance-verification-contract">CodeBurn -- Claude Log Replay / Provenance Verification Contract</a><a href="#idempotency-vs-provenance-identity">핵심 구분: Idempotency vs Provenance Identity</a><a href="#non-idempotency">명시적 Non-Idempotency 계약</a><a href="#provenance-identity">결정론적 Provenance Identity</a><a href="#replay">세 가지 Replay 불변량</a><a href="#r1-source-record-line">R1 -- source_record_line 안정성</a><a href="#r2-source-record-offset">R2 -- source_record_offset 안정성</a><a href="#r3-quarantine-provenance">R3 -- quarantine provenance 안정성</a><a href="#">세 가지 경계 선언</a><a href="#1-replay-stable-runtime-observed">경계 1: replay stable != runtime observed</a><a href="#2-duplicate-allowed-duplicate-semantically-consumed">경계 2: duplicate allowed != duplicate semantically consumed</a><a href="#3-provenance-identity-stable-token-truth-verified">경계 3: provenance identity stable != token truth verified</a><a href="#provenance-identity">Provenance Identity 중복 감지 규칙</a><a href="#">이 계약이 승인하는 구현</a><a href="#">이 계약이 승인하지 않는 것</a></div>
+<h1 id="codeburn-claude-log-replay-provenance-verification-contract">CodeBurn -- Claude Log Replay / Provenance Verification Contract</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> -- P4.0 spec document</p>
+<p>Scope: all Claude .jsonl ingestion via claude<em>log</em>ingestor.py</p>
+<p>Depends on: CODEBURN<em>CLAUDE</em>ARTIFACT<em>CONTRACT.md, CODEBURN</em>TOKEN<em>PROVENANCE</em>ONTOLOGY.md</p>
+<p>Authorizes: P4.1 provenance identity helper, P4.2/P4.3 replay tests</p>
+</blockquote>
+<hr>
+<h2 id="idempotency-vs-provenance-identity">핵심 구분: Idempotency vs Provenance Identity</h2>
+<p>이 문서는 두 개의 서로 다른 개념을 명확히 분리한다.</p>
+<p><strong>Idempotency</strong> -- 동일한 입력에 대해 시스템 상태가 동일하게 유지되는가</p>
+<p><strong>Provenance Identity</strong> -- 동일한 소스 위치에서 추출된 증거 내용이 일관적인가</p>
+<p>CodeBurn Claude 인제스터는:</p>
+<ul>
+<li><strong>Non-idempotent</strong>: 동일 artifact 를 두 번 ingest 하면 두 배의 rows 생성</li>
+<li><strong>Provenance-identity stable</strong>: 동일한 (artifact_path, line, offset) 위치에서는</li>
+</ul>
+<p>항상 동일한 증거 내용이 추출됨</p>
+<p>이 두 속성은 독립적이다. Non-idempotency 는 버그가 아니라 설계 결정이다.</p>
+<hr>
+<h2 id="non-idempotency">명시적 Non-Idempotency 계약</h2>
+<p><strong>CodeBurn Claude 인제스터는 중복 ingest 를 방지하지 않는다.</strong></p>
+<p>이유:</p>
+<ol>
+<li>CodeBurn 은 관찰 시스템이다 -- 트랜잭션 시스템이 아니다</li>
+<li>중복 방지는 &quot;이전에 이것을 본 적 있다&quot;는 상태를 요구하며, 이는 runtime authority 로의</li>
+</ol>
+<p>첫 번째 이동이다</p>
+<ol>
+<li>로그 기반 시스템은 append-only 가 기본이며, 중복 제거는 downstream 의 책임이다</li>
+<li>중복 ingest 는 감사 가능성을 파괴하지 않는다 -- 오히려 ingest 이력을 보존한다</li>
+</ol>
+<p><strong>무엇이 보장되지 않는가:</strong></p>
+<table>
+<tr><th>행동</th><th>보장 여부</th></tr>
+<tr><td>동일 artifact 두 번 ingest = DB 상태 동일</td><td>보장 안 됨</td></tr>
+<tr><td>step_id 가 동일하게 유지</td><td>보장 안 됨 (UUID 는 매 ingest 마다 새로 생성)</td></tr>
+<tr><td>총 row 수가 ingest 횟수에 비례</td><td>보장됨</td></tr>
+<tr><td>quarantine rows 가 중복 생성되지 않음</td><td>보장 안 됨</td></tr>
+</table>
+
+<p><strong>소비자에 대한 함의:</strong></p>
+<p>중복 ingestion 여부를 판단해야 하는 소비자는</p>
+<p><code>source<em>artifact</em>path + source<em>record</em>line + source<em>record</em>offset</code> 의 조합으로</p>
+<p>중복을 감지해야 한다. <code>step_id</code> 는 중복 감지 키가 아니다.</p>
+<hr>
+<h2 id="provenance-identity">결정론적 Provenance Identity</h2>
+<p>동일한 소스 위치에서 추출된 증거 내용은 항상 동일하다.</p>
+<p><strong>Provenance Identity 는 세 필드의 조합으로 정의된다:</strong></p>
+<pre><code>provenance_identity = (
+    source_artifact_path,   # 절대 경로 -- 파일 이동 시 변경됨
+    source_record_line,     # 1-indexed 줄 번호
+    source_record_offset    # 파일 시작부터의 바이트 오프셋
+)</code></pre>
+<p>이 세 필드가 동일하면, 추출되는 증거 내용은 반드시 동일하다:</p>
+<ul>
+<li><code>prompt_tokens</code> 값</li>
+<li><code>completion_tokens</code> 값</li>
+<li><code>epistemic_class</code> (항상 &#x27;<span class="class-c">Class C</span>&#x27;)</li>
+<li><code>acquisition<em>mode</code> (항상 &#x27;session</em>log_ingestion&#x27;)</li>
+</ul>
+<p><strong>이 안정성은 다음을 전제로 한다:</strong></p>
+<ul>
+<li>.jsonl 파일 내용이 변경되지 않았다 (append-only 로그 특성)</li>
+<li>파일 인코딩이 동일하다 (utf-8, errors=&#x27;replace&#x27;)</li>
+<li>줄 구분자 처리가 동일하다 (rstrip &#x27;\n\r&#x27;)</li>
+</ul>
+<hr>
+<h2 id="replay">세 가지 Replay 불변량</h2>
+<h3 id="r1-source-record-line">R1 -- source<em>record</em>line 안정성</h3>
+<p>동일한 .jsonl 파일을 여러 번 ingest 할 때,</p>
+<p>동일한 레코드는 항상 동일한 <code>source<em>record</em>line</code> 값을 가진다.</p>
+<pre><code>ingest(artifact, session, db) 두 번 실행 시:
+  1회차 source_record_line=4 인 레코드
+  → 2회차에서도 source_record_line=4</code></pre>
+<p>이것이 실패한다면: 파일 읽기가 결정론적이지 않거나, 줄 계산에 버그가 있음을 의미한다.</p>
+<h3 id="r2-source-record-offset">R2 -- source<em>record</em>offset 안정성</h3>
+<p>동일한 레코드는 항상 동일한 <code>source<em>record</em>offset</code> 값을 가진다.</p>
+<pre><code>1회차 offset=480 인 레코드 → 2회차에서도 offset=480</code></pre>
+<p>offset 은 파일 시작부터의 누적 바이트 수이며, utf-8 인코딩 기준으로 계산된다.</p>
+<p>파일 내용이 변경되지 않는 한 안정적이어야 한다.</p>
+<h3 id="r3-quarantine-provenance">R3 -- quarantine provenance 안정성</h3>
+<p>malformed line 에 대한 quarantine record 도 동일한 line/offset 을 가진다.</p>
+<pre><code>1회차 malformed line 9 → quarantined_records.source_record_line=9
+2회차 동일 malformed line 9 → quarantined_records.source_record_line=9</code></pre>
+<p>quarantine 은 증거의 부재를 기록한다. 부재의 위치는 안정적이어야 한다.</p>
+<hr>
+<h2 id="">세 가지 경계 선언</h2>
+<h3 id="1-replay-stable-runtime-observed">경계 1: replay stable != runtime observed</h3>
+<p>동일한 결과를 반복 재현할 수 있다고 해서</p>
+<p>해당 증거가 runtime 에 실시간으로 관찰된 것이 되지는 않는다.</p>
+<p>재현 가능성은 데이터 품질의 속성이다.</p>
+<p><span class="class-c">Class C</span> (observer-reconstructed) 분류는 재현 가능성에 관계없이 유지된다.</p>
+<pre><code>WRONG:  &quot;동일한 결과를 두 번 얻었으므로 provider-grade 증거와 같다&quot;
+RIGHT:  &quot;동일한 재구성을 두 번 수행했다 -- 여전히 Class C&quot;</code></pre>
+<h3 id="2-duplicate-allowed-duplicate-semantically-consumed">경계 2: duplicate allowed != duplicate semantically consumed</h3>
+<p>중복 row 가 존재한다는 것이 중복 row 가 유효한 독립 증거라는 의미가 아니다.</p>
+<p>두 번 ingest 해서 생성된 두 개의 rows 는:</p>
+<ul>
+<li>데이터베이스 관점: 두 개의 독립 rows</li>
+<li>증거 관점: 동일한 소스 위치에 대한 두 번의 재구성 -- 독립 증거 아님</li>
+</ul>
+<p>소비자는 이 구분을 명시적으로 처리해야 한다.</p>
+<p>중복 row 를 합산하거나 독립 관찰로 취급하는 것은 금지된다.</p>
+<h3 id="3-provenance-identity-stable-token-truth-verified">경계 3: provenance identity stable != token truth verified</h3>
+<p>(source<em>artifact</em>path, line, offset) 의 안정성은</p>
+<p>해당 위치에 기록된 token 값이 provider 가 실제로 계산한 값임을 증명하지 않는다.</p>
+<p>안정성은 재구성이 일관적임을 의미한다.</p>
+<p>일관적인 재구성은 여전히 <span class="class-c">Class C</span> 이며, Class A 로 승급되지 않는다.</p>
+<pre><code>WRONG:  &quot;재현 가능한 token 값 = provider-verified token&quot;
+RIGHT:  &quot;재현 가능한 token 값 = 재구성이 일관적 -- 여전히 Class C&quot;</code></pre>
+<hr>
+<h2 id="provenance-identity">Provenance Identity 중복 감지 규칙</h2>
+<p>중복 ingestion 을 감지하거나 분석해야 하는 경우 사용할 규칙:</p>
+<pre><code class="language-sql">-- 동일 소스 위치에 대해 두 번 이상 ingest 된 레코드 탐지
+SELECT
+    source_artifact_path,
+    source_record_line,
+    source_record_offset,
+    COUNT(*) as ingest_count
+FROM step_ingestion_provenance
+GROUP BY source_artifact_path, source_record_line, source_record_offset
+HAVING COUNT(*) &gt; 1;</code></pre>
+<p>이 쿼리의 결과를 &quot;중복 오류&quot; 로 처리해서는 안 된다.</p>
+<p>이것은 &quot;동일 위치를 여러 번 재구성했다&quot; 는 관찰이다.</p>
+<p>중복 ingestion 이 문제가 되는 경우는:</p>
+<ul>
+<li>aggregate 계산에 포함될 때 (금지됨 -- Comparability Boundary)</li>
+<li>독립 관찰로 취급될 때 (위 경계 2 위반)</li>
+</ul>
+<hr>
+<h2 id="">이 계약이 승인하는 구현</h2>
+<p><strong>P4.1</strong> -- <code><em>provenance</em>identity(artifact_path, line, offset)</code> 헬퍼</p>
+<p>source<em>record</em>line 과 source<em>record</em>offset 이 결정론적임을 테스트하기 위한 보조 함수</p>
+<p><strong>P4.2</strong> -- valid record replay 테스트</p>
+<p>동일 artifact 두 번 ingest 후 동일 (line, offset) 쌍이 나타남을 검증</p>
+<p><strong>P4.3</strong> -- quarantine record replay 테스트</p>
+<p>malformed line 두 번 ingest 후 동일 line/offset 으로 quarantine 됨을 검증</p>
+<p><strong>P4.4</strong> -- non-idempotency 명시 테스트</p>
+<p>두 번 ingest 시 row 수가 두 배가 됨을 검증 (이것은 버그가 아님을 확인)</p>
+<p><strong>P4.5</strong> -- replay smoke command</p>
+<p>실제 session log 에 대해 replay 안정성을 확인하는 CLI</p>
+<hr>
+<h2 id="">이 계약이 승인하지 않는 것</h2>
+<ul>
+<li>중복 방지 로직 (deduplication at ingestion time)</li>
+<li>&quot;이미 본 레코드&quot; 상태 추적</li>
+<li>Replay 안정성을 근거로 한 epistemic class 승급</li>
+<li>Token 값의 provider-side 검증</li>
+<li>동일 소스 위치의 두 rows 를 독립 증거로 취급한 aggregation</li>
+</ul>
+<hr>
+<p><em>재구성은 반복될 수 있다.</em></p>
+<p><em>반복 가능한 재구성은 여전히 재구성이다.</em></p>
+<p><em><span class="class-c">Class C</span> 는 재현 가능성이 아니라 관찰 거리에 의해 결정된다.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CLAUDE_REPLAY_PROVENANCE_CONTRACT.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

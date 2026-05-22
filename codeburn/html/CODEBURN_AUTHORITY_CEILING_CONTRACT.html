@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Authority Ceiling Contract</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Authority Ceiling Contract</div>
+  <div class="meta">Source: CODEBURN_AUTHORITY_CEILING_CONTRACT.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-authority-ceiling-contract">CodeBurn — Authority Ceiling Contract</a><a href="#why-this-is-the-most-critical-p0-document">Why This Is the Most Critical P0 Document</a><a href="#the-authority-escalation-path">The Authority Escalation Path</a><a href="#the-core-principle">The Core Principle</a><a href="#what-acquisition-completeness-does-grant">What Acquisition Completeness DOES Grant</a><a href="#permanent-authority-ceilings">Permanent Authority Ceilings</a><a href="#ac1-runtime-authority">AC1 — Runtime Authority</a><a href="#ac2-governance-authority">AC2 — Governance Authority</a><a href="#ac3-evaluative-authority">AC3 — Evaluative Authority</a><a href="#ac4-decision-safety-certification">AC4 — Decision Safety Certification</a><a href="#ac5-provider-truthfulness-certification">AC5 — Provider Truthfulness Certification</a><a href="#the-trustworthiness-inference-why-it-must-be-explicitly-blocked">The Trustworthiness Inference — Why It Must Be Explicitly Blocked</a><a href="#authority-drift-detection-signals">Authority Drift Detection Signals</a><a href="#relationship-to-other-boundary-documents">Relationship to Other Boundary Documents</a><a href="#what-elevating-the-authority-ceiling-requires">What Elevating the Authority Ceiling Requires</a><a href="#current-authority-state-2026-05-20">Current Authority State (2026-05-20)</a></div>
+<h1 id="codeburn-authority-ceiling-contract">CodeBurn — Authority Ceiling Contract</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> — P0 constitutional freeze document, effective immediately</p>
+<p>Scope: all CodeBurn versions, all acquisition states, all epistemic classes</p>
+<p>Prerequisite for: any acquisition implementation that produces Class A or Class B evidence</p>
+<p>Depends on: CODEBURN<em>TOKEN</em>PROVENANCE_ONTOLOGY.md</p>
+</blockquote>
+<hr>
+<h2 id="why-this-is-the-most-critical-p0-document">Why This Is the Most Critical P0 Document</h2>
+<p>The Provenance Ontology defines what token evidence IS.</p>
+<p>The Comparability Boundary defines what comparisons are permitted.</p>
+<p>This document defines what CodeBurn itself may BECOME as a result of acquisition.</p>
+<p>The other two documents constrain data and its use.</p>
+<p>This document constrains CodeBurn&#x27;s epistemic position.</p>
+<p>The distinction matters because the most dangerous authority escalation does not</p>
+<p>come from misusing data — it comes from the system itself being reclassified.</p>
+<p>Once CodeBurn is treated as a decision-support system, or a governance authority,</p>
+<p>or a performance monitoring infrastructure, that reclassification shapes everything</p>
+<p>that follows: what features get requested, what reports get generated, what</p>
+<p>organizational workflows depend on it.</p>
+<p><strong>This reclassification does not require a single deliberate decision.</strong></p>
+<p>It occurs through gradual normalization of acquisition completeness as authority.</p>
+<p>This document is the pre-positioned constraint against that normalization.</p>
+<hr>
+<h2 id="the-authority-escalation-path">The Authority Escalation Path</h2>
+<p>The specific drift pattern this document closes:</p>
+<pre><code>Stage 1: Acquisition Completeness
+  &quot;CodeBurn now receives Class A evidence from the Claude provider API&quot;
+  → Authorized: improved observability
+  → Not yet at boundary
+
+Stage 2: Trustworthiness Inference
+  &quot;The data is provider-grade, replay-stable, and provenance-verified&quot;
+  → This is true
+  → Not yet at boundary — but the next step is the critical transition
+
+Stage 3: Authority Inference (BOUNDARY)
+  &quot;Trustworthy data can be used to inform decisions&quot;
+  → This step is not authorized
+  → Trustworthiness is a data quality attribute
+  → Authority is a governance grant
+  → These are not the same thing
+
+Stage 4: Operational Integration (boundary already crossed)
+  &quot;CodeBurn token reports now feed the review queue prioritization&quot;
+  → CodeBurn is now a decision-influencing system
+  → Authority was never granted; it was accumulated through workflow
+
+Stage 5: Reclassification (boundary long since crossed)
+  &quot;CodeBurn is our AI efficiency monitoring platform&quot;
+  → Original epistemic position is no longer recoverable without explicit rollback</code></pre>
+<p>Stage 3 is where this document intervenes. The transition from Stage 2 to Stage 3</p>
+<p>is the specific logical step that must be explicitly blocked, because it appears</p>
+<p>epistemically reasonable — trustworthy data SHOULD be usable for decisions, in</p>
+<p>most contexts. CodeBurn is the exception, and this document is the pre-positioned</p>
+<p>record of why.</p>
+<hr>
+<h2 id="the-core-principle">The Core Principle</h2>
+<p><strong>Data quality does not confer authority.</strong></p>
+<p>Authority requires a separate, explicit governance grant — a document that:</p>
+<ol>
+<li>Names the specific authority being granted</li>
+<li>Specifies the conditions under which it applies</li>
+<li>Defines the oversight mechanism for that authority</li>
+<li>Is written before any implementation depends on it</li>
+</ol>
+<p>No such document exists for CodeBurn as of 2026-05-20. Therefore CodeBurn&#x27;s</p>
+<p>authority ceiling is: observational reporting only.</p>
+<p>This ceiling holds at every acquisition stage.</p>
+<hr>
+<h2 id="what-acquisition-completeness-does-grant">What Acquisition Completeness DOES Grant</h2>
+<p>To be precise: acquisition completeness is not without value. It legitimately grants:</p>
+<table>
+<tr><th>Acquisition stage</th><th>What is gained</th><th>What is NOT gained</th></tr>
+<tr><td><span class="class-d">Class D</span> → Class A</td><td>Higher provenance quality</td><td>Any evaluative authority</td></tr>
+<tr><td>Replay-stable</td><td>Audit-grade token records</td><td>Decision input legitimacy</td></tr>
+<tr><td>Provider-integrated</td><td>Real-time session coverage</td><td>Runtime authority</td></tr>
+<tr><td>Cross-session coverage</td><td>Historical observability</td><td>Comparative evaluation</td></tr>
+<tr><td>Multi-provider</td><td>Broader coverage</td><td>Cross-provider comparability</td></tr>
+</table>
+
+<p>Each row represents a real improvement. None of them represents an authority upgrade.</p>
+<p>The purpose of this table is to allow genuine progress to be acknowledged without</p>
+<p>allowing that acknowledgment to be misread as authority escalation.</p>
+<hr>
+<h2 id="permanent-authority-ceilings">Permanent Authority Ceilings</h2>
+<p class="box-frozen">The following authority types are permanently outside CodeBurn&#x27;s scope regardless</p>
+<p>of acquisition completeness, data quality, or operational maturity:</p>
+<h3 id="ac1-runtime-authority">AC1 — Runtime Authority</h3>
+<p>CodeBurn may not make, block, trigger, or influence automated runtime decisions.</p>
+<p><strong>What this prohibits:</strong></p>
+<ul>
+<li>Gates that check CodeBurn data before allowing a session to proceed</li>
+<li>Thresholds that trigger automated actions based on token counts</li>
+<li>Alerts that interrupt AI agent workflows based on token observability signals</li>
+<li>Any mechanism where CodeBurn output changes system behavior without human intermediary</li>
+</ul>
+<p><strong>What this permits:</strong></p>
+<ul>
+<li>Human reviewer reads CodeBurn report and makes a decision</li>
+<li>CodeBurn report is available as context for human review</li>
+</ul>
+<p>The distinction: human in the loop = permitted. System-to-system without human = prohibited.</p>
+<p><strong>Does not become permitted when:</strong> acquisition is complete, data is Class A, or</p>
+<p>the automated action is &quot;minor.&quot; No automated runtime action is authorized.</p>
+<hr>
+<h3 id="ac2-governance-authority">AC2 — Governance Authority</h3>
+<p>CodeBurn may not issue governance decisions, compliance verdicts, or policy enforcement</p>
+<p>based on token observability data.</p>
+<p><strong>What this prohibits:</strong></p>
+<ul>
+<li>&quot;Session X failed governance review because token usage exceeded threshold&quot;</li>
+<li>Automated promotion blocking based on token signals</li>
+<li>Compliance scoring that includes token count as a governance factor</li>
+<li>Policy enforcement that treats token anomalies as violations</li>
+</ul>
+<p><strong>What this permits:</strong></p>
+<ul>
+<li>Governance reviewers may read CodeBurn reports as observational context</li>
+<li>CodeBurn signals (e.g., <code>retry<em>pattern</em>detected</code>) are advisory, never blocking</li>
+</ul>
+<p class="box-advisory"><strong>Note:</strong> CodeBurn signals carry <code>advisory<em>only = 1, can</em>block = 0</code> in the schema.</p>
+<p>This schema constraint is the runtime encoding of AC2. Schema changes that set</p>
+<p><code>can_block = 1</code> for token-related signals are prohibited without a separate</p>
+<p>governance contract.</p>
+<hr>
+<h3 id="ac3-evaluative-authority">AC3 — Evaluative Authority</h3>
+<p>CodeBurn may not evaluate, score, rank, or rate sessions, agents, contributors,</p>
+<p>or providers based on token observability data.</p>
+<p><strong>What this prohibits:</strong></p>
+<ul>
+<li>Session quality scores derived from token counts</li>
+<li>Agent performance metrics that include token usage</li>
+<li>Contributor efficiency rankings based on token data</li>
+<li>Provider quality assessments based on reported token counts</li>
+</ul>
+<p><strong>What this permits:</strong></p>
+<ul>
+<li>Describing token count as a session property (observational)</li>
+<li>Reporting token provenance quality (data quality, not session quality)</li>
+</ul>
+<p><strong>Inherited from:</strong> Consumption Boundary §Prohibited Uses. This ceiling applies</p>
+<p>to CodeBurn&#x27;s own output generation, not only to downstream consumers.</p>
+<hr>
+<h3 id="ac4-decision-safety-certification">AC4 — Decision Safety Certification</h3>
+<p>CodeBurn may not certify that its output is safe for use in automated decision systems.</p>
+<p><strong>What this prohibits:</strong></p>
+<ul>
+<li>Setting <code>analysis<em>safe</em>for_decision = true</code> without a separate</li>
+</ul>
+<p><code>CODEBURN<em>DECISION</em>AUTHORITY_CONTRACT.md</code> being created and reviewed</p>
+<ul>
+<li>Any report field that implies output can safely feed a decision system</li>
+<li>Schema changes that introduce decision-support fields without the above contract</li>
+</ul>
+<p><strong>What this permits:</strong></p>
+<ul>
+<li>Current state: <code>analysis<em>safe</em>for_decision = false</code> (permanent default)</li>
+<li>This default survives all acquisition milestones unchanged</li>
+</ul>
+<p><strong>The specific field:</strong> <code>analysis<em>safe</em>for<em>decision</code> in <code>codeburn</em>analyze.py</code> is</p>
+<p>hard-coded to <code>False</code>. That hard-coding is not a placeholder. It is the runtime</p>
+<p>implementation of AC4. Changing it requires <code>CODEBURN<em>DECISION</em>AUTHORITY_CONTRACT.md</code>.</p>
+<hr>
+<h3 id="ac5-provider-truthfulness-certification">AC5 — Provider Truthfulness Certification</h3>
+<p>CodeBurn may not certify the accuracy or truthfulness of provider-reported token counts.</p>
+<p><strong>What this prohibits:</strong></p>
+<ul>
+<li>&quot;Provider-grade evidence means the count is accurate&quot;</li>
+<li>Using Class A evidence to validate provider billing claims</li>
+<li>Treating consistent Class A counts as confirmed provider truthfulness</li>
+</ul>
+<p><strong>What this permits:</strong></p>
+<ul>
+<li>&quot;The provider reported N tokens for this request&quot;</li>
+<li>&quot;Token source is Class A (provider-originated)&quot;</li>
+</ul>
+<p><strong>Reason:</strong> CodeBurn observes what providers report, not what providers compute.</p>
+<p>Provider reporting and provider computation are not the same thing. This boundary</p>
+<p>may seem minor but is critical if token data is ever considered for cost auditing.</p>
+<hr>
+<h2 id="the-trustworthiness-inference-why-it-must-be-explicitly-blocked">The Trustworthiness Inference — Why It Must Be Explicitly Blocked</h2>
+<p>The Authority Escalation Path passes through Stage 2 → Stage 3 via what appears</p>
+<p>to be a reasonable inference:</p>
+<blockquote>
+<p>&quot;The data is trustworthy, therefore it can inform decisions.&quot;</p>
+</blockquote>
+<p>This inference is valid in most epistemic contexts. It is specifically invalid for</p>
+<p>CodeBurn token observability because:</p>
+<p><strong>1. The inference assumes authority follows from data quality.</strong></p>
+<p>Authority is a governance grant, not a data property. Trustworthy data without</p>
+<p>authority grant = trustworthy observational data. Nothing more.</p>
+<p><strong>2. The inference ignores the inferential gap.</strong></p>
+<p><code>token count → session quality → decision relevance</code> crosses boundaries that</p>
+<p>are not authorized by any CodeBurn governance contract. The data being trustworthy</p>
+<p>does not close the inferential gap.</p>
+<p><strong>3. The inference inverts the authority model.</strong></p>
+<p>In the correct model: governance contract → authority → data can be used for X.</p>
+<p>In the inverted model: data quality → data can be used for X → authority is implied.</p>
+<p>CodeBurn&#x27;s governance model is the correct model. The inference runs in the wrong direction.</p>
+<p>**This document is the explicit record that this inference does not apply to</p>
+<p>CodeBurn token observability, regardless of acquisition stage.**</p>
+<hr>
+<h2 id="authority-drift-detection-signals">Authority Drift Detection Signals</h2>
+<p>The following patterns, when observed in CodeBurn-related documentation, discussion,</p>
+<p>or tooling, indicate that authority escalation is occurring or has occurred:</p>
+<table>
+<tr><th>Pattern</th><th>Authority ceiling being crossed</th></tr>
+<tr><td>&quot;CodeBurn flagged this session&quot; (as if it blocked something)</td><td>AC1 runtime authority</td></tr>
+<tr><td>&quot;Token usage triggered a review&quot; (automated trigger)</td><td>AC1 runtime authority</td></tr>
+<tr><td>&quot;Session failed CodeBurn governance check&quot;</td><td>AC2 governance authority</td></tr>
+<tr><td>&quot;CodeBurn score&quot; or &quot;CodeBurn rating&quot;</td><td>AC3 evaluative authority</td></tr>
+<tr><td>&quot;High-token sessions require extended review&quot;</td><td>AC3 + AC1 combined</td></tr>
+<tr><td>&quot;We use CodeBurn to monitor agent efficiency&quot;</td><td>AC3 evaluative authority</td></tr>
+<tr><td>&quot;CodeBurn-verified token counts&quot; (implying decision safety)</td><td>AC4 decision safety</td></tr>
+<tr><td>&quot;Provider accuracy confirmed by CodeBurn&quot;</td><td>AC5 provider truthfulness</td></tr>
+<tr><td>Any sentence treating CodeBurn as a performance monitoring system</td><td>All ceilings</td></tr>
+</table>
+
+<p>**If any of these patterns appears in a feature request, report template, or operational</p>
+<p>workflow, that is evidence of authority escalation. The correct response is not</p>
+<p>&quot;we need to add safeguards to this feature&quot; — it is &quot;this feature crosses the</p>
+<p>authority ceiling.&quot;**</p>
+<hr>
+<h2 id="relationship-to-other-boundary-documents">Relationship to Other Boundary Documents</h2>
+<table>
+<tr><th>Document</th><th>What it constrains</th><th>How it relates to this document</th></tr>
+<tr><td>Provenance Ontology</td><td>What token evidence IS</td><td>Defines the evidence that is subject to this contract</td></tr>
+<tr><td>Comparability Boundary</td><td>What comparisons are permitted</td><td>Constrains data use at comparison layer</td></tr>
+<tr><td>Consumption Boundary</td><td>What consumers may do with output</td><td>Constrains downstream use (this contract constrains CodeBurn itself)</td></tr>
+<tr><td>Phase 1 Analysis Contract</td><td>What CodeBurn output may claim</td><td>Constrains output text; this contract constrains system position</td></tr>
+</table>
+
+<p>The consumption boundary constrains external actors.</p>
+<p>This contract constrains CodeBurn&#x27;s epistemic position as a system.</p>
+<p>A system that respects the consumption boundary but exceeds this contract has still</p>
+<p>undergone authority escalation — the escalation happens at the system identity level,</p>
+<p>not at the data use level.</p>
+<hr>
+<h2 id="what-elevating-the-authority-ceiling-requires">What Elevating the Authority Ceiling Requires</h2>
+<p>Any authority ceiling (AC1–AC5) may be elevated only through:</p>
+<ol>
+<li>A dedicated governance contract document named for the specific authority being granted</li>
+</ol>
+<p>(e.g., <code>CODEBURN<em>DECISION</em>AUTHORITY_CONTRACT.md</code> for AC4)</p>
+<ol>
+<li>The contract must name the specific authority, the conditions, and the oversight mechanism</li>
+<li>The contract must be committed before any implementation that depends on the elevated ceiling</li>
+<li>The contract must not be created by the same actor who requests the authority elevation</li>
+</ol>
+<p>(separation of roles)</p>
+<p>No acquisition milestone, data quality improvement, or operational maturity achievement</p>
+<p>substitutes for this process.</p>
+<p>The authority ceiling is not a temporary restriction pending better infrastructure.</p>
+<p>It is a permanent constraint pending explicit governance authorization.</p>
+<hr>
+<h2 id="current-authority-state-2026-05-20">Current Authority State (2026-05-20)</h2>
+<pre><code>AC1 runtime authority:        NOT GRANTED
+AC2 governance authority:     NOT GRANTED
+AC3 evaluative authority:     NOT GRANTED
+AC4 decision safety:          NOT GRANTED (analysis_safe_for_decision = false)
+AC5 provider truthfulness:    NOT GRANTED
+
+CodeBurn epistemic position:  observational reporting only
+Authority ceiling:            advisory signals, human-facing reports</code></pre>
+<p>This state is the baseline. All future acquisition work begins from this baseline.</p>
+<p>Completion of acquisition chains does not modify this state.</p>
+<hr>
+<p><em>Trustworthy data is still just data.</em></p>
+<p><em>Authority is a governance grant, not a data property.</em></p>
+<p><em>This ceiling survives every acquisition milestone.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_AUTHORITY_CEILING_CONTRACT.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

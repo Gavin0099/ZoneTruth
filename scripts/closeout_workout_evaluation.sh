@@ -17,6 +17,7 @@ working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
 annotation_gate="not-required"
+codeburn_render_guard="passed"
 
 if ! swift test; then
   semantic_guard="failed"
@@ -121,6 +122,19 @@ if ! swift test --filter testBodyCompositionSeedLedgerHasExpectedCoverage; then
   echo "snapshot_fixture: ${snapshot_fixture}"
   echo "weekly_snapshot: ${weekly_snapshot}"
   echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "working_tree_clean: ${working_tree_clean}"
+  echo "ui_smoke: ${ui_smoke}"
+  exit 1
+fi
+
+if ! bash scripts/run_codeburn_render_test.sh; then
+  codeburn_render_guard="failed"
+  echo "semantic_guard: ${semantic_guard}"
+  echo "snapshot_fixture: ${snapshot_fixture}"
+  echo "weekly_snapshot: ${weekly_snapshot}"
+  echo "weekly_ui_guard: ${weekly_ui_guard}"
+  echo "annotation_gate: ${annotation_gate}"
+  echo "codeburn_render_guard: ${codeburn_render_guard}"
   echo "working_tree_clean: ${working_tree_clean}"
   echo "ui_smoke: ${ui_smoke}"
   exit 1
@@ -283,6 +297,7 @@ echo "snapshot_fixture: ${snapshot_fixture}"
 echo "weekly_snapshot: ${weekly_snapshot}"
 echo "weekly_ui_guard: ${weekly_ui_guard}"
 echo "annotation_gate: ${annotation_gate}"
+echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"
 echo "ui_smoke: ${ui_smoke}"
 echo "dual_run_review: ${dual_run_review}"

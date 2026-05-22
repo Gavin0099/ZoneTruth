@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Claude Artifact Ingestion Contract</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Claude Artifact Ingestion Contract</div>
+  <div class="meta">Source: CODEBURN_CLAUDE_ARTIFACT_CONTRACT.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-claude-artifact-ingestion-contract">CodeBurn — Claude Artifact Ingestion Contract</a><a href="#what-this-document-authorizes">What This Document Authorizes</a><a href="#the-artifact-claude-code-jsonl-session-files">The Artifact: Claude Code `.jsonl` Session Files</a><a href="#observed-record-types">Observed Record Types</a><a href="#the-token-evidence-structure-assistant-records">The Token Evidence Structure (assistant records)</a><a href="#admissible-fields">Admissible Fields</a><a href="#inadmissible-fields-must-not-influence-any-codeburn-claim">Inadmissible Fields (must not influence any CodeBurn claim)</a><a href="#token-count-interpretation-the-cache-problem">Token Count Interpretation: The Cache Problem</a><a href="#the-epistemic-class-class-c-observer-reconstructed">The Epistemic Class: Class C (Observer-Reconstructed)</a><a href="#invariants-what-implementation-must-preserve">Invariants: What Implementation Must Preserve</a><a href="#i1-class-c-assignment-is-unconditional">I1 — Class C Assignment Is Unconditional</a><a href="#i2-missing-token-fields-zero-usage">I2 — Missing Token Fields ≠ Zero Usage</a><a href="#i3-malformed-records-are-quarantined-not-dropped">I3 — Malformed Records Are Quarantined, Not Dropped</a><a href="#i4-source-artifact-path-and-line-number-are-required">I4 — Source Artifact Path and Line Number Are Required</a><a href="#i5-no-authority-upgrade-through-ingestion">I5 — No Authority Upgrade Through Ingestion</a><a href="#i6-reconstruction-gap-must-be-declared">I6 — Reconstruction Gap Must Be Declared</a><a href="#schema-extension-authorization">Schema Extension Authorization</a><a href="#new-table-step-ingestion-provenance">New Table: `step_ingestion_provenance`</a><a href="#new-table-quarantined-records">New Table: `quarantined_records`</a><a href="#new-fields-in-steps-table">New Fields in `steps` Table</a><a href="#negative-path-specifications">Negative-Path Specifications</a><a href="#np1-valid-record-class-c-evidence-written">NP1 — Valid Record → Class C Evidence Written</a><a href="#np2-missing-usage-typed-null-written">NP2 — Missing Usage → Typed Null Written</a><a href="#np3-malformed-json-quarantine-record-written">NP3 — Malformed JSON → Quarantine Record Written</a><a href="#np4-inadmissible-fields-not-stored">NP4 — Inadmissible Fields → Not Stored</a><a href="#np5-cache-tokens-individual-fields-no-total-computed">NP5 — Cache Tokens → Individual Fields, No Total Computed</a><a href="#what-this-contract-does-not-authorize">What This Contract Does NOT Authorize</a></div>
+<h1 id="codeburn-claude-artifact-ingestion-contract">CodeBurn — Claude Artifact Ingestion Contract</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> — P3.0 spec document, authorizes schema extension and ingestion implementation</p>
+<p>Scope: Claude Code .jsonl session log artifacts, L1.5 acquisition surface only</p>
+<p>Depends on: CODEBURN<em>TOKEN</em>PROVENANCE<em>ONTOLOGY.md, CODEBURN</em>ACQUISITION<em>AUTHORITY</em>MODEL.md</p>
+<p>Authorizes: P3.1 schema extension, P3.2 ingestion parser, P3.3 provenance writer</p>
+</blockquote>
+<hr>
+<h2 id="what-this-document-authorizes">What This Document Authorizes</h2>
+<p>This document authorizes the implementation of L1.5 (post-hoc session log ingestion)</p>
+<p>for Claude Code artifacts. It defines:</p>
+<ol>
+<li>The admissible artifact format and record types</li>
+<li>The epistemic class of evidence that ingestion may produce (<span class="class-c">Class C</span> only)</li>
+<li>The schema extensions required</li>
+<li>The invariants that implementation must preserve</li>
+<li>The negative-path specifications (what implementation must handle correctly)</li>
+</ol>
+<p>Nothing in this document authorizes runtime observation, real-time capture,</p>
+<p>or any acquisition mode other than post-hoc log ingestion.</p>
+<hr>
+<h2 id="the-artifact-claude-code-jsonl-session-files">The Artifact: Claude Code <code>.jsonl</code> Session Files</h2>
+<p>Claude Code stores session logs as newline-delimited JSON files (<code>.jsonl</code>).</p>
+<p>Each line is a self-contained JSON record. Files are stored at:</p>
+<pre><code>~/.claude/projects/&lt;project-slug&gt;/&lt;session-uuid&gt;.jsonl</code></pre>
+<h3 id="observed-record-types">Observed Record Types</h3>
+<table>
+<tr><th>Type</th><th>Contains token data</th><th>Admissible</th><th>Notes</th></tr>
+<tr><td><code>assistant</code></td><td>yes — <code>message.usage</code></td><td>yes</td><td>Primary token evidence source</td></tr>
+<tr><td><code>user</code></td><td>no</td><td>no — metadata only</td><td>Session scope context</td></tr>
+<tr><td><code>system</code></td><td>no</td><td>no</td><td>Session initialization</td></tr>
+<tr><td><code>progress</code></td><td>no</td><td>no</td><td>Streaming artifacts, not completed responses</td></tr>
+<tr><td><code>queue-operation</code></td><td>no</td><td>no</td><td>Session queue management</td></tr>
+<tr><td><code>file-history-snapshot</code></td><td>no</td><td>no</td><td>File tracking, not interaction data</td></tr>
+</table>
+
+<p><strong>Only <code>type=assistant</code> records are admissible for token extraction.</strong></p>
+<p>All other record types are ignored during ingestion. They are not errors.</p>
+<p>They are not quarantined. They are structurally not-applicable.</p>
+<hr>
+<h2 id="the-token-evidence-structure-assistant-records">The Token Evidence Structure (assistant records)</h2>
+<p>For <code>type=assistant</code> records, token data is at <code>message.usage</code>:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;assistant&quot;,
+  &quot;sessionId&quot;: &quot;...&quot;,
+  &quot;uuid&quot;: &quot;...&quot;,
+  &quot;timestamp&quot;: &quot;...&quot;,
+  &quot;message&quot;: {
+    &quot;role&quot;: &quot;assistant&quot;,
+    &quot;usage&quot;: {
+      &quot;input_tokens&quot;: N,
+      &quot;output_tokens&quot;: M,
+      &quot;cache_creation_input_tokens&quot;: X,
+      &quot;cache_read_input_tokens&quot;: Y,
+      &quot;service_tier&quot;: &quot;standard&quot;,
+      &quot;inference_geo&quot;: &quot;not_available&quot;
+    }
+  }
+}</code></pre>
+<h3 id="admissible-fields">Admissible Fields</h3>
+<table>
+<tr><th>Field path</th><th>Admitted as</th><th>Notes</th></tr>
+<tr><td><code>message.usage.input_tokens</code></td><td><code>prompt_tokens</code> (<span class="class-c">Class C</span>)</td><td>May be 0 when cache dominates</td></tr>
+<tr><td><code>message.usage.output_tokens</code></td><td><code>completion_tokens</code> (<span class="class-c">Class C</span>)</td><td>Completion token count</td></tr>
+<tr><td><code>message.usage.cache<em>creation</em>input_tokens</code></td><td><code>cache<em>creation</em>tokens</code> (<span class="class-c">Class C</span>)</td><td>New cache creation cost</td></tr>
+<tr><td><code>message.usage.cache<em>read</em>input_tokens</code></td><td><code>cache<em>read</em>tokens</code> (<span class="class-c">Class C</span>)</td><td>Cache hit reads</td></tr>
+<tr><td><code>uuid</code></td><td><code>source<em>record</em>id</code></td><td>Record identifier for provenance</td></tr>
+<tr><td><code>timestamp</code></td><td><code>source<em>record</em>timestamp</code></td><td>Record timestamp for ordering</td></tr>
+</table>
+
+<h3 id="inadmissible-fields-must-not-influence-any-codeburn-claim">Inadmissible Fields (must not influence any CodeBurn claim)</h3>
+<table>
+<tr><th>Field</th><th>Why inadmissible</th></tr>
+<tr><td><code>message.usage.service_tier</code></td><td>Operational metadata — not a token quantity</td></tr>
+<tr><td><code>message.usage.inference_geo</code></td><td>Geographic routing — not a token quantity</td></tr>
+<tr><td><code>message.usage.cache<em>creation.ephemeral</em>5m<em>input</em>tokens</code></td><td>Sub-field of cache — not yet in scope</td></tr>
+<tr><td><code>message.usage.cache<em>creation.ephemeral</em>1h<em>input</em>tokens</code></td><td>Sub-field of cache — not yet in scope</td></tr>
+<tr><td><code>message.model</code></td><td>Model identity — not a token evidence field</td></tr>
+<tr><td><code>cwd</code></td><td>Working directory — not a token evidence field</td></tr>
+<tr><td><code>version</code></td><td>Client version — not a token evidence field</td></tr>
+</table>
+
+<p class="box-warn"><strong>Inadmissible fields must not be stored in the token provenance table.</strong></p>
+<p>Storing them as &quot;additional context&quot; without a separate authorization is</p>
+<p>a scope expansion that this contract does not permit.</p>
+<hr>
+<h2 id="token-count-interpretation-the-cache-problem">Token Count Interpretation: The Cache Problem</h2>
+<p>Claude Code token accounting includes cache fields that make the total token</p>
+<p>picture more complex than <code>input<em>tokens + output</em>tokens</code>:</p>
+<pre><code>total_billed_tokens ≈ input_tokens + output_tokens + cache_creation_input_tokens
+                      (cache_read_input_tokens typically billed at reduced rate)</code></pre>
+<p><strong>This contract does not authorize total billing computation.</strong></p>
+<p>Reasons:</p>
+<ol>
+<li>Cache billing rates are provider-defined and may change</li>
+<li><code>cache<em>creation</em>input_tokens</code> represents a different cost than regular input</li>
+<li>Computing billing from token fields would cross from observation into cost governance</li>
+<li>Cost governance requires a separate contract (currently prohibited by AC3)</li>
+</ol>
+<p><strong>What ingestion may record:</strong> individual field values, as observed in the log.</p>
+<p><strong>What ingestion may NOT compute:</strong> totals, aggregates, billing estimates, cost-per-session.</p>
+<hr>
+<h2 id="the-epistemic-class-class-c-observer-reconstructed">The Epistemic Class: <span class="class-c">Class C</span> (Observer-Reconstructed)</h2>
+<p>All token evidence produced by this ingestion is <span class="class-c">Class C</span>.</p>
+<p><strong>It is <span class="class-c">Class C</span> because:</strong></p>
+<ul>
+<li>CodeBurn arrives after the interaction completes</li>
+<li>Evidence is reconstructed from log artifacts, not observed in real-time</li>
+<li>Log completeness is not guaranteed (logs may be truncated, partial, or corrupt)</li>
+<li>The log records what was reported to the log writer, not what the provider computed</li>
+</ul>
+<p><strong>This class assignment is permanent and unconditional.</strong></p>
+<p>It does not change if:</p>
+<ul>
+<li>All records are present and valid</li>
+<li>Token counts are internally consistent</li>
+<li>The same session is ingested multiple times with identical results</li>
+<li>The provider API is verified as the originator of the session</li>
+</ul>
+<p>Consistency and completeness do not upgrade <span class="class-c">Class C</span> to Class A or Class B.</p>
+<p>The temporal distance (post-hoc) is what determines the class, not the data quality.</p>
+<hr>
+<h2 id="invariants-what-implementation-must-preserve">Invariants: What Implementation Must Preserve</h2>
+<p class="box-frozen">The following invariants must hold for every ingestion path:</p>
+<h3 id="i1-class-c-assignment-is-unconditional">I1 — <span class="class-c">Class C</span> Assignment Is Unconditional</h3>
+<pre><code>provenance_class = &quot;C&quot;
+real_time_observed = False</code></pre>
+<p class="box-warn">These values must be set at record creation and must not be modifiable by ingestion logic.</p>
+<p>They are not defaults with override paths. They are structural constants.</p>
+<h3 id="i2-missing-token-fields-zero-usage">I2 — Missing Token Fields ≠ Zero Usage</h3>
+<p>If <code>message.usage</code> is absent from an assistant record, or if individual fields</p>
+<p>within <code>message.usage</code> are absent:</p>
+<pre><code>CORRECT:  token field = NULL (typed null, incomplete evidence)
+WRONG:    token field = 0    (implies zero usage, which is not the same as absence)</code></pre>
+<p><code>NULL</code> means &quot;not present in log artifact.&quot;</p>
+<p><code>0</code> means &quot;recorded as zero.&quot;</p>
+<p class="box-warn">These are epistemically different states. <code>NULL</code> must not be collapsed to <code>0</code>.</p>
+<h3 id="i3-malformed-records-are-quarantined-not-dropped">I3 — Malformed Records Are Quarantined, Not Dropped</h3>
+<p>If a line in the <code>.jsonl</code> file cannot be parsed as valid JSON, or if a parsed</p>
+<p>record has a structure that does not match the expected schema:</p>
+<pre><code>CORRECT:  quarantine the record — store source_artifact_path + line_number +
+          raw_content + failure_reason; do not write token evidence
+WRONG:    silently skip the line
+WRONG:    log a warning and continue without persisting the failure
+WRONG:    write partial evidence from a partially-parsed record</code></pre>
+<p>Quarantine means: <strong>the failure is persisted and traceable</strong>. Silent drops are</p>
+<p>not acceptable because they make ingestion completeness unverifiable.</p>
+<h3 id="i4-source-artifact-path-and-line-number-are-required">I4 — Source Artifact Path and Line Number Are Required</h3>
+<p>Every token evidence record must carry:</p>
+<pre><code>source_artifact_path  — absolute path to the .jsonl file
+source_artifact_line  — 1-indexed line number of the source record</code></pre>
+<p>Without these, the evidence is not reconstructable or auditable. Records without</p>
+<p class="box-warn">source provenance must not be written.</p>
+<h3 id="i5-no-authority-upgrade-through-ingestion">I5 — No Authority Upgrade Through Ingestion</h3>
+<p class="box-warn">Ingestion must not set or imply:</p>
+<pre><code>token_source = &#x27;provider&#x27;   ← Class A only
+real_time_observed = True   ← false for all Class C
+analysis_safe_for_decision = True  ← permanently false per Authority Ceiling Contract</code></pre>
+<p class="box-warn">These values must not appear in any ingestion output, default, or fallback path.</p>
+<h3 id="i6-reconstruction-gap-must-be-declared">I6 — Reconstruction Gap Must Be Declared</h3>
+<p>Every ingestion record must carry:</p>
+<pre><code>reconstruction_gap_declared = True</code></pre>
+<p>This is not an opt-in field. It is a required assertion that the ingester</p>
+<p>acknowledges the temporal distance between the original interaction and this</p>
+<p>record.</p>
+<hr>
+<h2 id="schema-extension-authorization">Schema Extension Authorization</h2>
+<p>This contract authorizes the following schema additions to <code>schema.sql</code>:</p>
+<h3 id="new-table-step-ingestion-provenance">New Table: <code>step<em>ingestion</em>provenance</code></h3>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS step_ingestion_provenance (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  step_id TEXT NOT NULL,
+  provenance_class TEXT NOT NULL CHECK (provenance_class IN (&#x27;A&#x27;, &#x27;B&#x27;, &#x27;C&#x27;, &#x27;D&#x27;, &#x27;E&#x27;)),
+  real_time_observed INTEGER NOT NULL DEFAULT 0 CHECK (real_time_observed IN (0, 1)),
+  reconstruction_gap_declared INTEGER NOT NULL DEFAULT 1 CHECK (reconstruction_gap_declared IN (0, 1)),
+  source_artifact_path TEXT NOT NULL,
+  source_artifact_line INTEGER NOT NULL,
+  source_record_id TEXT,
+  source_record_timestamp TEXT,
+  ingested_at TEXT NOT NULL,
+  FOREIGN KEY(step_id) REFERENCES steps(step_id)
+);</code></pre>
+<h3 id="new-table-quarantined-records">New Table: <code>quarantined_records</code></h3>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS quarantined_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_artifact_path TEXT NOT NULL,
+  source_artifact_line INTEGER NOT NULL,
+  raw_content TEXT,
+  failure_reason TEXT NOT NULL,
+  quarantined_at TEXT NOT NULL
+);</code></pre>
+<h3 id="new-fields-in-steps-table">New Fields in <code>steps</code> Table</h3>
+<p>None. Token values are already stored in the existing <code>steps</code> table via</p>
+<p><code>prompt<em>tokens</code>, <code>completion</em>tokens</code>, <code>total<em>tokens</code>, <code>token</em>source</code>.</p>
+<p>The <code>step<em>ingestion</em>provenance</code> table provides the <span class="class-c">Class C</span> metadata without</p>
+<p>modifying the existing schema.</p>
+<hr>
+<h2 id="negative-path-specifications">Negative-Path Specifications</h2>
+<p>These are the test contracts that implementation must satisfy:</p>
+<h3 id="np1-valid-record-class-c-evidence-written">NP1 — Valid Record → <span class="class-c">Class C</span> Evidence Written</h3>
+<p><strong>Input:</strong> Valid <code>type=assistant</code> record with complete <code>message.usage</code></p>
+<p><strong>Expected:</strong> <code>steps</code> row written with <code>token<em>source=&amp;#x27;estimated&amp;#x27;</code>; <code>step</em>ingestion<em>provenance</code> row written with <code>provenance</em>class=&amp;#x27;C&amp;#x27;</code>, <code>real<em>time</em>observed=0</code>, <code>reconstruction<em>gap</em>declared=1</code></p>
+<p><strong>Fail if:</strong> <code>provenance<em>class</code> is anything other than <code>C</code>; <code>real</em>time<em>observed</code> is 1; <code>token</em>source</code> is <code>provider</code></p>
+<h3 id="np2-missing-usage-typed-null-written">NP2 — Missing Usage → Typed Null Written</h3>
+<p><strong>Input:</strong> Valid <code>type=assistant</code> record where <code>message.usage</code> is absent</p>
+<p><strong>Expected:</strong> <code>steps</code> row written with token fields as <code>NULL</code> (not 0); <code>step<em>ingestion</em>provenance</code> row written with <code>provenance_class=&amp;#x27;C&amp;#x27;</code></p>
+<p><strong>Fail if:</strong> token fields are written as 0; record is silently dropped; no <code>step<em>ingestion</em>provenance</code> row</p>
+<h3 id="np3-malformed-json-quarantine-record-written">NP3 — Malformed JSON → Quarantine Record Written</h3>
+<p><strong>Input:</strong> <code>.jsonl</code> file line that is not valid JSON</p>
+<p><strong>Expected:</strong> <code>quarantined<em>records</code> row written with source path, line number, raw content, failure reason; no <code>steps</code> row; no <code>step</em>ingestion_provenance</code> row</p>
+<p><strong>Fail if:</strong> line is silently skipped; partial <code>steps</code> row is written; failure is only logged (not persisted)</p>
+<h3 id="np4-inadmissible-fields-not-stored">NP4 — Inadmissible Fields → Not Stored</h3>
+<p><strong>Input:</strong> Valid <code>type=assistant</code> record with <code>service<em>tier</code> and <code>inference</em>geo</code> in usage</p>
+<p><strong>Expected:</strong> <code>step<em>ingestion</em>provenance</code> row contains no <code>service<em>tier</code> or <code>inference</em>geo</code> column</p>
+<p><strong>Fail if:</strong> any inadmissible field is stored in any table as &quot;context&quot;</p>
+<h3 id="np5-cache-tokens-individual-fields-no-total-computed">NP5 — Cache Tokens → Individual Fields, No Total Computed</h3>
+<p><strong>Input:</strong> Valid record with <code>input<em>tokens=3</code>, <code>cache</em>creation<em>input</em>tokens=5808</code>, <code>cache<em>read</em>input_tokens=9364</code></p>
+<p><strong>Expected:</strong> individual fields stored as-is; no <code>total<em>tokens</code> computed from these fields; <code>steps.total</em>tokens</code> is <code>NULL</code> or the sum of <code>input<em>tokens + output</em>tokens</code> only (not cache fields)</p>
+<p><strong>Fail if:</strong> a cost estimate or billed total is computed and stored</p>
+<hr>
+<h2 id="what-this-contract-does-not-authorize">What This Contract Does NOT Authorize</h2>
+<ul>
+<li>Real-time token capture from Claude Code API responses</li>
+<li>Modification of any existing record after ingestion</li>
+<li>Cross-session aggregation of ingested token counts</li>
+<li>Comparison of ingested counts to any other source</li>
+<li>Using <code>inference<em>geo</code> or <code>service</em>tier</code> for any purpose</li>
+<li>Treating successful ingestion as evidence that logs are complete</li>
+</ul>
+<hr>
+<p><em>Ingestion reads artifacts that already exist.</em></p>
+<p><em>It does not observe. It reconstructs.</em></p>
+<p><em>The reconstruction is always partial. The partiality must be acknowledged in every record.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CLAUDE_ARTIFACT_CONTRACT.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

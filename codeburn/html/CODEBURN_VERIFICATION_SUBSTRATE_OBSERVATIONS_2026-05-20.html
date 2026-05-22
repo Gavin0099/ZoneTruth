@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Verification Substrate Observations — 2026-05-20</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Verification Substrate Observations — 2026-05-20</div>
+  <div class="meta">Source: CODEBURN_VERIFICATION_SUBSTRATE_OBSERVATIONS_2026-05-20.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-verification-substrate-observations-2026-05-20">CodeBurn — Verification Substrate Observations — 2026-05-20</a><a href="#purpose">Purpose</a><a href="#1-verification-laundering-the-named-pattern">1. Verification laundering — the named pattern</a><a href="#2-verification-substrate-fragility-governance-substrate-concern">2. Verification substrate fragility — governance substrate concern</a><a href="#3-asymmetrical-evolution-the-architectural-freeze-constraint">3. Asymmetrical evolution — the architectural freeze constraint</a><a href="#4-operational-dependency-creep-the-most-dangerous-drift-path">4. Operational dependency creep — the most dangerous drift path</a><a href="#5-verification-substrate-recovery-what-is-needed">5. Verification substrate recovery — what is needed</a><a href="#document-status">Document status</a></div>
+<h1 id="codeburn-verification-substrate-observations-2026-05-20">CodeBurn — Verification Substrate Observations — 2026-05-20</h1>
+<p>Status: observation record — not a constraint, not a policy document</p>
+<p>Scope: governance substrate failure mode analysis; exemplified by Phase 2 state</p>
+<p>Origin: discussion during Phase 2 status review, 2026-05-20 session</p>
+<p>Authority: none — observations only; no operational consequence</p>
+<hr>
+<h2 id="purpose">Purpose</h2>
+<p>This document records governance failure mode patterns identified during analysis</p>
+<p>of CodeBurn Phase 2 verification state. The patterns are named here so they can</p>
+<p>be recognized and cited in future decision contexts.</p>
+<p>The observation-before-modification principle applies: no structural change is</p>
+<p>authorized by this document. It provides vocabulary, not prescription.</p>
+<hr>
+<h2 id="1-verification-laundering-the-named-pattern">1. Verification laundering — the named pattern</h2>
+<p><strong>Definition</strong>: The organizational memory rewrite that converts &quot;verification failed&quot;</p>
+<p>into &quot;feature basically done, environment has issues.&quot;</p>
+<p><strong>The pattern:</strong></p>
+<pre><code>Step 1: Feature implemented (code written, runtime smoke passes)
+Step 2: Formal verification fails (pytest permission-denied — cannot run test suite)
+Step 3: Organizational memory records: &quot;feature complete, pytest env degraded&quot;
+Step 4: Future reference: &quot;Phase 2 token observability: implementation_landed&quot;
+Step 5 (risk): &quot;implementation_landed&quot; ≈ &quot;verified&quot; in downstream reasoning</code></pre>
+<p><strong>The launder point is Step 3 → Step 4</strong>: the failure state is preserved in words</p>
+<p>(&quot;environment degraded&quot;) but encoded in a status field (&quot;implementation_landed&quot;)</p>
+<p>that does not carry the failure signal. Future readers see the status, not the words.</p>
+<p><strong>Codeburn Phase 2 current state:</strong></p>
+<p><code>CODEBURN<em>PHASE2</em>TOKEN<em>OBSERVABILITY</em>SLICE<em>CLOSEOUT</em>2026-04-30.md</code> records:</p>
+<ul>
+<li><code>status: implementation_landed</code></li>
+<li>pytest environment: permission-denied failures (cannot run full test suite)</li>
+<li>Verification closure: NOT available</li>
+</ul>
+<p>The code is present and structurally correct. The test suite cannot confirm it.</p>
+<p><code>implementation<em>landed</code> ≠ <code>verification</em>complete</code>.</p>
+<p><strong>Anti-laundering artifact already present:</strong></p>
+<p>The closeout document explicitly records this distinction. The failure mode is not</p>
+<p>yet instantiated — the laundering risk exists if future reasoning treats the</p>
+<p>status field as sufficient evidence without reading the prose.</p>
+<hr>
+<h2 id="2-verification-substrate-fragility-governance-substrate-concern">2. Verification substrate fragility — governance substrate concern</h2>
+<p><strong>Definition</strong>: Test environment failures are not infrastructure noise when the</p>
+<p>test suite is the verification substrate for a governance claim.</p>
+<p><strong>The distinction:</strong></p>
+<table>
+<tr><th>Framing</th><th>Implication</th><th>Correct?</th></tr>
+<tr><td>&quot;pytest env is degraded — tech debt&quot;</td><td>fix when convenient; feature is done</td><td>No</td></tr>
+<tr><td>&quot;pytest env permission-denied = verification closure unavailable&quot;</td><td>governance substrate concern; feature status is uncertain</td><td>Yes</td></tr>
+</table>
+
+<p><strong>Why the distinction matters:</strong></p>
+<p>Phase 2 token observability is claimed as <code>implementation_landed</code>. The claim</p>
+<p>depends on the implementation being verifiable. If the test substrate cannot run,</p>
+<p>the verification gap is indeterminate — we cannot tell whether the claim is</p>
+<p>correct or incorrect. The feature exists in an epistemically unverifiable state.</p>
+<p><strong>Structural property:</strong></p>
+<p>A governance system that cannot verify its own claims is not producing governance —</p>
+<p>it is producing the appearance of governance backed by implementation optimism.</p>
+<p>The pytest failure is not a blocker to fix; it is a signal that the current</p>
+<p>verification posture is not adequate for the governance claims being made.</p>
+<p><strong>Codeburn current state:</strong></p>
+<ul>
+<li>Phase 1: verified (runtime smoke passes; M1–M8 confirmed)</li>
+<li>Phase 2 token observability: code present, pytest substrate broken</li>
+<li>Phase 2 token provenance: spec written, not implemented</li>
+</ul>
+<p>The honest statement: Phase 2 observability code exists but is not</p>
+<p>verified by the system&#x27;s own test substrate.</p>
+<hr>
+<h2 id="3-asymmetrical-evolution-the-architectural-freeze-constraint">3. Asymmetrical evolution — the architectural freeze constraint</h2>
+<p><strong>The asymmetry:</strong></p>
+<table>
+<tr><th>Axis</th><th>Can evolve?</th><th>Authority required?</th></tr>
+<tr><td>Observability capability</td><td>Yes (Phase 2, 3, ...)</td><td>New observability contract per slice</td></tr>
+<tr><td><code>analysis<em>safe</em>for_decision</code></td><td>Must remain <code>false</code></td><td>CODEBURN<em>DECISION</em>AUTHORITY_CONTRACT.md (not written)</td></tr>
+<tr><td><code>decision<em>usage</em>allowed</code></td><td>Must remain <code>false</code></td><td>Same authority contract</td></tr>
+</table>
+
+<p><strong>Why this asymmetry is architecturally correct:</strong></p>
+<p>Observability and decision authority have different governance prerequisites.</p>
+<p class="box-frozen">Observability requires: new contract, additive fields, Phase 1 invariants preserved.</p>
+<p>Decision authority requires: proof standard, authority certification, scope definition,</p>
+<p>enforcement validator — none of which currently exist.</p>
+<p><strong>The risk: capability-authority conflation</strong></p>
+<p>As observability grows (token provenance, cross-session comparison, step-level</p>
+<p>breakdown), the data richness increases. Rich observational data creates pressure</p>
+<p>toward decision use through:</p>
+<ul>
+<li>&quot;advisory prioritization&quot; (not a formal decision)</li>
+<li>&quot;confidence-weighted ranking&quot; (uses token data as signal)</li>
+<li>&quot;review acceleration&quot; (treats high-token sessions as review targets)</li>
+</ul>
+<p>None of these require changing <code>analysis<em>safe</em>for_decision</code> from <code>false</code>.</p>
+<p>All of them constitute decision authority use without authorization.</p>
+<p><strong>The constitutional boundary:</strong></p>
+<p><code>analysis<em>safe</em>for_decision = false</code> is not a placeholder. It is the</p>
+<p>architectural boundary between observability and decision authority.</p>
+<p>The asymmetry is intentional: observability can be extended; decision</p>
+<p>authority requires a separate governance track that does not yet exist.</p>
+<hr>
+<h2 id="4-operational-dependency-creep-the-most-dangerous-drift-path">4. Operational dependency creep — the most dangerous drift path</h2>
+<p><strong>Definition</strong>: Decision authority is used in practice through workflow integration,</p>
+<p class="box-frozen">even when schema invariants remain unchanged.</p>
+<p><strong>Why it is more dangerous than direct schema change:</strong></p>
+<table>
+<tr><th>Path</th><th>Detection</th><th>Reversibility</th></tr>
+<tr><td>Direct: change <code>analysis<em>safe</em>for_decision = true</code></td><td>Easy — schema diff</td><td>Hard — requires revert + governance review</td></tr>
+<tr><td>Indirect: integrate Codeburn output into review workflow</td><td>Hard — behavioral change</td><td>Very hard — organizational habit</td></tr>
+</table>
+
+<p><strong>The mechanism:</strong></p>
+<pre><code>Codeburn report is added to review template (observational, permitted)
+→ reviewer looks at token counts before deciding scope (informed by data)
+→ reviewer mentions token count in review notes (becomes reference point)
+→ next reviewer looks for token count signal to calibrate (pattern established)
+→ high token count → extended review (implicit decision criterion)
+→ token count is now a de facto decision signal (schema unchanged; governance bypassed)</code></pre>
+<p><strong>Why this is hard to prevent:</strong></p>
+<p>The mechanism is individually legitimate at each step. Adding observational</p>
+<p>data to a template is permitted. A reviewer using data to inform judgment is</p>
+<p class="box-warn">not prohibited. The governance violation is in the aggregate pattern, not any</p>
+<p>individual step. It is the semantic leakage problem applied to workflow integration.</p>
+<p><strong>Observable precursors (not yet observed in this system):</strong></p>
+<ul>
+<li>Codeburn output referenced in review comments</li>
+<li>Review decisions correlated with token observability level</li>
+<li>Team norms that treat high-token sessions as requiring more review</li>
+<li>SLA differentiation based on Codeburn step count</li>
+</ul>
+<p class="box-frozen">None of these involve changing any governance document. The invariant <code>false</code></p>
+<p>fields remain. The authority boundary has been operationally bypassed.</p>
+<hr>
+<h2 id="5-verification-substrate-recovery-what-is-needed">5. Verification substrate recovery — what is needed</h2>
+<p>This section records what would be needed to close the verification gap,</p>
+<p>without prescribing when or whether to do it.</p>
+<p><strong>P1 prerequisite (from Phase 1 Final Closeout):</strong></p>
+<blockquote>
+<p>pytest environment unblocked: 7 test files must pass fully</p>
+</blockquote>
+<p><strong>Current state:</strong></p>
+<p>Permission-denied errors in pytest temporary directories prevent the test</p>
+<p>suite from running. Root cause: Windows filesystem permission issue in</p>
+<p><code>examples/pytest_tmp*</code> directories.</p>
+<p><strong>What resolution provides:</strong></p>
+<ul>
+<li>Verification closure for Phase 2 token observability slice</li>
+<li><code>implementation<em>landed</code> → <code>runtime</em>verified</code> status upgrade possible</li>
+<li>Unblocking of Phase 3+ entry (Phase 2 P1 prerequisite satisfied)</li>
+</ul>
+<p><strong>What resolution does NOT provide:</strong></p>
+<ul>
+<li>Authorization to change <code>analysis<em>safe</em>for<em>decision</code> (that requires DECISION</em>AUTHORITY_CONTRACT)</li>
+<li>Cross-session comparability (requires Phase 2 comparability slice)</li>
+<li>Decision authority (requires separate governance track)</li>
+</ul>
+<p><strong>Governance note:</strong></p>
+<p>Fixing the pytest environment is not a governance decision — it is a maintenance</p>
+<p>action with governance prerequisites as a consequence. It should be treated as</p>
+<p>infrastructure work, not as a governance boundary modification.</p>
+<hr>
+<h2 id="document-status">Document status</h2>
+<p>Observation record. Carries no enforcement authority.</p>
+<p>Does not modify any Phase 1 or Phase 2 constraint.</p>
+<p>Does not authorize any change to <code>analysis<em>safe</em>for<em>decision</code> or <code>decision</em>usage_allowed</code>.</p>
+<p>Does not prescribe when to fix the pytest environment.</p>
+<p><strong>Function</strong>: provide named vocabulary for recognizing these patterns when they</p>
+<p>appear in actual system evolution decisions.</p>
+<p><strong>Trigger condition for revisiting:</strong></p>
+<p>If a concrete instance of verification laundering, operational dependency creep,</p>
+<p>or capability-authority conflation is identified in actual Codeburn usage or</p>
+<p>integration, that instance becomes the evidence base for targeted constraint addition.</p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_VERIFICATION_SUBSTRATE_OBSERVATIONS_2026-05-20.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Cross-Provider Comparability Boundary</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Cross-Provider Comparability Boundary</div>
+  <div class="meta">Source: CODEBURN_CROSS_PROVIDER_COMPARABILITY_BOUNDARY.md &nbsp;·&nbsp; Generated: 2026-05-22 09:47 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-cross-provider-comparability-boundary">CodeBurn — Cross-Provider Comparability Boundary</a><a href="#why-this-document-must-exist-before-multi-provider-acquisition">Why This Document Must Exist Before Multi-Provider Acquisition</a><a href="#the-comparability-prerequisite">The Comparability Prerequisite</a><a href="#permanently-prohibited-comparisons">Permanently Prohibited Comparisons</a><a href="#p1-cross-provider-token-comparison">P1 — Cross-Provider Token Comparison</a><a href="#p2-cross-class-comparison">P2 — Cross-Class Comparison</a><a href="#p3-unlabeled-aggregation">P3 — Unlabeled Aggregation</a><a href="#p4-normalization-across-providers">P4 — Normalization Across Providers</a><a href="#p5-efficiency-inference-across-sessions">P5 — Efficiency Inference Across Sessions</a><a href="#conditionally-permitted-comparisons">Conditionally Permitted Comparisons</a><a href="#cp1-same-session-same-class-step-aggregation">CP1 — Same-Session, Same-Class Step Aggregation</a><a href="#cp2-same-provider-same-class-declared-scope-trend-observation">CP2 — Same-Provider, Same-Class, Declared-Scope Trend Observation</a><a href="#cp3-data-quality-comparison">CP3 — Data Quality Comparison</a><a href="#the-normalization-trap">The Normalization Trap</a><a href="#comparability-scope-declaration-format">Comparability Scope Declaration Format</a><a href="#cross-provider-acquisition-state-does-not-change-this-boundary">Cross-Provider Acquisition State Does Not Change This Boundary</a><a href="#relationship-to-other-boundary-documents">Relationship to Other Boundary Documents</a><a href="#amendment-process">Amendment Process</a></div>
+<h1 id="codeburn-cross-provider-comparability-boundary">CodeBurn — Cross-Provider Comparability Boundary</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> — P0 constitutional freeze document, effective immediately</p>
+<p>Scope: all CodeBurn versions, all provider combinations, all aggregation operations</p>
+<p>Prerequisite for: any multi-provider reporting, any cross-session analysis, any aggregate claim</p>
+<p>Depends on: CODEBURN<em>TOKEN</em>PROVENANCE_ONTOLOGY.md (epistemic class definitions)</p>
+</blockquote>
+<hr>
+<h2 id="why-this-document-must-exist-before-multi-provider-acquisition">Why This Document Must Exist Before Multi-Provider Acquisition</h2>
+<p>The natural endpoint of a multi-provider token observability system is comparison.</p>
+<p>Once CodeBurn can observe token counts from Claude, Codex, and potentially other</p>
+<p>providers, the organizational pressure to compare them becomes very difficult to</p>
+<p>resist technically. The data will be in the same database. The schema will have</p>
+<p>the same fields. The reports will render them side by side.</p>
+<p>At that point, comparison will feel inevitable — not because it is authorized,</p>
+<p>but because it is structurally available.</p>
+<p><strong>This document establishes that structural availability ≠ epistemic authorization.</strong></p>
+<p>The comparability boundary must be defined before multi-provider acquisition exists,</p>
+<p>for the same reason the consumption boundary was defined before acquisition legitimacy</p>
+<p>was established: if the boundary is written after the data is present, it will appear</p>
+<p>as a post-hoc restriction on already-available comparison surfaces.</p>
+<p>Written before, it is a design constraint. Written after, it is a limitation.</p>
+<hr>
+<h2 id="the-comparability-prerequisite">The Comparability Prerequisite</h2>
+<p>Comparison between two token counts is epistemically legitimate only when all of</p>
+<p>the following conditions hold simultaneously:</p>
+<p><strong>Condition 1 — Same epistemic class</strong></p>
+<p>Both counts must belong to the same class in the Token Provenance Ontology</p>
+<p>(Class A, B, C, or D). Cross-class comparison is prohibited regardless of</p>
+<p>other conditions.</p>
+<p><strong>Condition 2 — Same referent definition</strong></p>
+<p>Both counts must measure the same thing. &quot;Token&quot; is not a universal unit —</p>
+<p>providers define tokenization differently. A Claude token and a Codex token</p>
+<p>are not the same referent. Comparison requires explicit confirmation that the</p>
+<p>referents are equivalent, which is not currently achievable.</p>
+<p><strong>Condition 3 — Same observation distance</strong></p>
+<p>The acquisition mode must produce the same distance between observation and</p>
+<p>the underlying computation for both counts. A Class A provider-reported count</p>
+<p>and a Class B observer-derived count from the same provider are not at the same</p>
+<p>observation distance.</p>
+<p><strong>Condition 4 — Declared comparability scope</strong></p>
+<p>The comparison must be accompanied by an explicit declaration of what is being</p>
+<p>compared, under what conditions, and what the declared comparison does not imply.</p>
+<p><strong>If any condition is not met, comparison is not permitted.</strong></p>
+<p>No single condition is sufficient on its own. All four must hold simultaneously.</p>
+<p>As of 2026-05-20, Condition 2 cannot be confirmed for any cross-provider pair.</p>
+<p>This means cross-provider comparison is not currently achievable under any</p>
+<p>acquisition configuration.</p>
+<hr>
+<h2 id="permanently-prohibited-comparisons">Permanently Prohibited Comparisons</h2>
+<p>The following comparisons are prohibited regardless of acquisition completeness,</p>
+<p>data quality, or organizational pressure to enable them:</p>
+<h3 id="p1-cross-provider-token-comparison">P1 — Cross-Provider Token Comparison</h3>
+<p>Comparing token counts between different AI providers.</p>
+<pre><code>Prohibited:
+  Claude session: N tokens
+  Codex session:  M tokens
+  → &quot;Claude used more tokens than Codex for equivalent work&quot;</code></pre>
+<p><strong>Reason:</strong> Condition 2 fails. Tokenization is provider-defined. &quot;Token&quot; is not</p>
+<p>a cross-provider unit. There is no currently available mechanism to establish</p>
+<p>referent equivalence across providers.</p>
+<p><strong>Does not become permitted when:</strong> acquisition chains for both providers are complete,</p>
+<p>data quality improves, or both counts are Class A (provider-reported). Conditions 1</p>
+<p>and 4 might be satisfiable; Condition 2 cannot be satisfied without explicit</p>
+<p>provider-published tokenization equivalence documentation, which does not exist.</p>
+<hr>
+<h3 id="p2-cross-class-comparison">P2 — Cross-Class Comparison</h3>
+<p>Comparing token counts from different epistemic classes, even from the same provider.</p>
+<pre><code>Prohibited:
+  Session A: Class A (provider-reported) = N tokens
+  Session B: Class D (user-asserted)      = M tokens
+  → Any comparison or aggregate including both</code></pre>
+<p><strong>Reason:</strong> Condition 1 fails. Different epistemic classes carry different claim</p>
+<p>legitimacy. Mixing them without class declaration produces undefined provenance.</p>
+<p><strong>Does not become permitted when:</strong> both counts happen to match. Agreement between</p>
+<p>Class A and <span class="class-d">Class D</span> evidence does not upgrade <span class="class-d">Class D</span> to Class A.</p>
+<hr>
+<h3 id="p3-unlabeled-aggregation">P3 — Unlabeled Aggregation</h3>
+<p>Computing aggregate statistics (mean, median, total, percentile) across sessions</p>
+<p>without declaring the epistemic class of each included count.</p>
+<pre><code>Prohibited:
+  average_tokens_per_session = sum(all session tokens) / session_count
+  → where sessions include mixed Class A, B, C, D evidence</code></pre>
+<p><strong>Reason:</strong> Unlabeled aggregation conceals epistemic class mixing. The aggregate</p>
+<p>inherits the least legitimate class of its inputs, but this inheritance is invisible</p>
+<p>in the aggregate value. Condition 4 (declared scope) fails.</p>
+<p><strong>Does not become permitted when:</strong> the database enforces class labeling at storage</p>
+<p>time. Aggregation without explicit class-scoped query is prohibited regardless of</p>
+<p>how the underlying data is labeled.</p>
+<hr>
+<h3 id="p4-normalization-across-providers">P4 — Normalization Across Providers</h3>
+<p>Applying a conversion factor, normalization function, or equivalence mapping to</p>
+<p>make cross-provider token counts comparable.</p>
+<pre><code>Prohibited:
+  normalized_tokens = claude_tokens * 0.8  # &quot;approximate Codex equivalent&quot;
+  → then treating normalized_tokens as cross-provider comparable</code></pre>
+<p><strong>Reason:</strong> Normalization does not establish referent equivalence — it asserts it.</p>
+<p>The assertion is not epistemically grounded without provider-published equivalence</p>
+<p>contracts, which do not exist. Normalization transforms a Condition 2 failure into</p>
+<p class="box-warn">a hidden assumption, making the violation less visible, not more acceptable.</p>
+<hr>
+<h3 id="p5-efficiency-inference-across-sessions">P5 — Efficiency Inference Across Sessions</h3>
+<p>Using token counts to draw conclusions about relative efficiency between sessions,</p>
+<p>agents, tasks, or providers — even within a single provider and single epistemic class.</p>
+<pre><code>Prohibited:
+  Session A (500 tokens) was more efficient than Session B (1200 tokens)</code></pre>
+<p><strong>Reason:</strong> Token count does not measure task equivalence. Sessions with different</p>
+<p>task complexity, context size, retry patterns, and output requirements are not</p>
+<p>comparable on token grounds even if all other conditions are met. This prohibition</p>
+<p>is inherited from the Consumption Boundary and applies at the comparability layer.</p>
+<hr>
+<h2 id="conditionally-permitted-comparisons">Conditionally Permitted Comparisons</h2>
+<p>The following are permitted when the stated conditions are fully satisfied:</p>
+<h3 id="cp1-same-session-same-class-step-aggregation">CP1 — Same-Session, Same-Class Step Aggregation</h3>
+<p>Summing token counts across steps within a single session, when all steps have</p>
+<p>the same epistemic class.</p>
+<pre><code>Permitted when:
+  - All steps in the session share the same epistemic class
+  - The class is declared in the report
+  - The aggregate is labeled as &quot;session total (Class X)&quot;</code></pre>
+<p><strong>What this does not authorize:</strong> comparing the session total to any other session,</p>
+<p>or drawing efficiency conclusions from the total.</p>
+<hr>
+<h3 id="cp2-same-provider-same-class-declared-scope-trend-observation">CP2 — Same-Provider, Same-Class, Declared-Scope Trend Observation</h3>
+<p>Observing token count trends across sessions from the same provider with the same</p>
+<p>acquisition mode, when the scope is explicitly declared.</p>
+<pre><code>Permitted when:
+  - All sessions use the same provider
+  - All sessions use the same acquisition mode (same epistemic class)
+  - The report declares: &quot;provider: X, acquisition: Y, class: Z&quot;
+  - The trend is described as observation only, not as efficiency signal</code></pre>
+<p><strong>What this does not authorize:</strong> drawing optimization conclusions from the trend,</p>
+<p>or extending the trend observation to sessions outside the declared scope.</p>
+<hr>
+<h3 id="cp3-data-quality-comparison">CP3 — Data Quality Comparison</h3>
+<p>Comparing the epistemic class distribution across sessions or providers as a</p>
+<p>data quality observation (not as a token usage observation).</p>
+<pre><code>Permitted:
+  &quot;Session A has Class A evidence; Session B has Class D evidence.
+   Session A has higher provenance quality.&quot;</code></pre>
+<p><strong>What this does not authorize:</strong> using provenance quality as a proxy for session</p>
+<p>quality, or ranking sessions by provenance quality as an evaluative signal.</p>
+<hr>
+<h2 id="the-normalization-trap">The Normalization Trap</h2>
+<p>The most common path to Condition 2 failure is normalization presented as a</p>
+<p>technical solution rather than an epistemic assumption.</p>
+<p>The pattern:</p>
+<pre><code>Step 1: Cross-provider comparison is identified as desirable
+Step 2: &quot;Tokens are just numbers&quot; — referent equivalence assumed
+Step 3: Conversion factor proposed (&quot;Claude tokens ≈ X Codex tokens&quot;)
+Step 4: Normalization implemented as a utility function
+Step 5: Normalized counts enter reports as if Condition 2 were satisfied
+Step 6: Cross-provider comparison becomes standard practice</code></pre>
+<p class="box-warn">No individual step is an explicit violation. The boundary crossing occurs when</p>
+<p>Step 4 is treated as satisfying Condition 2 rather than as an assertion that</p>
+<p>bypasses it.</p>
+<p>**This document is the pre-positioned reference for identifying Step 3 → Step 4</p>
+<p>as a Condition 2 bypass before it becomes implemented infrastructure.**</p>
+<p>If a normalization function is proposed for cross-provider token counts, that</p>
+<p>proposal is attempting to bypass the comparability prerequisite. Reject it at</p>
+<p>the design stage. The correct response is not &quot;we need a better conversion factor&quot;</p>
+<p>but &quot;referent equivalence requires provider-published equivalence contracts.&quot;</p>
+<hr>
+<h2 id="comparability-scope-declaration-format">Comparability Scope Declaration Format</h2>
+<p>When a permitted comparison (CP1, CP2, or CP3) is included in a report, the</p>
+<p>declaration must include:</p>
+<pre><code class="language-yaml">comparability_scope:
+  provider: [provider name, e.g. &quot;claude&quot; or &quot;same-provider-only&quot;]
+  acquisition_mode: [e.g. &quot;provider-api-response&quot;, &quot;session-log-ingestion&quot;]
+  epistemic_class: [A / B / C / D]
+  comparison_type: [step-aggregation / trend-observation / quality-comparison]
+  what_this_does_not_claim:
+    - [explicit list of prohibited inferences]</code></pre>
+<p>The <code>what<em>this</em>does<em>not</em>claim</code> field is not optional. A comparability scope</p>
+<p>declaration without explicit prohibited inference listing is incomplete.</p>
+<hr>
+<h2 id="cross-provider-acquisition-state-does-not-change-this-boundary">Cross-Provider Acquisition State Does Not Change This Boundary</h2>
+<p>When CodeBurn successfully acquires Class A evidence from both Claude and Codex,</p>
+<p>the following remain unchanged:</p>
+<ul>
+<li>Cross-provider token comparison remains prohibited (Condition 2 unsatisfied)</li>
+<li>The normalization trap remains a boundary crossing, not a technical solution</li>
+<li>Aggregate statistics across providers remain unlabeled aggregation violations</li>
+<li>Efficiency inference across providers remains prohibited</li>
+</ul>
+<p>Acquisition completeness moves token evidence from <span class="class-d">Class D</span> to Class A.</p>
+<p>It does not move Condition 2 from unsatisfied to satisfied.</p>
+<p>**The comparability boundary is not a temporary restriction pending better data.</p>
+<p>It is a permanent epistemic constraint on what token counts can legitimately claim.**</p>
+<hr>
+<h2 id="relationship-to-other-boundary-documents">Relationship to Other Boundary Documents</h2>
+<table>
+<tr><th>Document</th><th>Layer</th><th>Constraint</th></tr>
+<tr><td>CODEBURN<em>TOKEN</em>PROVENANCE_ONTOLOGY.md</td><td>Type system</td><td>Defines epistemic classes</td></tr>
+<tr><td>This document</td><td>Comparison surface</td><td>Defines what comparisons are permitted</td></tr>
+<tr><td>CODEBURN<em>TOKEN</em>OBSERVABILITY<em>CONSUMPTION</em>BOUNDARY.md</td><td>Downstream use</td><td>Defines what consumers may do</td></tr>
+<tr><td>CODEBURN<em>PHASE1</em>ANALYSIS_CONTRACT.md</td><td>Output claims</td><td>Defines what CodeBurn may say</td></tr>
+</table>
+
+<p>These documents form a layered constraint surface. A use that passes one layer</p>
+<p>may still be prohibited by another. All layers apply simultaneously.</p>
+<hr>
+<h2 id="amendment-process">Amendment Process</h2>
+<p class="box-frozen">The permanently prohibited comparison list (P1–P5) may be narrowed only if:</p>
+<ol>
+<li>A provider publishes explicit tokenization equivalence documentation that</li>
+</ol>
+<p>satisfies Condition 2 for a specific cross-provider pair</p>
+<ol>
+<li>The specific pair is named, and the equivalence scope is documented</li>
+<li>The amendment is committed before any comparison implementation that depends on it</li>
+<li>The <code>what<em>this</em>does<em>not</em>claim</code> field for any comparison using the amendment</li>
+</ol>
+<p>explicitly names the remaining prohibited inferences</p>
+<p>Amending P1 for one provider pair does not amend it for any other pair.</p>
+<hr>
+<p><em>Structural availability of data is not epistemic authorization to compare it.</em></p>
+<p><em>Acquisition completeness does not satisfy the comparability prerequisite.</em></p>
+<p><em>Cross-provider token counts are not the same kind of evidence.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CROSS_PROVIDER_COMPARABILITY_BOUNDARY.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

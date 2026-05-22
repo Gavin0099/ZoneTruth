@@ -1,0 +1,6 @@
+﻿date,user_login,model,aic_quantity,aic_gross_amount
+2026-05-21,alice,gpt-4.1,12.5,1.23
+2026-05-21,alice,gpt-4.1,12.5,1.23
+2026-05-21,bob,claude-3.7,7,0.77
+2026-05-21,charlie,gpt-4.1,-1,0.11
+2026-05-21,dana,,5,0.55

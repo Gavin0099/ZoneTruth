@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Token Provenance Ontology</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Token Provenance Ontology</div>
+  <div class="meta">Source: CODEBURN_TOKEN_PROVENANCE_ONTOLOGY.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-token-provenance-ontology">CodeBurn — Token Provenance Ontology</a><a href="#why-this-document-must-exist-before-acquisition">Why This Document Must Exist Before Acquisition</a><a href="#the-acquisition-non-equivalence-principle">The Acquisition Non-Equivalence Principle</a><a href="#epistemic-class-definitions">Epistemic Class Definitions</a><a href="#class-a-provider-originated">Class A: Provider-Originated</a><a href="#class-b-observer-derived">Class B: Observer-Derived</a><a href="#class-c-observer-reconstructed">Class C: Observer-Reconstructed</a><a href="#class-d-user-asserted">Class D: User-Asserted</a><a href="#class-e-acquisition-impossible">Class E: Acquisition-Impossible</a><a href="#epistemic-class-summary-table">Epistemic Class Summary Table</a><a href="#implementation-proximity-epistemic-legitimacy">Implementation Proximity ≠ Epistemic Legitimacy</a><a href="#relationship-to-existing-schema">Relationship to Existing Schema</a><a href="#what-this-ontology-does-not-authorize">What This Ontology Does NOT Authorize</a><a href="#amendment-process">Amendment Process</a></div>
+<h1 id="codeburn-token-provenance-ontology">CodeBurn — Token Provenance Ontology</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> — P0 constitutional freeze document, effective immediately</p>
+<p>Scope: all CodeBurn versions, all acquisition modes, all provider integrations</p>
+<p>Prerequisite for: any acquisition implementation, any comparability claim, any provenance assertion</p>
+</blockquote>
+<hr>
+<h2 id="why-this-document-must-exist-before-acquisition">Why This Document Must Exist Before Acquisition</h2>
+<p>Token data is not epistemically uniform.</p>
+<p>A token count from a provider API response and a token count reconstructed from a session</p>
+<p>log are not the same kind of evidence. They differ not in accuracy, but in <strong>epistemic class</strong> —</p>
+<p>in what can be legitimately claimed about them, and what authority those claims carry.</p>
+<p>Without an explicit ontology, this distinction collapses under implementation pressure.</p>
+<p>The default outcome is:</p>
+<pre><code>&quot;It&#x27;s all just token counts&quot;</code></pre>
+<p>This document prevents that collapse by defining the epistemic types before any</p>
+<p>acquisition implementation exists. Once defined, these types are permanent. They</p>
+<p>constrain what acquisition implementations may claim, not how they are built.</p>
+<p><strong>Anti-inversion rule: this ontology governs acquisition design, not the reverse.</strong></p>
+<p>If an acquisition implementation produces evidence that does not fit an existing epistemic</p>
+<p>class, the correct response is to define a new class — not to reclassify existing evidence</p>
+<p>to fit the implementation.</p>
+<hr>
+<h2 id="the-acquisition-non-equivalence-principle">The Acquisition Non-Equivalence Principle</h2>
+<p><strong>Different acquisition paths produce epistemically non-equivalent token evidence.</strong></p>
+<p>This holds regardless of:</p>
+<ul>
+<li>How accurate the token count is</li>
+<li>How consistent it is across repeated runs</li>
+<li>How trusted the acquisition infrastructure is</li>
+<li>How long the system has been operational</li>
+</ul>
+<p>Equivalence requires shared epistemic grounding — same referent, same observation distance,</p>
+<p>same reconstruction assumptions. Acquisition modes differ on all three.</p>
+<p>**Corollary: token counts from different acquisition modes cannot be compared</p>
+<p>without explicit comparability scope declaration.**</p>
+<p>This corollary is absolute. It does not relax when acquisition chains become complete.</p>
+<p>It does not relax when provider integration matures. Comparability is not a function of</p>
+<p>data quality — it is a function of epistemic class alignment.</p>
+<hr>
+<h2 id="epistemic-class-definitions">Epistemic Class Definitions</h2>
+<h3 id="class-a-provider-originated">Class A: Provider-Originated</h3>
+<p><strong>Definition:</strong> Token count reported directly by the provider in the API response to the</p>
+<p>request that generated the tokens. No intermediate observation, reconstruction, or</p>
+<p>estimation layer.</p>
+<p><strong>Acquisition modes that produce Class A:</strong></p>
+<ul>
+<li>Direct API response field (e.g., <code>usage.input_tokens</code> in Claude API response)</li>
+<li>Provider webhook with per-request token breakdown</li>
+<li>Provider SDK callback with usage object</li>
+</ul>
+<p><strong>Legitimate claims:</strong></p>
+<ul>
+<li>&quot;The provider reported N tokens for this request&quot;</li>
+<li>&quot;This token count has provider-grade provenance&quot;</li>
+<li>&quot;The token source is <code>provider</code>&quot;</li>
+</ul>
+<p><strong>Prohibited claims:</strong></p>
+<ul>
+<li>&quot;This session consumed N tokens&quot; (session-level aggregation crosses a boundary)</li>
+<li>&quot;This count reflects actual computation cost&quot; (billing ≠ observability)</li>
+<li>&quot;This count can be compared to Class B or <span class="class-c">Class C</span> evidence&quot; (non-equivalent)</li>
+</ul>
+<p><strong>Authority ceiling:</strong> Provider report of one request. Nothing above request level.</p>
+<hr>
+<h3 id="class-b-observer-derived">Class B: Observer-Derived</h3>
+<p><strong>Definition:</strong> Token count inferred from artifacts of the AI interaction that are</p>
+<p>observable to a wrapper or interceptor — but not reported by the provider. Includes:</p>
+<p>parsing stdout/stderr for token information, reading process environment, intercepting</p>
+<p>IPC between client and provider.</p>
+<p><strong>Acquisition modes that produce Class B:</strong></p>
+<ul>
+<li>Runtime command wrapper that parses output</li>
+<li>Claude Code extension hooks (if reading output artifacts, not API response)</li>
+<li>Any layer that observes the interaction without being in the API response path</li>
+</ul>
+<p><strong>Legitimate claims:</strong></p>
+<ul>
+<li>&quot;N tokens were observed in the command output for this step&quot;</li>
+<li>&quot;This estimate is observer-derived, not provider-reported&quot;</li>
+<li>&quot;The token source is <code>estimated</code>&quot;</li>
+</ul>
+<p><strong>Prohibited claims:</strong></p>
+<ul>
+<li>&quot;This is equivalent to provider-reported token count&quot; (different epistemic class)</li>
+<li>&quot;This observation is as trustworthy as Class A&quot; (observation distance differs)</li>
+<li>&quot;Consistent observer-derived counts validate provider counts&quot; (circular)</li>
+</ul>
+<p><strong>Authority ceiling:</strong> Observer claim about one observable artifact. Cannot be</p>
+<p>aggregated with Class A evidence without explicit class declaration.</p>
+<hr>
+<h3 id="class-c-observer-reconstructed"><span class="class-c">Class C</span>: Observer-Reconstructed</h3>
+<p><strong>Definition:</strong> Token count derived from post-hoc analysis of session logs, recorded</p>
+<p>outputs, or stored artifacts. Not observed in real-time. Reconstruction introduces</p>
+<p>temporal distance and mutability assumptions.</p>
+<p><strong>Acquisition modes that produce <span class="class-c">Class C</span>:</strong></p>
+<ul>
+<li>Session log ingestion after session ends</li>
+<li>Replay of stored session artifacts</li>
+<li>Log file parsing (e.g., Claude Code <code>.jsonl</code> session logs)</li>
+</ul>
+<p><strong>Legitimate claims:</strong></p>
+<ul>
+<li>&quot;Log analysis estimated N tokens for this session segment&quot;</li>
+<li>&quot;This reconstruction is post-hoc; real-time state may have differed&quot;</li>
+<li>&quot;The token source is <code>estimated</code> with reconstruction gap&quot;</li>
+</ul>
+<p><strong>Prohibited claims:</strong></p>
+<ul>
+<li>&quot;This reconstruction is equivalent to real-time observation&quot; (temporal distance)</li>
+<li>&quot;Log completeness implies token completeness&quot; (logs may be partial)</li>
+<li>&quot;Replay accuracy validates original session token usage&quot; (reconstruction ≠ original)</li>
+</ul>
+<p><strong>Authority ceiling:</strong> Reconstruction claim about a logged artifact. Reconstruction</p>
+<p>gap must be declared. Cannot be treated as real-time evidence.</p>
+<hr>
+<h3 id="class-d-user-asserted"><span class="class-d">Class D</span>: User-Asserted</h3>
+<p><strong>Definition:</strong> Token count provided by a human user, either manually entered into</p>
+<p>a tool (e.g., <code>codeburn_run.py --total-tokens N</code>) or reported verbally. No</p>
+<p>automated observation mechanism.</p>
+<p><strong>Acquisition modes that produce <span class="class-d">Class D</span>:</strong></p>
+<ul>
+<li>Manual <code>--prompt-tokens</code>, <code>--completion-tokens</code>, <code>--total-tokens</code> CLI flags</li>
+<li>Human-written session notes with token estimates</li>
+<li>Copy-pasted token counts from provider interfaces</li>
+</ul>
+<p><strong>Legitimate claims:</strong></p>
+<ul>
+<li>&quot;User reported N tokens for this step&quot;</li>
+<li>&quot;This token count is user-asserted, not automatically captured&quot;</li>
+<li>&quot;The token source is <code>estimated</code> (user-provided)&quot;</li>
+</ul>
+<p><strong>Prohibited claims:</strong></p>
+<ul>
+<li>&quot;This count is validated&quot; (no validation mechanism exists for <span class="class-d">Class D</span>)</li>
+<li>&quot;Consistent user assertion implies accurate observation&quot; (assertion ≠ observation)</li>
+<li>&quot;User assertion has the same provenance as Class A or B&quot; (fundamentally different)</li>
+</ul>
+<p><strong>Authority ceiling:</strong> User assertion about one step. Self-reported provenance.</p>
+<p>Cannot substitute for automated acquisition.</p>
+<p><strong>Note on current CodeBurn state:</strong> As of 2026-05-20, all token data in CodeBurn</p>
+<p>is <span class="class-d">Class D</span>. The <code>--total-tokens</code> flags in <code>codeburn_run.py</code> are user-assertion</p>
+<p>inputs. This is not a temporary limitation — it is the current epistemic state.</p>
+<hr>
+<h3 id="class-e-acquisition-impossible">Class E: Acquisition-Impossible</h3>
+<p><strong>Definition:</strong> Token count for an interaction where no acquisition mechanism can</p>
+<p>produce verifiable evidence, due to provider-imposed epistemic opacity. The referent</p>
+<p>is unknown or unverifiable by design.</p>
+<p><strong>Acquisition modes that produce Class E:</strong></p>
+<ul>
+<li>ChatGPT web UI (no API path, no structured response)</li>
+<li>Any provider interface where token accounting is opaque or bundled</li>
+<li>Provider configurations where token reporting is disabled</li>
+</ul>
+<p><strong>Legitimate claims:</strong></p>
+<ul>
+<li>&quot;Token observability is not achievable for this interaction type&quot;</li>
+<li>&quot;This provider interaction cannot be represented in the CodeBurn token ontology&quot;</li>
+<li>&quot;Acquisition mode: impossible&quot;</li>
+</ul>
+<p><strong>Prohibited claims:</strong></p>
+<ul>
+<li>&quot;We can estimate tokens for this interaction&quot; (estimation requires a referent)</li>
+<li>&quot;Screen-scraped numbers represent token usage&quot; (unverifiable referent)</li>
+<li>&quot;This provider is observability-difficult&quot; (difficulty is not the issue; the category is wrong)</li>
+</ul>
+<p><strong>Authority ceiling:</strong> None. Class E interactions cannot be given token observability</p>
+<p>status in CodeBurn. They are recorded as <code>acquisition_impossible</code>, not as</p>
+<p><code>token_source: unknown</code>.</p>
+<p><strong>Critical distinction:</strong> <code>token_source: unknown</code> means &quot;automated acquisition</p>
+<p>attempted but provenance not established.&quot; <code>acquisition_impossible</code> means &quot;the</p>
+<p>category of verifiable acquisition does not apply to this interaction type.&quot;</p>
+<p class="box-warn">These are different conditions that must not be conflated.</p>
+<hr>
+<h2 id="epistemic-class-summary-table">Epistemic Class Summary Table</h2>
+<table>
+<tr><th>Class</th><th>Label</th><th>Acquisition mode</th><th>Token source field</th><th>Claim ceiling</th></tr>
+<tr><td>A</td><td>Provider-Originated</td><td>Direct API response</td><td><code>provider</code></td><td>One request</td></tr>
+<tr><td>B</td><td>Observer-Derived</td><td>Runtime wrapper/hook</td><td><code>estimated</code></td><td>One observable artifact</td></tr>
+<tr><td>C</td><td>Observer-Reconstructed</td><td>Log ingestion / replay</td><td><code>estimated</code> (+ reconstruction gap)</td><td>One logged artifact</td></tr>
+<tr><td>D</td><td>User-Asserted</td><td>Manual CLI flags</td><td><code>estimated</code></td><td>User assertion</td></tr>
+<tr><td>E</td><td>Acquisition-Impossible</td><td>ChatGPT UI, opaque providers</td><td>(not applicable)</td><td>None</td></tr>
+</table>
+
+<hr>
+<h2 id="implementation-proximity-epistemic-legitimacy">Implementation Proximity ≠ Epistemic Legitimacy</h2>
+<p>A common drift pattern: assume that acquisition modes closer to provider runtime</p>
+<p>produce more legitimate evidence.</p>
+<p>This is false.</p>
+<p><strong>Closeness to runtime does not confer epistemic legitimacy.</strong> It changes the</p>
+<p>observation distance but not the epistemic class.</p>
+<p>Example:</p>
+<p>A Class B observer-derived count captured in real-time from a wrapper is</p>
+<p><strong>not epistemically superior</strong> to a <span class="class-c">Class C</span> log reconstruction — it is</p>
+<p><strong>epistemically different</strong>. The wrapper has lower observation distance but</p>
+<p>the same fundamental limitation: it observes artifacts, not provider computation.</p>
+<p>A Class A provider-reported count is **not more legitimate than Class B in the</p>
+<p>sense that justifies evaluative use** — both are subject to the Acquisition</p>
+<p>Non-Equivalence Principle and the Authority Ceiling Contract.</p>
+<p>The relevant question is not:</p>
+<blockquote>
+<p>&quot;How close is this acquisition mode to provider reality?&quot;</p>
+</blockquote>
+<p>The relevant question is:</p>
+<blockquote>
+<p>&quot;What can be legitimately claimed from this epistemic class?&quot;</p>
+</blockquote>
+<p>**Implementation topology (how the data is captured) does not determine</p>
+<p>epistemic topology (what the data permits).**</p>
+<p>This distinction must be preserved when evaluating acquisition implementation</p>
+<p>proposals. An L2 direct API hook produces Class A evidence — which carries</p>
+<p>the most significant authority drift risk precisely because it appears most</p>
+<p>authoritative.</p>
+<hr>
+<h2 id="relationship-to-existing-schema">Relationship to Existing Schema</h2>
+<p>The current schema (<code>schema.sql</code>) records <code>token_source</code> as:</p>
+<pre><code class="language-sql">token_source TEXT CHECK (token_source IN (&#x27;provider&#x27;, &#x27;estimated&#x27;, &#x27;unknown&#x27;))</code></pre>
+<p>This maps to the ontology as follows:</p>
+<table>
+<tr><th>Schema value</th><th>Epistemic class(es)</th></tr>
+<tr><td><code>provider</code></td><td>Class A only</td></tr>
+<tr><td><code>estimated</code></td><td>Class B, C, or D (undifferentiated in current schema)</td></tr>
+<tr><td><code>unknown</code></td><td>Acquisition attempted, class not determined</td></tr>
+<tr><td>(absent)</td><td>Class E — use <code>acquisition_mode: impossible</code> in metadata</td></tr>
+</table>
+
+<p><strong>Schema limitation:</strong> The current schema cannot differentiate Class B, C, and D.</p>
+<p>This limitation is acceptable for Phase 1 but must be addressed before any</p>
+<p>cross-acquisition-mode analysis is attempted.</p>
+<p><strong>No schema change is authorized by this document.</strong> Schema changes require</p>
+<p>a separate spec with evidence plan.</p>
+<hr>
+<h2 id="what-this-ontology-does-not-authorize">What This Ontology Does NOT Authorize</h2>
+<p>Defining epistemic classes does not authorize:</p>
+<ul>
+<li>Cross-class comparison (Class A count vs <span class="class-d">Class D</span> count from same session)</li>
+<li>Aggregation across acquisition modes without explicit scope declaration</li>
+<li>Upgrading evidence class based on consistency (consistent <span class="class-d">Class D</span> ≠ Class A)</li>
+<li>Using any class for evaluative conclusions (all classes are observational only)</li>
+<li>Inferring provider computation quality from any class of token evidence</li>
+</ul>
+<p>The ontology defines what each class IS. It does not authorize what the evidence</p>
+<p>from each class MAY CONCLUDE. That requires the Authority Ceiling Contract.</p>
+<hr>
+<h2 id="amendment-process">Amendment Process</h2>
+<p>This ontology may be extended with new epistemic classes if a new acquisition</p>
+<p>mode is identified that does not fit existing classes.</p>
+<p>Amendments require:</p>
+<ol>
+<li>The new class must be defined with the same structure (definition, legitimate claims,</li>
+</ol>
+<p>prohibited claims, authority ceiling)</p>
+<ol>
+<li>The amendment must be committed before any acquisition implementation that depends on</li>
+</ol>
+<p>the new class</p>
+<ol>
+<li>The <code>schema.sql</code> mapping table must be updated if the new class requires a new</li>
+</ol>
+<p><code>token_source</code> value</p>
+<p>Existing class definitions may not be modified to expand claim legitimacy or raise</p>
+<p>authority ceilings. Modifications in that direction require the Authority Ceiling</p>
+<p>Contract process.</p>
+<hr>
+<p><em>Token evidence is typed. Types are permanent.</em></p>
+<p><em>Acquisition completeness does not change types.</em></p>
+<p><em>Implementation proximity does not override epistemic class.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_TOKEN_PROVENANCE_ONTOLOGY.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

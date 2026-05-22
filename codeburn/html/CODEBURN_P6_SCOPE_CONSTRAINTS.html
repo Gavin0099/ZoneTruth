@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn P6 Scope Constraints</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn P6 Scope Constraints</div>
+  <div class="meta">Source: CODEBURN_P6_SCOPE_CONSTRAINTS.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-p6-scope-constraints">CodeBurn P6 Scope Constraints</a><a href="#context-why-this-document-exists">Context: Why This Document Exists</a><a href="#constraint-question-1-aggregate-analytics">Constraint Question 1: Aggregate Analytics</a><a href="#constraint-question-2-same-provider-trend-analysis">Constraint Question 2: Same-Provider Trend Analysis</a><a href="#constraint-question-3-cost-estimation">Constraint Question 3: Cost Estimation</a><a href="#constraint-question-4-replay-derived-metrics">Constraint Question 4: Replay-Derived Metrics</a><a href="#constraint-question-5-provider-specific-optimization">Constraint Question 5: Provider-Specific Optimization</a><a href="#constraint-question-6-visualizations-that-cause-authority-inflation">Constraint Question 6: Visualizations That Cause Authority Inflation</a><a href="#summary-the-six-constraints">Summary: The Six Constraints</a><a href="#what-p6-is-permitted-to-build">What P6 Is Permitted To Build</a><a href="#what-p6-is-not-permitted-to-build">What P6 Is NOT Permitted To Build</a><a href="#p6-opening-condition">P6 Opening Condition</a></div>
+<h1 id="codeburn-p6-scope-constraints">CodeBurn P6 Scope Constraints</h1>
+<blockquote>
+<p>Status: <strong>PRE-ADMISSION CONSTRAINT DOCUMENT</strong></p>
+<p>Written: 2026-05-21</p>
+<p>Purpose: Define what P6 is and is not permitted to build, before any implementation begins.</p>
+<p></p>
+<p>This document is a prerequisite for any P6 phase opening.</p>
+<p>P6 may not begin without explicit answers to all six constraint questions below.</p>
+</blockquote>
+<hr>
+<h2 id="context-why-this-document-exists">Context: Why This Document Exists</h2>
+<p>P0–P5 successfully bounded the acquisition layer:</p>
+<ul>
+<li>Multi-provider ingestion (Claude + Codex)</li>
+<li><span class="class-c">Class C</span> provenance for all evidence</li>
+<li>Semantic freeze preventing field equivalence claims</li>
+<li>Admission-gated provider expansion</li>
+<li>Replay-stable provenance identity</li>
+</ul>
+<p>The primary drift risk for P6 is no longer <strong>acquisition drift</strong>.</p>
+<p>It is <strong>interpretation layer drift</strong>:</p>
+<blockquote>
+<p>The acquisition system produces <span class="class-c">Class C</span>, observer-reconstructed evidence.</p>
+<p>An interpretation layer that treats this evidence as more authoritative</p>
+<p>than <span class="class-c">Class C</span> constitutes implicit epistemic promotion.</p>
+</blockquote>
+<p>The six questions below define the constraint boundary before any P6 scope is proposed.</p>
+<hr>
+<h2 id="constraint-question-1-aggregate-analytics">Constraint Question 1: Aggregate Analytics</h2>
+<p><strong>Question:</strong> Is P6 permitted to build aggregate analytics across sessions or turns?</p>
+<p><strong>Answer: CONDITIONALLY RESTRICTED.</strong></p>
+<p>Same-provider, single-session aggregation (e.g., total tokens across turns within one session)</p>
+<p>is a <strong>reconstruction operation</strong>, not an analytic promotion — permitted with epistemic annotation.</p>
+<p>Cross-session aggregation (e.g., weekly token totals across multiple sessions) is:</p>
+<ul>
+<li>Permitted for <strong>display</strong> as <span class="class-c">Class C</span> reconstruction summary</li>
+<li>Forbidden for <strong>use</strong> as decision input, efficiency signal, or optimization basis</li>
+</ul>
+<p class="box-warn">Cross-provider aggregation is <strong>categorically forbidden</strong> by FSP-3:</p>
+<blockquote>
+<p><span class="class-c">Class C</span> + <span class="class-c">Class C</span> →/ comparability</p>
+</blockquote>
+<p>Aggregation does not change the epistemic class of the underlying evidence.</p>
+<p>An aggregate of <span class="class-c">Class C</span> rows is still <span class="class-c">Class C</span>. Any display that omits this is</p>
+<p>an authority inflation surface.</p>
+<p><strong>Constraint (A-1):</strong> All aggregate outputs must carry <code>epistemic_class = <span class="class-c">Class C</span></code></p>
+<p>and <code>analysis<em>safe</em>for_decision = 0</code> in their provenance annotation.</p>
+<p class="box-warn">Aggregates must not be labeled as &quot;usage&quot;, &quot;consumption&quot;, or &quot;cost&quot; without</p>
+<p>explicit <span class="class-c">Class C</span> qualification.</p>
+<hr>
+<h2 id="constraint-question-2-same-provider-trend-analysis">Constraint Question 2: Same-Provider Trend Analysis</h2>
+<p><strong>Question:</strong> Is P6 permitted to analyze trends within a single provider over time?</p>
+<p class="box-warn"><strong>Answer: PERMITTED FOR OBSERVATION, <strong style="color:#c0392b">FORBIDDEN</strong> FOR INFERENCE.</strong></p>
+<p>Observing that a provider&#x27;s reconstructed token counts changed over time is</p>
+<p>a <span class="class-c">Class C</span> reconstruction of log data — permitted.</p>
+<p class="box-warn">Inferring from that trend any of the following is <strong>forbidden</strong>:</p>
+<ul>
+<li>Efficiency change</li>
+<li>Model behavior change</li>
+<li>Cost change</li>
+<li>Performance regression or improvement</li>
+<li>Optimization opportunity</li>
+</ul>
+<p>The Temporal Non-Promotion Rule (TNP) applies directly:</p>
+<blockquote>
+<p class="box-warn" style="margin:0;background:none;border:none;padding:0">Replay stability / persistence / historical consistency MUST NOT upgrade</p>
+<p>provider equivalence, field equivalence, or aggregation admissibility.</p>
+</blockquote>
+<p>A consistent upward trend in token counts over 30 days does not become</p>
+<p>&quot;measurement&quot; by virtue of persistence. It remains reconstruction.</p>
+<p><strong>Constraint (T-1):</strong> Trend displays must include explicit epistemic annotation:</p>
+<p class="box-warn"><code>observer-reconstructed trend — not provider-measured</code>. Trend data must not be</p>
+<p>used as input to any optimization, ranking, or allocation decision path.</p>
+<hr>
+<h2 id="constraint-question-3-cost-estimation">Constraint Question 3: Cost Estimation</h2>
+<p><strong>Question:</strong> Is P6 permitted to build cost estimation features?</p>
+<p class="box-warn"><strong>Answer: <strong style="color:#c0392b">FORBIDDEN</strong>.</strong></p>
+<p class="box-warn">Cost estimation is explicitly banned by IAF-4 (billing computation forbidden)</p>
+<p>and by the architectural decision to exclude <code>cached<em>input</em>tokens</code> from all</p>
+<p>acquisition paths. The exclusion of cached tokens was precisely because cached</p>
+<p>tokens affect billing calculations — and billing computation is outside the</p>
+<p>epistemic boundary of this system.</p>
+<p>Cost estimation requires:</p>
+<ul>
+<li>Provider billing rates (external, not acquired)</li>
+<li>Accurate token counts (<span class="class-c">Class C</span>, not verified)</li>
+<li>Cache behavior (IAF-4, excluded from acquisition)</li>
+<li>Reasoning token scope (IAF-2, excluded from acquisition)</li>
+</ul>
+<p>None of these are available at sufficient epistemic authority for billing computation.</p>
+<p class="box-warn"><strong>Constraint (C-1):</strong> P6 must not implement any cost estimation, cost projection,</p>
+<p>billing approximation, or spend tracking feature. Any feature that multiplies</p>
+<p>token counts by a price rate is categorically out of scope.</p>
+<hr>
+<h2 id="constraint-question-4-replay-derived-metrics">Constraint Question 4: Replay-Derived Metrics</h2>
+<p><strong>Question:</strong> Is P6 permitted to derive metrics from replay-stable sessions?</p>
+<p class="box-warn"><strong>Answer: <strong style="color:#c0392b">FORBIDDEN</strong> AS METRICS, PERMITTED AS RECONSTRUCTION DOCUMENTATION.</strong></p>
+<p>A replay-derived value (e.g., &quot;average tokens per turn across 5 replays&quot;) is</p>
+<p>a <span class="class-c">Class C</span> reconstruction artifact. It is not a metric in the measurement sense.</p>
+<p>The distinction:</p>
+<ul>
+<li><strong>Reconstruction documentation</strong>: &quot;Session replay produced consistent token counts across N runs&quot; — permitted, with <span class="class-c">Class C</span> annotation</li>
+<li><strong>Metric</strong>: &quot;Average tokens per turn = 847&quot; presented as a measurement — forbidden, implies measurement authority</li>
+</ul>
+<p class="box-frozen">The Anti-Collapse Axiom applies:</p>
+<blockquote>
+<p>Stable reconstruction does not collapse observation distance.</p>
+</blockquote>
+<p>Replay consistency across N runs does not upgrade the reconstructed value to</p>
+<p>a measured value. 100 consistent replays = reconstruction method stable.</p>
+<p>100 consistent replays ≠ measurement.</p>
+<p><strong>Constraint (R-1):</strong> Replay-derived outputs must be labeled <code>reconstruction artifact</code></p>
+<p class="box-warn">not <code>metric</code>. They must not be consumed by ranking, optimization, or decision systems.</p>
+<hr>
+<h2 id="constraint-question-5-provider-specific-optimization">Constraint Question 5: Provider-Specific Optimization</h2>
+<p><strong>Question:</strong> Is P6 permitted to implement provider-specific optimization recommendations?</p>
+<p class="box-warn"><strong>Answer: <strong style="color:#c0392b">FORBIDDEN</strong>.</strong></p>
+<p>Optimization implies using evidence to make decisions. The epistemic contract</p>
+<p class="box-frozen">of this system permanently sets <code>analysis<em>safe</em>for_decision = 0</code> for all</p>
+<p><span class="class-c">Class C</span> evidence. This is not a runtime configuration — it is a constitutional constraint.</p>
+<p>Provider-specific optimization would require:</p>
+<ul>
+<li>Treating token counts as measurements (they are reconstructions)</li>
+<li>Using <span class="class-c">Class C</span> evidence as decision inputs (forbidden by AC4)</li>
+<li>Implicitly claiming provider truthfulness (forbidden, provider<em>truthfulness</em>assumed = 0)</li>
+</ul>
+<p>This is the most dangerous form of authority inflation because it appears</p>
+<p>to be a natural extension of &quot;having the data&quot;:</p>
+<blockquote>
+<p>&quot;We already track Codex tokens → we can tell you which prompts are cheaper&quot;</p>
+</blockquote>
+<p>This inference chain is categorically blocked. Having acquisition data does not</p>
+<p>authorize optimization use of that data.</p>
+<p class="box-warn"><strong>Constraint (O-1):</strong> P6 must not implement optimization recommendations, prompt</p>
+<p>efficiency rankings, provider cost comparisons, or any feature that uses</p>
+<p><span class="class-c">Class C</span> evidence as decision authority. Such features would require a separate</p>
+<p>epistemic upgrade process — not an implicit P6 scope expansion.</p>
+<hr>
+<h2 id="constraint-question-6-visualizations-that-cause-authority-inflation">Constraint Question 6: Visualizations That Cause Authority Inflation</h2>
+<p><strong>Question:</strong> Which visualizations are out of scope because they implicitly inflate authority?</p>
+<p class="box-warn"><strong>Answer:</strong> The following visualization patterns are <strong>forbidden</strong> without explicit</p>
+<p>epistemic guardrails:</p>
+<table>
+<tr><th>Visualization Type</th><th>Why It Inflates Authority</th></tr>
+<tr><td>Bar chart: &quot;Token Usage by Provider&quot;</td><td>Implies cross-provider comparability (FSP-3 violation)</td></tr>
+<tr><td>Line chart: &quot;Token Trend Over Time&quot; without <span class="class-c">Class C</span> label</td><td>Implies measurement, not reconstruction</td></tr>
+<tr><td>Pie chart: &quot;Cost Breakdown by Provider&quot;</td><td>Implies billing computation (IAF-4 violation)</td></tr>
+<tr><td>Table: &quot;Efficiency Ranking by Prompt&quot;</td><td>Implies optimization authority (O-1 violation)</td></tr>
+<tr><td>Dashboard: &quot;Total Spend This Week&quot;</td><td>Implies cost estimation (C-1 violation)</td></tr>
+<tr><td>Any chart comparing Claude vs Codex values</td><td>Implies NST-1 violation (non-transferable semantics)</td></tr>
+</table>
+
+<p>The following visualization patterns are <strong>permitted</strong> with required annotation:</p>
+<table>
+<tr><th>Visualization Type</th><th>Required Annotation</th></tr>
+<tr><td>Same-provider session token counts</td><td><code><span class="class-c">Class C</span> — observer-reconstructed</code></td></tr>
+<tr><td>Same-provider turn-count timeline</td><td><code><span class="class-c">Class C</span> — not provider-measured</code></td></tr>
+<tr><td>Quarantine rate per session</td><td><code><span class="class-c">Class C</span> — structural observation only</code></td></tr>
+<tr><td>Admission/skip/quarantine breakdown</td><td><code><span class="class-c">Class C</span> — acquisition surface statistics</code></td></tr>
+</table>
+
+<p><strong>Constraint (V-1):</strong> All P6 visualizations must carry explicit epistemic class annotation.</p>
+<p>Any visualization that presents <span class="class-c">Class C</span> data without `observer-reconstructed, <span class="class-c">Class C</span>,</p>
+<p>not decision-authoritative` labeling is an authority inflation surface and is out of scope.</p>
+<hr>
+<h2 id="summary-the-six-constraints">Summary: The Six Constraints</h2>
+<table>
+<tr><th>ID</th><th>Domain</th><th>Ruling</th></tr>
+<tr><td>A-1</td><td>Aggregate analytics</td><td>Permitted for observation, forbidden for decision input</td></tr>
+<tr><td>T-1</td><td>Trend analysis</td><td>Permitted for reconstruction display, forbidden for inference</td></tr>
+<tr><td>C-1</td><td>Cost estimation</td><td><strong>Categorically forbidden</strong></td></tr>
+<tr><td>R-1</td><td>Replay-derived metrics</td><td>Permitted as reconstruction documentation, not as metrics</td></tr>
+<tr><td>O-1</td><td>Optimization recommendations</td><td><strong>Categorically forbidden</strong></td></tr>
+<tr><td>V-1</td><td>Visualizations</td><td>Permitted only with explicit <span class="class-c">Class C</span> annotation</td></tr>
+</table>
+
+<hr>
+<h2 id="what-p6-is-permitted-to-build">What P6 Is Permitted To Build</h2>
+<p>Within the constraints above, P6 may explore:</p>
+<ul>
+<li><strong>Acquisition surface statistics</strong>: counts of admitted, skipped, quarantined records</li>
+</ul>
+<p>(structural observation, not measurement)</p>
+<ul>
+<li><strong>Session provenance display</strong>: surfacing existing provenance fields for human review</li>
+</ul>
+<p>(display of already-bound <span class="class-c">Class C</span> evidence)</p>
+<ul>
+<li><strong>Replay consistency documentation</strong>: displaying that replay produced consistent</li>
+</ul>
+<p>reconstructions (stability documentation, not metric)</p>
+<ul>
+<li><strong>Quarantine inspection</strong>: tooling to inspect quarantined records and understand</li>
+</ul>
+<p>why they were excluded (structural audit, not analytics)</p>
+<hr>
+<h2 id="what-p6-is-not-permitted-to-build">What P6 Is NOT Permitted To Build</h2>
+<p>The following are outside P6 scope regardless of implementation effort:</p>
+<ul>
+<li>Cost estimation or billing approximation of any kind</li>
+<li>Cross-provider comparison of any token field</li>
+<li>Optimization recommendations based on token data</li>
+<li>Efficiency rankings or prompt scoring</li>
+<li>Trend-based decision inputs</li>
+<li>Any feature that treats <span class="class-c">Class C</span> evidence as measurement-grade data</li>
+</ul>
+<hr>
+<h2 id="p6-opening-condition">P6 Opening Condition</h2>
+<p>P6 may not open a phase document until:</p>
+<ol>
+<li>This constraint document is committed and acknowledged</li>
+<li>The proposed P6 scope is checked against all six constraints (A-1, T-1, C-1, R-1, O-1, V-1)</li>
+<li>Any proposed P6 feature that touches a &quot;<strong style="color:#c0392b">FORBIDDEN</strong>&quot; constraint is explicitly removed</li>
+</ol>
+<p>from scope before implementation begins</p>
+<p>The purpose of P6 is to build <strong>observability tooling</strong> for <span class="class-c">Class C</span> evidence —</p>
+<p>not to upgrade that evidence to a higher epistemic class through the back door</p>
+<p>of visualization and analytics.</p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_P6_SCOPE_CONSTRAINTS.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

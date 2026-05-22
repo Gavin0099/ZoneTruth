@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — GitHub Copilot AI Credits Surface Research</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — GitHub Copilot AI Credits Surface Research</div>
+  <div class="meta">Source: CODEBURN_GITHUB_COPILOT_AI_CREDITS_SURFACE_RESEARCH.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-github-copilot-ai-credits-surface-research">CodeBurn — GitHub Copilot AI Credits Surface Research</a><a href="#1-surface-description">1. Surface Description</a><a href="#2-what-this-surface-actually-is">2. What This Surface Actually Is</a><a href="#3-critical-acquisition-gaps">3. Critical Acquisition Gaps</a><a href="#gap-1-code-completions-are-absent">Gap 1: Code Completions Are Absent</a><a href="#gap-2-no-session-level-granularity">Gap 2: No Session-Level Granularity</a><a href="#gap-3-preview-actual-billing">Gap 3: Preview ≠ Actual Billing</a><a href="#gap-4-organization-credit-pooling">Gap 4: Organization Credit Pooling</a><a href="#4-three-non-negotiable-boundaries">4. Three Non-Negotiable Boundaries</a><a href="#boundary-cp-1-ai-credits-raw-token-truth">Boundary CP-1: AI Credits ≠ Raw Token Truth</a><a href="#boundary-cp-2-ai-credits-provider-efficiency-signal">Boundary CP-2: AI Credits ≠ Provider Efficiency Signal</a><a href="#boundary-cp-3-billing-report-session-provenance">Boundary CP-3: Billing Report ≠ Session Provenance</a><a href="#5-proposed-epistemic-classification">5. Proposed Epistemic Classification</a><a href="#6-what-a-future-admission-gate-would-need-to-answer">6. What a Future Admission Gate Would Need to Answer</a><a href="#7-what-is-not-permitted-under-p6-constraints">7. What Is Not Permitted Under P6 Constraints</a><a href="#8-what-is-permitted-under-p6-observability-only">8. What Is Permitted Under P6 (Observability Only)</a><a href="#9-recommendation">9. Recommendation</a><a href="#document-status">Document Status</a></div>
+<h1 id="codeburn-github-copilot-ai-credits-surface-research">CodeBurn — GitHub Copilot AI Credits Surface Research</h1>
+<blockquote>
+<p>Status: <strong>P6 ADMISSION RESEARCH — NOT YET ADMITTED</strong></p>
+<p>Written: 2026-05-21</p>
+<p>Purpose: Analyze GitHub Copilot AI Credits as a potential CodeBurn acquisition surface</p>
+<p>before any ingestion path is proposed.</p>
+<p></p>
+<p>This document does NOT authorize ingestion.</p>
+<p>It defines what the surface IS and what boundaries MUST be locked before any P7+ work.</p>
+</blockquote>
+<hr>
+<h2 id="1-surface-description">1. Surface Description</h2>
+<p>GitHub Copilot transitions to usage-based billing on <strong>2026-06-01</strong>.</p>
+<p>The billing unit is the <strong>AI Credit</strong>: 1 AI Credit = $0.01 USD.</p>
+<p>Token consumption is converted to AI Credits via model-specific pricing rates.</p>
+<p>A usage report CSV is available (one row per user, per model, per day) with fields:</p>
+<ul>
+<li><code>aic_quantity</code> — AI Credits consumed</li>
+<li><code>aic<em>gross</em>amount</code> — Estimated USD cost</li>
+</ul>
+<p>Source: https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing</p>
+<hr>
+<h2 id="2-what-this-surface-actually-is">2. What This Surface Actually Is</h2>
+<p><strong>The CSV report is not a token log. It is a billing ledger.</strong></p>
+<p>The conversion path is:</p>
+<pre><code>raw token counts (provider-internal)
+  → model-specific pricing rate ($/million tokens)
+  → AI Credits (aic_quantity)
+  → estimated USD (aic_gross_amount)</code></pre>
+<p>By the time the data reaches the CSV report, it has passed through:</p>
+<ol>
+<li>Provider token counting (unverifiable by observer)</li>
+<li>Model-specific pricing conversion</li>
+<li>GitHub billing platform aggregation (daily, not session)</li>
+<li>Optional plan-specific multipliers (annual vs. monthly subscribers differ)</li>
+</ol>
+<p>CodeBurn acquires data at the observation boundary.</p>
+<p>The AI Credits CSV is already three transformations removed from that boundary.</p>
+<hr>
+<h2 id="3-critical-acquisition-gaps">3. Critical Acquisition Gaps</h2>
+<h3 id="gap-1-code-completions-are-absent">Gap 1: Code Completions Are Absent</h3>
+<blockquote>
+<p>Code completions and Next Edit Suggestions do NOT consume AI Credits.</p>
+</blockquote>
+<p>The most common Copilot usage pattern — inline code completion while typing — is</p>
+<p><strong>entirely invisible</strong> to the AI Credits surface. Any &quot;total Copilot usage&quot; metric</p>
+<p>derived from AI Credits is structurally incomplete. It systematically excludes the</p>
+<p>highest-frequency, lowest-friction use case.</p>
+<p><strong>Implication for CodeBurn:</strong> An AI Credits acquisition surface produces a dataset</p>
+<p>with an unknown and unquantifiable completions-shaped hole. Aggregates over this</p>
+<p>data misrepresent actual AI compute consumed by Copilot users.</p>
+<h3 id="gap-2-no-session-level-granularity">Gap 2: No Session-Level Granularity</h3>
+<p>The report granularity is <strong>one row per user, per model, per day</strong>.</p>
+<p>There is no session UUID, no conversation ID, no provenance identity.</p>
+<p>Provenance identity — the principle that each ingested record can be traced to</p>
+<p>a specific artifact at a specific offset — does not exist in this surface.</p>
+<p>This is a fundamental break from P3/P4 acquisition design, which was built on</p>
+<p>JSONL line-level provenance.</p>
+<h3 id="gap-3-preview-actual-billing">Gap 3: Preview ≠ Actual Billing</h3>
+<p>GitHub explicitly states that preview reports are &quot;directional signals,&quot; not</p>
+<p>precise billing predictions. Known inaccuracies:</p>
+<ul>
+<li>~2% of 0x-model usage from April 1–24 missing</li>
+<li>Some code review entries missing AI credit estimations</li>
+<li>May 14, 2026 correction: April preview showed credits higher than expected</li>
+</ul>
+<p><strong>Implication:</strong> Even the billing ledger itself is subject to retrospective correction.</p>
+<p>An ingestor that trusts <code>aic_quantity</code> as ground truth ingests a value that GitHub</p>
+<p>itself disclaims as an estimate.</p>
+<h3 id="gap-4-organization-credit-pooling">Gap 4: Organization Credit Pooling</h3>
+<p>Credits are pooled at the billing-entity level, not per-user buckets.</p>
+<p>Individual developer attribution requires additional assumptions about how pooled</p>
+<p>credits are divided — assumptions that GitHub does not provide algorithmically.</p>
+<hr>
+<h2 id="4-three-non-negotiable-boundaries">4. Three Non-Negotiable Boundaries</h2>
+<p>These boundaries must be locked before any ingestion path for Copilot AI Credits</p>
+<p>is proposed. They may not be relaxed in P7 or later.</p>
+<h3 id="boundary-cp-1-ai-credits-raw-token-truth">Boundary CP-1: AI Credits ≠ Raw Token Truth</h3>
+<pre><code>AI Credits = f(tokens, model_pricing_rate, plan_multiplier)</code></pre>
+<p>AI Credits are a pricing-converted aggregate. The mapping is:</p>
+<ul>
+<li>Non-invertible without knowing the exact billing rate applied at the time</li>
+<li>Model-dependent (Claude Opus rates differ from GPT-4o rates by 27x in annual plans)</li>
+<li>Plan-dependent (monthly vs. annual subscribers have different multipliers)</li>
+<li>Platform-opaque (billing system may apply corrections after the fact)</li>
+</ul>
+<p class="box-warn"><strong>Locked rule:</strong> <code>aic_quantity</code> MUST NOT be treated as a token count.</p>
+<p>Back-calculation from credits to tokens requires billing computation,</p>
+<p class="box-warn">which is forbidden by C-1 (cost estimation) and IAF-4 (billing computation forbidden).</p>
+<h3 id="boundary-cp-2-ai-credits-provider-efficiency-signal">Boundary CP-2: AI Credits ≠ Provider Efficiency Signal</h3>
+<p>AI Credits embed pricing decisions made by GitHub and its model providers.</p>
+<p>A session using Claude Opus 4.7 costs 27x more credits than a comparable session</p>
+<p>using a 0x-model — not because Claude used more tokens, but because GitHub priced</p>
+<p>it higher for annual subscribers.</p>
+<p>Credit comparison across models is pricing comparison, not capability comparison.</p>
+<p>Credit comparison across time is pricing-tier comparison, not usage comparison.</p>
+<p class="box-warn"><strong>Locked rule:</strong> AI Credits MUST NOT be used to compare efficiency, cost-effectiveness,</p>
+<p>or output quality across models or providers. Such comparison requires FSP-3</p>
+<p class="box-warn">(cross-provider) violation AND C-1 (cost) violation simultaneously.</p>
+<h3 id="boundary-cp-3-billing-report-session-provenance">Boundary CP-3: Billing Report ≠ Session Provenance</h3>
+<p>The AI Credits CSV has no session UUID, no conversation identity, no line-level</p>
+<p>offset, no acquisition timestamp for individual turns. It is a billing summary,</p>
+<p>not an observation log.</p>
+<p>The P3/P4 provenance identity model (artifact → line → offset → session_id)</p>
+<p>cannot be applied to a daily-aggregated billing report. Any ingestion path that</p>
+<p>claims session-level provenance from a daily aggregate is making a false claim.</p>
+<p class="box-frozen"><strong>Locked rule:</strong> AI Credits data MUST be labeled with <code>acquisition<em>mode = &amp;quot;billing</em>report<em>daily</em>aggregate&amp;quot;</code>,</p>
+<p>NOT <code>acquisition<em>mode = &amp;quot;session</em>log_ingestion&amp;quot;</code>. Provenance identity fields</p>
+<p>(source<em>artifact</em>line, source<em>artifact</em>offset) MUST be NULL or absent.</p>
+<hr>
+<h2 id="5-proposed-epistemic-classification">5. Proposed Epistemic Classification</h2>
+<p>If admitted in a future phase, Copilot AI Credits evidence would require a new</p>
+<p>epistemic class:</p>
+<table>
+<tr><th>Dimension</th><th>Claude (P4)</th><th>Codex (P5)</th><th>Copilot AI Credits (proposed)</th></tr>
+<tr><td>Source</td><td>Session JSONL</td><td>Session JSONL</td><td>Billing report CSV</td></tr>
+<tr><td>Granularity</td><td>Per turn</td><td>Per turn</td><td>Per user / model / day</td></tr>
+<tr><td>Token counts</td><td>Reconstructed</td><td>Reconstructed</td><td><strong>Not available</strong> (credits only)</td></tr>
+<tr><td>Session identity</td><td>UUID (from filename)</td><td>UUID (from filename)</td><td><strong>None</strong></td></tr>
+<tr><td>Provenance depth</td><td>Line + offset</td><td>Line + offset</td><td><strong>File + date only</strong></td></tr>
+<tr><td>Epistemic class</td><td><span class="class-c">Class C</span></td><td><span class="class-c">Class C</span></td><td><strong><span class="class-d">Class D</span></strong> (proposed)</td></tr>
+<tr><td>real<em>time</em>observed</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>analysis<em>safe</em>for_decision</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>provider<em>truthfulness</em>assumed</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>Billing computation</td><td>Forbidden</td><td>Forbidden</td><td>Forbidden (aic<em>gross</em>amount)</td></tr>
+<tr><td>Cross-provider compare</td><td>Forbidden</td><td>Forbidden</td><td>Forbidden</td></tr>
+</table>
+
+<p><strong><span class="class-d">Class D</span></strong> is proposed as a new epistemic class for billing-reported evidence:</p>
+<blockquote>
+<p>Observer did not observe token counts. Observer acquired billing-system ledger entries</p>
+<p>that were produced by converting token counts through pricing rates and plan conditions.</p>
+<p>The original token counts are not recoverable without billing computation.</p>
+</blockquote>
+<p><span class="class-d">Class D</span> is weaker than <span class="class-c">Class C</span>. The observation distance is greater.</p>
+<p><span class="class-d">Class D</span> + <span class="class-c">Class C</span> → NOT comparable (FSP-3 applies across classes as well as providers).</p>
+<hr>
+<h2 id="6-what-a-future-admission-gate-would-need-to-answer">6. What a Future Admission Gate Would Need to Answer</h2>
+<p>Any P7+ proposal to ingest Copilot AI Credits must address:</p>
+<p><strong>AG-Copilot-1:</strong> How does the ingestor represent the structural absence of</p>
+<p>code completions? Does it annotate that the surface is systematically incomplete?</p>
+<p><strong>AG-Copilot-2:</strong> How does the daily-aggregate granularity affect provenance identity?</p>
+<p>Is a &quot;session&quot; even a meaningful unit for this surface?</p>
+<p><strong>AG-Copilot-3:</strong> How does the ingestor handle the preview-vs-actual ambiguity?</p>
+<p>Does it re-ingest corrected reports? What happens to records already in the DB?</p>
+<p><strong>AG-Copilot-4:</strong> How does CP-1 prevent back-calculation from <code>aic_quantity</code> to tokens?</p>
+<p>What schema constraints enforce this?</p>
+<p><strong>AG-Copilot-5:</strong> How does CP-2 prevent cross-model credit comparison in reports</p>
+<p>and visualizations? What query-level guards enforce this?</p>
+<p><strong>AG-Copilot-6:</strong> What adversarial re-interpretation attempts were made, and which</p>
+<p class="box-frozen">existing invariants blocked them? (AG-6 requirement)</p>
+<hr>
+<h2 id="7-what-is-not-permitted-under-p6-constraints">7. What Is Not Permitted Under P6 Constraints</h2>
+<p>Per <code>CODEBURN<em>P6</em>SCOPE_CONSTRAINTS.md</code>:</p>
+<ul>
+<li><code>aic<em>gross</em>amount</code> ingestion → <strong>C-1 violation</strong> (cost estimation forbidden)</li>
+<li>Credit-to-model comparison visualization → <strong>V-1 + C-1 violation</strong></li>
+<li>&quot;Total Copilot spend this week&quot; → <strong>C-1 + O-1 violation</strong></li>
+<li>Trend analysis of credits over time → <strong>T-1 constraint applies</strong> (annotation required)</li>
+<li>Cross-provider credit comparison (Copilot vs. direct Claude) → <strong>FSP-3 + CP-2 violation</strong></li>
+</ul>
+<hr>
+<h2 id="8-what-is-permitted-under-p6-observability-only">8. What Is Permitted Under P6 (Observability Only)</h2>
+<ul>
+<li>Documenting that this surface exists (this document)</li>
+<li>Documenting the gap (completions absent) as a structural acquisition limitation</li>
+<li>Noting that <code>aic_quantity</code> represents billing-converted evidence, not token evidence</li>
+<li>Proposing a <span class="class-d">Class D</span> epistemic classification for future admission discussion</li>
+</ul>
+<hr>
+<h2 id="9-recommendation">9. Recommendation</h2>
+<p><strong>Do not admit Copilot AI Credits as an acquisition surface in P6.</strong></p>
+<p>Reasons:</p>
+<ol>
+<li>The surface is structurally incomplete (completions absent — unquantifiable gap)</li>
+<li>No session-level provenance identity (daily aggregate only)</li>
+<li><code>aic_quantity</code> is already a billing construct, not a token observation</li>
+<li><span class="class-d">Class D</span> evidence would require new schema extension, new epistemic class definition,</li>
+</ol>
+<p>and new adversarial review — all of which are P7+ admission work</p>
+<ol>
+<li>The preview-vs-actual ambiguity creates a retroactive correction risk that</li>
+</ol>
+<p>CodeBurn&#x27;s append-only ingestion model does not currently handle</p>
+<p><strong>If admitted later:</strong> Copilot AI Credits evidence must be stored in a separate</p>
+<p>table (<code>copilot<em>billing</em>events</code> or similar), never joined with <code>steps</code> rows,</p>
+<p>and never used in the same aggregate as <span class="class-c">Class C</span> evidence.</p>
+<hr>
+<h2 id="document-status">Document Status</h2>
+<ul>
+<li>Surface research: <span class="status-complete">COMPLETE</span></li>
+<li>Admission gate: NOT YET OPENED</li>
+<li>Next required step before P7 can propose ingestion:</li>
+</ul>
+<p>All six AG-Copilot questions must be answered in an adversarial review document.</p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_GITHUB_COPILOT_AI_CREDITS_SURFACE_RESEARCH.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

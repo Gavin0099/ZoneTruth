@@ -11,18 +11,18 @@
 # ── PROVENANCE ────────────────────────────────────────────────────────────────
 schema_version: "1"
 baseline_version: 1.0.0
-source_commit: 3cdd1b6fdbc5f13748935008a82f1d9c994df725
-framework_root: /Users/gavin_wu/Desktop/ai-governance-framework-temp
-initialized_at: 2026-05-22T01:33:48Z
+source_commit: 9648c944802a9f2204e41bd52ab3beb1e6cc3c3b
+framework_root: D:\ai-governance-framework
+initialized_at: 2026-03-29T16:23:27Z
 initialized_by: governance_tools/adopt_governance.py
 
 # ── INTEGRITY ─────────────────────────────────────────────────────────────────
 # sha256.<file>: hash recorded at init/refresh time; "protected" files are hash-verified
 # overridable.<file>: protected = must not change | overridable = repo may extend freely
-sha256.AGENTS.base.md: d3c025e3cffa9c00e3f38d0a104b4767a5ca15eb343dc7d03d8654c37cef8509
-sha256.PLAN.md: fb228c1f3366af0360853d44cb2fb615e9876fba64da1db362480db7a5093092
-sha256.contract.yaml: 1dfe2819fe0fa5e824f5b1f372ec438e1d4f2a68c8d988f5f4bcad3acfc3537b
-sha256.AGENTS.md: 08d9ae77d6587f5ae5d45f08eb084fe696c51cf783d060bd6d8c6f44e9611d68
+sha256.AGENTS.base.md: 1465ac22cce87583d7c673bf4ad15ac554299d8588c9d4f3e9a42c8a99dc7baa
+sha256.PLAN.md: 600527427a1289917b2a809f8c73f7c630eac1c13735af9d290b282d2be28119
+sha256.contract.yaml: 881230fe1ad69b1c8a260c998a6ca82340e849f610ffa6355666e52e83dca19a
+sha256.AGENTS.md: 59243d86c7774a1c270d166451eb12837923af83b4d8b6ccca6af698e1991e66
 overridable.AGENTS.base.md: protected
 overridable.PLAN.md: overridable
 overridable.contract.yaml: overridable
@@ -46,11 +46,17 @@ contract_required_fields:
 # plan_section_inventory: ## headings detected in PLAN.md at adoption/refresh time.
 #   Drift checker surfaces these for visibility but never fails on missing inventory items.
 plan_section_inventory:
-  - "## 0. 實作現況對齊（2026-05-20）"
-  - "## 1. 專案定位"
-  - "## 2. 核心問題"
-  - "## 3. MVP 目標"
-  - "## 4. 資料來源"
-  - "## 5. 使用流程"
-  - "## 6. 個人化 Zone 設定"
-  - "## 7. 核心分析模組"
+  - "## 📋 專案目標"
+  - "## 🏗️ 當前階段"
+  - "## 📦 Phase 詳細規劃"
+  - "## 🔥 當前聚焦 — 維護期 / Alpha adoption hardening"
+  - "## 🔥 下一輪聚焦 — Beta 收斂"
+  - "## ⛔ 暫停授權項目 — Entry Layer（E1–E5）"
+  - "## 📊 待辦清單 (Backlog)"
+  - "## 🚫 不要做 (Anti-Goals)"
+  - "## 🤖 AI 協作規則"
+  - "## 🎯 Gate 與驗收標準"
+  - "## 📅 里程碑"
+  - "## 📝 已知問題"
+  - "## 🔧 技術債務追蹤"
+  - "## 🔄 變更歷史"

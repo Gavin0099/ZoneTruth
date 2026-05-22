@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn P7 — Advisory Threshold Governance</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn P7 — Advisory Threshold Governance</div>
+  <div class="meta">Source: CODEBURN_P7_ADVISORY_THRESHOLD_GOVERNANCE.md &nbsp;·&nbsp; Generated: 2026-05-22 15:28 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-p7-advisory-threshold-governance">CodeBurn P7 — Advisory Threshold Governance</a><a href="#0-purpose-and-scope">0. Purpose and Scope</a><a href="#1-definition-advisory-threshold-vs-verified-boundary">1. Definition — Advisory Threshold vs. Verified Boundary</a><a href="#what-source-authority-means-for-a-verified-boundary">What "source authority" means for a verified boundary</a><a href="#the-nst-1-generalization-applies-here">The NST-1 generalization applies here</a><a href="#2-rule-at-1-naming-convention">2. Rule AT-1 — Naming Convention</a><a href="#format-requirement">Format requirement</a><a href="#prohibited-tokens-in-advisory-threshold-identifiers">Prohibited tokens in advisory threshold identifiers</a><a href="#examples">Examples</a><a href="#motivating-case">Motivating case</a><a href="#scope">Scope</a><a href="#3-rule-at-2-origin-provenance-record">3. Rule AT-2 — Origin Provenance Record</a><a href="#required-provenance-fields">Required provenance fields</a><a href="#what-the-record-must-not-contain">What the record must NOT contain</a><a href="#edge-case-new-observation-after-initial-registration">Edge case — new observation after initial registration</a><a href="#edge-case-codex-advisory-threshold">Edge case — Codex advisory threshold</a><a href="#4-rule-at-3-invalidity-conditions">4. Rule AT-3 — Invalidity Conditions</a><a href="#at-3-1-provider-changes-the-accounting-regime">AT-3.1 Provider changes the accounting regime</a><a href="#at-3-2-official-documentation-contradicts-the-advisory-value">AT-3.2 Official documentation contradicts the advisory value</a><a href="#at-3-3-accounting-regime-confirmed-to-differ-from-observation-context">AT-3.3 Accounting regime confirmed to differ from observation context</a><a href="#at-3-4-jsonl-field-confirmed-to-not-count-toward-the-relevant-limit">AT-3.4 JSONL field confirmed to not count toward the relevant limit</a><a href="#at-3-5-source-observation-retracted">AT-3.5 Source observation retracted</a><a href="#what-does-not-invalidate-the-threshold">What does NOT invalidate the threshold</a><a href="#partial-invalidation">Partial invalidation</a><a href="#5-rule-at-4-upgrade-prohibition">5. Rule AT-4 — Upgrade Prohibition</a><a href="#the-specific-drift-pattern-at-4-closes">The specific drift pattern AT-4 closes</a><a href="#explicitly-prohibited-upgrade-paths">Explicitly prohibited upgrade paths</a><a href="#the-only-valid-upgrade-path">The only valid upgrade path</a><a href="#6-rule-at-5-closeout-prohibition">6. Rule AT-5 — Closeout Prohibition</a><a href="#wording-that-is-permitted-in-closeout-documents">Wording that IS permitted in closeout documents</a><a href="#wording-that-is-not-permitted-in-closeout-documents">Wording that is NOT permitted in closeout documents</a><a href="#implicit-claims">Implicit claims</a><a href="#automated-enforcement-future">Automated enforcement (future)</a><a href="#7-current-advisory-threshold-registry">7. Current Advisory Threshold Registry</a><a href="#8-relationship-to-architecture-freeze">8. Relationship to Architecture Freeze</a><a href="#8-1-this-document-does-not-modify-the-freeze">8.1 This document does not modify the freeze</a><a href="#8-2-p7-operationalizes-10-without-claiming-to-resolve-it">8.2 P7 operationalizes §10 without claiming to resolve it</a><a href="#8-3-the-only-path-that-modifies-10-is-the-at-4-upgrade-path">8.3 The only path that modifies §10 is the AT-4 upgrade path</a><a href="#rule-to-freeze-mapping">Rule-to-freeze mapping</a><a href="#note-on-advisory-only-field-in-schema">Note on advisory_only field in schema</a><a href="#9-amendment-process">9. Amendment Process</a><a href="#registry-only-updates-no-p7-version-bump-required">Registry-only updates (no P7 version bump required)</a><a href="#full-p7-amendment-required">Full P7 amendment required</a><a href="#amendment-process">Amendment process</a></div>
+<h1 id="codeburn-p7-advisory-threshold-governance">CodeBurn P7 — Advisory Threshold Governance</h1>
+<blockquote>
+<p>Status: <strong>BINDING</strong> — effective from date of commitment</p>
+<p>Written: 2026-05-22</p>
+<p>Scope: all advisory thresholds in CodeBurn, current and future</p>
+<p>Operationalizes: CODEBURN<em>V1</em>1<em>ARCHITECTURE</em>FREEZE.md §10</p>
+<p>Does NOT modify: the architecture freeze</p>
+<p>Depends on:</p>
+<p>CODEBURN<em>V1</em>1<em>ARCHITECTURE</em>FREEZE.md §10 (Unverified Boundary)</p>
+<p>CODEBURN<em>ACQUISITION</em>SEMANTIC_FREEZE.md (TNP, Anti-Collapse Axiom)</p>
+<p>CODEBURN<em>TOKEN</em>PROVENANCE_ONTOLOGY.md (epistemic class definitions)</p>
+</blockquote>
+<hr>
+<h2 id="0-purpose-and-scope">0. Purpose and Scope</h2>
+<p class="box-advisory">The architecture freeze documented one advisory threshold in §10 and described it as</p>
+<p class="box-advisory">&quot;unverified.&quot; It did not define:</p>
+<ul>
+<li>What &quot;unverified&quot; means as a governance category</li>
+<li>What evidence would change that status</li>
+<li>How a threshold in this epistemic state must be represented in downstream artifacts</li>
+</ul>
+<p>(env vars, session display, closeout documents)</p>
+<p>P7 closes that gap.</p>
+<p><strong>P7 does not govern verified boundaries</strong> — those do not exist in CodeBurn yet.</p>
+<p>P7 governs values that are: empirically derived, single-observation, not sourced from</p>
+<p class="box-advisory">official provider documentation, and used operationally as heuristics.</p>
+<p class="box-advisory"><strong>P7 does not imply that advisory thresholds are acceptable indefinitely.</strong></p>
+<p class="box-advisory">The primary risk is not the unverified status itself but the downstream drift where</p>
+<p class="box-advisory">an advisory threshold gets treated in practice as if it were verified.</p>
+<p>P7 governs that drift surface.</p>
+<hr>
+<h2 id="1-definition-advisory-threshold-vs-verified-boundary">1. Definition — Advisory Threshold vs. Verified Boundary</h2>
+<table>
+<tr><th>Dimension</th><th>Advisory Threshold</th><th>Verified Boundary</th></tr>
+<tr><td>Source</td><td>Empirical observation (one or more sessions)</td><td>Official provider documentation or API contract</td></tr>
+<tr><td>Observation count minimum</td><td>Any (one is sufficient to create the advisory)</td><td>Not applicable — source authority replaces observation count</td></tr>
+<tr><td>Observation authority</td><td>Observer-derived (CodeBurn acquisition observer)</td><td>External authority: named Anthropic document, rate-limit API contract</td></tr>
+<tr><td>Accounting regime confirmed</td><td>No</td><td>Yes — specific context (API rate limit, session limit, billing) must be named</td></tr>
+<tr><td>Permitted use</td><td>Advisory warning, usage anomaly observation</td><td>Threshold comparison, rate planning (if separately authorized)</td></tr>
+<tr><td>Closeout representation</td><td>&quot;advisory threshold — not verified&quot;</td><td>&quot;verified boundary — source: [named document]&quot;</td></tr>
+<tr><td>Subject to AT rules</td><td>Yes — all AT rules apply</td><td>No — AT rules do not apply once verified</td></tr>
+</table>
+
+<h3 id="what-source-authority-means-for-a-verified-boundary">What &quot;source authority&quot; means for a verified boundary</h3>
+<p>A verified boundary requires:</p>
+<ol>
+<li>A <strong>named, addressable external document</strong> (Anthropic API reference, official changelog,</li>
+</ol>
+<p>rate-limit policy page) that specifies the accounting unit, accounting scope, and</p>
+<p>numeric value.</p>
+<ol>
+<li><strong>Confirmed accounting regime</strong> — which accounting system (API rate limits, session</li>
+</ol>
+<p>limits, subscription limits, billing) uses the value, and in what way.</p>
+<p>The following are <strong>NOT</strong> source authority for a verified boundary:</p>
+<ul>
+<li>A different observer seeing the same number</li>
+<li>The same threshold working without incident for N consecutive months</li>
+<li>Multiple observations of an unverified referent (Anti-Collapse Axiom applies)</li>
+</ul>
+<h3 id="the-nst-1-generalization-applies-here">The NST-1 generalization applies here</h3>
+<p><code>cache<em>read</em>input_tokens</code> (JSONL field) is not a confirmed quota unit in Anthropic&#x27;s</p>
+<p>session limit accounting. The Architecture Freeze §10 states this explicitly. Any</p>
+<p class="box-advisory">advisory threshold derived from <code>rate<em>limit</em>tokens</code> (which includes <code>cache<em>read</em>input_tokens</code>)</p>
+<p>inherits this unconfirmed status. A verified boundary requires confirming not just</p>
+<p>the numeric value but the accounting treatment of each field in the formula.</p>
+<hr>
+<h2 id="2-rule-at-1-naming-convention">2. Rule AT-1 — Naming Convention</h2>
+<p class="box-advisory">**Env variable names, config keys, and code constants that identify advisory thresholds</p>
+<p>must encode their epistemic status in the identifier itself.**</p>
+<h3 id="format-requirement">Format requirement</h3>
+<p class="box-warn">The token <code>ADVISORY</code> must appear as a segment in the identifier. It must not be:</p>
+<ul>
+<li>Abbreviated (<code>ADV_</code>)</li>
+<li>Implied by context</li>
+<li>Omitted in favor of shorter names</li>
+</ul>
+<h3 id="prohibited-tokens-in-advisory-threshold-identifiers">Prohibited tokens in advisory threshold identifiers</h3>
+<p class="box-warn">An advisory threshold identifier must NOT include the following unless <code>ADVISORY</code></p>
+<p>precedes or qualifies them:</p>
+<table>
+<tr><th>Prohibited token</th><th>Reason</th></tr>
+<tr><td><code>LIMIT</code></td><td>Implies a known, authoritative boundary</td></tr>
+<tr><td><code>QUOTA</code></td><td>Implies provider-confirmed accounting</td></tr>
+<tr><td><code>BOUNDARY</code></td><td>Implies verification</td></tr>
+<tr><td><code>VERIFIED</code></td><td>Explicitly false for advisory thresholds</td></tr>
+<tr><td><code>RATE</code> (standalone)</td><td><code>RATE_LIMIT</code> implies the limit is known</td></tr>
+</table>
+
+<p class="box-advisory"><code>ADVISORY_WARN</code> is permitted alongside <code>RATE</code> when <code>ADVISORY</code> comes first:</p>
+<p class="box-advisory"><code>CODEBURN<em>CLAUDE</em>5H<em>ADVISORY</em>WARN_THRESHOLD</code> — compliant.</p>
+<h3 id="examples">Examples</h3>
+<p><strong>Compliant (existing):</strong></p>
+<ul>
+<li><code>CODEBURN<em>CLAUDE</em>5H<em>ADVISORY</em>WARN_THRESHOLD</code> — contains <code>ADVISORY</code>, no boundary claim</li>
+<li><code>CODEBURN<em>CODEX</em>5H<em>ADVISORY</em>WARN_THRESHOLD</code> — same pattern</li>
+</ul>
+<p><strong>Non-compliant (historical, now corrected):</strong></p>
+<ul>
+<li><code>CODEBURN<em>CLAUDE</em>5H<em>WARN</em>TOKENS</code> — implied a known token quantity; renamed</li>
+<li><code>CODEBURN<em>CLAUDE</em>5H<em>RATE</em>LIMIT_THRESHOLD</code> — implies rate limit boundary is known</li>
+<li><code>CODEBURN<em>CLAUDE</em>SESSION_LIMIT</code> — implies the limit is authoritative</li>
+<li><code>CODEBURN<em>CLAUDE</em>5H<em>QUOTA</em>THRESHOLD</code> — <code>QUOTA</code> implies provider-confirmed accounting</li>
+</ul>
+<h3 id="motivating-case">Motivating case</h3>
+<p class="box-advisory">The rename from <code>CODEBURN<em>CLAUDE</em>5H<em>WARN</em>TOKENS</code> to <code>CODEBURN<em>CLAUDE</em>5H<em>ADVISORY</em>WARN_THRESHOLD</code></p>
+<p>(commit <code>816966a</code>) is the canonical instance of this rule. The original name implied a</p>
+<p>known token count. A user reading the name without governance documentation would</p>
+<p>interpret it as a verified rate limit. AT-1 formalizes why that interpretation was wrong</p>
+<p>and prevents new identifiers from making the same implicit claim.</p>
+<h3 id="scope">Scope</h3>
+<p>AT-1 applies to:</p>
+<ul>
+<li>Environment variable names</li>
+<li>YAML / JSON configuration keys</li>
+<li>Python constants and variable names for these values</li>
+<li>Any persistent identifier for an advisory threshold in any output artifact</li>
+</ul>
+<hr>
+<h2 id="3-rule-at-2-origin-provenance-record">3. Rule AT-2 — Origin Provenance Record</h2>
+<p class="box-advisory">**Every advisory threshold in operational use must have a committed provenance record</p>
+<p>in the registry (Section 7) before first operational use.**</p>
+<p>A threshold without a provenance record is ungoverned. An ungoverned threshold may not</p>
+<p>be referenced in any governed closeout document.</p>
+<h3 id="required-provenance-fields">Required provenance fields</h3>
+<pre><code class="language-yaml"># Template — one entry per advisory threshold per accounting context
+identifier: &lt;ENV_VAR_NAME&gt;
+status: active | reserved_not_operational | invalidated
+epistemic_class: advisory_threshold
+
+value: &lt;integer&gt;
+value_unit: tokens
+value_metric: &lt;formula — e.g., rate_limit_tokens = input + cache_creation + cache_read&gt;
+value_derivation: &lt;arithmetic derivation from calibration_value — must be explicit&gt;
+
+observation_count: &lt;integer — minimum 1 for active status&gt;
+observation_date_approx: &lt;date or date range&gt;
+observation_context: &lt;description of what was happening during observation&gt;
+observation_surface: &lt;what produced the raw signal — UI bar, JSONL field, API header&gt;
+calibration_value: &lt;raw observed value, with units&gt;
+
+accounting_regime_confirmed: false
+accounting_regime_note: &lt;why it is unconfirmed; which regimes could apply&gt;
+
+observer_notes: &lt;caveats, limitations, untested assumptions&gt;
+
+display_label: &lt;string shown in session display — must include advisory language&gt;
+display_footnote: &lt;additional context shown to user&gt;
+
+at_rule_compliance:
+  AT-1: PASS | FAIL
+  AT-2: PASS (this record) | NOT MET
+  AT-3: no invalidity conditions triggered | &lt;condition name if triggered&gt;
+  AT-4: no upgrade claimed or in progress | &lt;upgrade doc name if in progress&gt;
+  AT-5: applies to all closeout documents referencing this threshold
+
+source_freeze_reference: &lt;CODEBURN_V1_1_ARCHITECTURE_FREEZE.md §N&gt;
+registered_date: &lt;YYYY-MM-DD&gt;</code></pre>
+<h3 id="what-the-record-must-not-contain">What the record must NOT contain</h3>
+<table>
+<tr><th>Prohibited field</th><th>Reason</th></tr>
+<tr><td><code>confidence: X%</code></td><td>Precision without source authority; false quantification</td></tr>
+<tr><td><code>next<em>review</em>date</code></td><td>Implies threshold becomes more authoritative over time (TNP violation by design implication)</td></tr>
+<tr><td><code>validated_by: &amp;lt;name&amp;gt;</code></td><td>Individual attestation does not substitute for source authority</td></tr>
+<tr><td><code>accuracy: high/medium/low</code></td><td>Qualitative accuracy claim on an unverified value</td></tr>
+</table>
+
+<h3 id="edge-case-new-observation-after-initial-registration">Edge case — new observation after initial registration</h3>
+<p>A new observation that gives a different number does not automatically invalidate the</p>
+<p class="box-advisory">existing entry (see AT-3). It adds a new data point. Whether the advisory value is</p>
+<p>updated is an explicit governance decision, documented in the registry entry, not a</p>
+<p>silent update to the <code>value</code> field.</p>
+<h3 id="edge-case-codex-advisory-threshold">Edge case — Codex advisory threshold</h3>
+<p class="box-advisory"><code>CODEBURN<em>CODEX</em>5H<em>ADVISORY</em>WARN<em>THRESHOLD</code> is referenced in <code>codeburn</em>session_display.py</code>.</p>
+<p>Its registry entry (Section 7) has <code>status: intentionally<em>inactive</em>no<em>observation</em>authority</code></p>
+<p>and <code>observation_count: 0</code>. This means: the identifier is governed by AT-1 (compliant name),</p>
+<p>but it is intentionally unconnected — no observation exists, no value may be used in governed</p>
+<p class="box-advisory">closeout. A user may set a personal heuristic value; no governed closeout may reference it.</p>
+<hr>
+<h2 id="4-rule-at-3-invalidity-conditions">4. Rule AT-3 — Invalidity Conditions</h2>
+<p class="box-advisory"><strong>The following conditions automatically invalidate an advisory threshold.</strong></p>
+<p>&quot;Invalidated&quot; means: the threshold may not be used in operational display or compared</p>
+<p>against observed values. The provenance record is retained as a historical artifact.</p>
+<p>The env var must be unset from operational configuration.</p>
+<h3 id="at-3-1-provider-changes-the-accounting-regime">AT-3.1 Provider changes the accounting regime</h3>
+<p>If Anthropic publishes documentation that explicitly changes how session tokens are</p>
+<p class="box-advisory">counted, any advisory threshold derived from observation of the previous regime is</p>
+<p>invalidated. The change need not affect the numeric value — if the accounting unit</p>
+<p>changes (e.g., cache reads counted differently toward session limits), the threshold</p>
+<p>is invalidated regardless.</p>
+<h3 id="at-3-2-official-documentation-contradicts-the-advisory-value">AT-3.2 Official documentation contradicts the advisory value</h3>
+<p>If any official Anthropic source (documentation, API rate-limit header semantics with</p>
+<p>confirmed documentation, written support confirmation) specifies a numeric value for</p>
+<p class="box-advisory">the accounting context that contradicts the advisory value by more than 10%, the</p>
+<p class="box-advisory">advisory threshold is invalidated. The official value creates a candidate verified</p>
+<p>boundary (subject to the AT-4 upgrade process).</p>
+<h3 id="at-3-3-accounting-regime-confirmed-to-differ-from-observation-context">AT-3.3 Accounting regime confirmed to differ from observation context</h3>
+<p class="box-advisory">The current advisory threshold was observed in a Claude.ai consumer session. If it is</p>
+<p>confirmed that Claude Code Pro subscription sessions use a different accounting regime</p>
+<p>from Claude.ai consumer sessions (a specific, documented difference, not a theoretical</p>
+<p class="box-advisory">one), the advisory threshold derived from Claude.ai observation cannot be applied to</p>
+<p>Claude Code contexts. It is invalidated for that context.</p>
+<h3 id="at-3-4-jsonl-field-confirmed-to-not-count-toward-the-relevant-limit">AT-3.4 JSONL field confirmed to not count toward the relevant limit</h3>
+<p>If Anthropic confirms that <code>cache<em>read</em>input_tokens</code> in the JSONL does not count toward</p>
+<p>session limits — i.e., the <code>rate<em>limit</em>tokens</code> formula used by CodeBurn does not reflect</p>
+<p>the actual quota accounting — the threshold is invalidated because the input to the</p>
+<p>formula is wrong.</p>
+<h3 id="at-3-5-source-observation-retracted">AT-3.5 Source observation retracted</h3>
+<p>If the original observation is found to have been made at a different session percentage</p>
+<p>than documented (e.g., it was 85%, not 95%, or the 18.4M figure was a display artifact),</p>
+<p class="box-advisory">the threshold is invalidated. A new observation must be documented before a new advisory</p>
+<p>value is set.</p>
+<h3 id="what-does-not-invalidate-the-threshold">What does NOT invalidate the threshold</h3>
+<table>
+<tr><th>Non-invalidating event</th><th>Reason</th></tr>
+<tr><td>New sessions where threshold fires earlier or later than expected</td><td>Variance is expected in a heuristic; does not retroactively invalidate provenance</td></tr>
+<tr><td>Time passing without AT-3.1–3.5 occurring</td><td>TNP is symmetric: time does not grant authority, but time alone does not strip it either</td></tr>
+<tr><td>A new observation giving a different number</td><td>Creates a new data point; whether the value changes is a governance decision, not an automatic invalidation</td></tr>
+<tr><td>Users finding the threshold inconvenient</td><td>Operational inconvenience is not an epistemic event</td></tr>
+</table>
+
+<h3 id="partial-invalidation">Partial invalidation</h3>
+<p>If AT-3.3 applies to one usage context but not another (e.g., invalidated for API-based</p>
+<p>sessions but not claude.ai-style sessions), the registry entry is split: one entry per</p>
+<p class="box-warn">accounting context. A single entry must not span multiple confirmed-different accounting</p>
+<p>regimes.</p>
+<hr>
+<h2 id="5-rule-at-4-upgrade-prohibition">5. Rule AT-4 — Upgrade Prohibition</h2>
+<p class="box-advisory">**An advisory threshold cannot be upgraded to a verified boundary through use, time,</p>
+<p>or consistency. The only valid upgrade path is documented source authority.**</p>
+<p class="box-advisory">This is the Temporal Non-Promotion Rule (TNP) applied specifically to advisory</p>
+<p>thresholds. The general TNP in the architecture freeze §6 governs evidence class</p>
+<p>promotion. AT-4 governs threshold status promotion, which has its own drift pattern.</p>
+<h3 id="the-specific-drift-pattern-at-4-closes">The specific drift pattern AT-4 closes</h3>
+<pre><code>Advisory threshold set at value V (one observation, N months ago)
+  → threshold operational for N months
+  → no complaints about false positives or misses
+  → threshold &quot;seems to be working&quot;
+  → team treats it as the Anthropic limit
+  → closeout document: &quot;rate limit threshold verified through operational use&quot;</code></pre>
+<p class="box-warn">Each step is individually plausible. The governance violation is in the final step.</p>
+<p class="box-warn">AT-4 makes the violation visible at each intermediate step rather than only at closeout.</p>
+<h3 id="explicitly-prohibited-upgrade-paths">Explicitly prohibited upgrade paths</h3>
+<table>
+<tr><th>Prohibited path</th><th>Why it fails</th></tr>
+<tr><td>Repeated use (N sessions, N months, N phases)</td><td>Number of uses does not upgrade epistemic class</td></tr>
+<tr><td>Historical stability (&quot;no problems in N months&quot;)</td><td>Stability is operational utility, not epistemic validity</td></tr>
+<tr><td>Implementation convenience (&quot;changing the code is expensive&quot;)</td><td>Implementation cost does not grant authority</td></tr>
+<tr><td>Cross-observation consistency (two observations, similar numbers)</td><td>Multiple observations of an unverified referent do not create a verified referent (Anti-Collapse Axiom)</td></tr>
+<tr><td>Informal provider confirmation (&quot;support chat said X&quot;)</td><td>Not a named, addressable external document</td></tr>
+</table>
+
+<h3 id="the-only-valid-upgrade-path">The only valid upgrade path</h3>
+<p class="box-advisory">An advisory threshold may be upgraded to a verified boundary if and only if all of</p>
+<p>the following conditions are met:</p>
+<ol>
+<li>A named Anthropic source document specifies a numeric value for the exact accounting</li>
+</ol>
+<p>context (session limit, API rate limit, subscription limit) in which CodeBurn</p>
+<p>applies the threshold.</p>
+<ol>
+<li>The accounting regime is unambiguously confirmed: the source document specifies</li>
+</ol>
+<p>whether <code>cache<em>read</em>input_tokens</code> counts toward the limit, at what rate, and whether</p>
+<p>that rate applies to CodeBurn&#x27;s acquisition context.</p>
+<ol>
+<li>A new governance document (<code>CODEBURN<em>CLAUDE</em>RATE<em>LIMIT</em>VERIFIED_BOUNDARY.md</code> or</li>
+</ol>
+<p>equivalent) is written that names the source, quotes the relevant text, and</p>
+<p>specifies the verified value and its accounting scope.</p>
+<ol>
+<li>That document is committed <strong>before</strong> the threshold is relabeled as verified in any</li>
+</ol>
+<p>operational configuration or closeout document.</p>
+<ol>
+<li>The existing advisory threshold registry entry is updated with:</li>
+</ol>
+<p><code>upgraded<em>to</em>verified_by: &amp;lt;document name&amp;gt;</code> and the upgrade timestamp.</p>
+<p>**No operational observation, however numerous or consistent, substitutes for</p>
+<p>conditions 1–2.** The upgrade is a source authority event, not an empirical</p>
+<p>accumulation event.</p>
+<p class="box-advisory">The advisory threshold may remain in operational use during the upgrade process. What</p>
+<p>changes is the label on closeout documents, not the operational behavior.</p>
+<hr>
+<h2 id="6-rule-at-5-closeout-prohibition">6. Rule AT-5 — Closeout Prohibition</h2>
+<p class="box-advisory">**A governed closeout document may not assert that an advisory threshold constitutes</p>
+<p>a verified rate limit, quota boundary, or provider-confirmed ceiling.**</p>
+<p>This rule applies to all CodeBurn phase closeouts and session closeouts, whether</p>
+<p>manually written or programmatically generated.</p>
+<h3 id="wording-that-is-permitted-in-closeout-documents">Wording that IS permitted in closeout documents</h3>
+<ul>
+<li><code>&amp;quot;The advisory warning threshold CODEBURN<em>CLAUDE</em>5H<em>ADVISORY</em>WARN_THRESHOLD (9,705,984 tokens) was active during this phase.&amp;quot;</code></li>
+<li><code>&amp;quot;Advisory threshold firing was observed during N sessions.&amp;quot;</code></li>
+<li><code>&amp;quot;No advisory threshold invalidity conditions (AT-3) were triggered during this phase.&amp;quot;</code></li>
+<li><code>&amp;quot;The advisory threshold remains unverified per AT-4.&amp;quot;</code></li>
+<li><code>&amp;quot;Rate limit observability used advisory heuristic — see AT-2 provenance record.&amp;quot;</code></li>
+<li><code>&amp;quot;Advisory threshold: not triggered&amp;quot;</code> (in summary tables)</li>
+<li><code>&amp;quot;Advisory threshold: fired N times — not a verified limit&amp;quot;</code> (in summary tables)</li>
+</ul>
+<h3 id="wording-that-is-not-permitted-in-closeout-documents">Wording that is NOT permitted in closeout documents</h3>
+<table>
+<tr><th>Prohibited wording</th><th>Violation</th></tr>
+<tr><td><code>&amp;quot;The session rate limit threshold has been validated through operational use.&amp;quot;</code></td><td>AT-4 prohibits operational-use as validation</td></tr>
+<tr><td><code>&amp;quot;Session token warnings correspond to approximately X% of the Anthropic 5h limit.&amp;quot;</code></td><td>Architecture Freeze §10: &quot;X% of Anthropic limit&quot; claims are forbidden</td></tr>
+<tr><td><code>&amp;quot;Rate limit threshold is set to 9,705,984 tokens based on observed Anthropic session behavior.&amp;quot;</code></td><td>&quot;Observed Anthropic session behavior&quot; implies empirical verification</td></tr>
+<tr><td><code>&amp;quot;No rate limit violations occurred during this phase.&amp;quot;</code></td><td>Implies the advisory threshold is the rate limit</td></tr>
+<tr><td><code>&amp;quot;Session token ceiling is approximately 18.4M tokens.&amp;quot;</code></td><td>Treats calibration observation as confirmed ceiling</td></tr>
+<tr><td><code>&amp;quot;Rate limit threshold: compliant&amp;quot;</code> in a summary table</td><td>Implicit verified-boundary claim through table structure</td></tr>
+<tr><td>Any phrase containing <code>&amp;quot;verified threshold&amp;quot;</code>, <code>&amp;quot;confirmed limit&amp;quot;</code>, <code>&amp;quot;Anthropic rate limit boundary&amp;quot;</code>, or <code>&amp;quot;provider quota&amp;quot;</code> without explicit advisory qualification</td><td>Authority inflation</td></tr>
+</table>
+
+<h3 id="implicit-claims">Implicit claims</h3>
+<p class="box-advisory">A table cell reading <code>&amp;quot;rate limit threshold: compliant&amp;quot;</code> with the advisory threshold</p>
+<p>value is making an implicit verified-boundary claim — the table structure implies the</p>
+<p>threshold is the limit and compliance is measured against it. This format is prohibited.</p>
+<p class="box-advisory">The cell must make the advisory status explicit.</p>
+<h3 id="automated-enforcement-future">Automated enforcement (future)</h3>
+<p>AT-5 is currently enforced through documentation review. A future enforcement gate</p>
+<p>could scan closeout documents for the prohibited phrases above, analogous to the</p>
+<p class="box-warn"><code>codeburn<em>validate</em>analysis.py</code> forbidden phrase scanner. P7 does not require</p>
+<p>implementing that scanner, but AT-5&#x27;s wording table is designed to support it.</p>
+<hr>
+<h2 id="7-current-advisory-threshold-registry">7. Current Advisory Threshold Registry</h2>
+<pre><code class="language-yaml">registry_version: 1
+generated_date: 2026-05-22
+governed_by: CODEBURN_P7_ADVISORY_THRESHOLD_GOVERNANCE.md
+
+entries:
+
+  - identifier: CODEBURN_CLAUDE_5H_ADVISORY_WARN_THRESHOLD
+    status: active
+    epistemic_class: advisory_threshold
+
+    value: 9705984
+    value_unit: tokens
+    value_metric: &gt;
+      rate_limit_tokens = input_tokens + cache_creation_input_tokens +
+      cache_read_input_tokens (JSONL fields, per-turn sum across session)
+    value_derivation: &gt;
+      Derived from calibration: 18,400,000 tokens observed at ~95% session usage.
+      Warn threshold = floor(18,400,000 * 0.5274) ≈ 9,705,984.
+      Factor 0.5274 ≈ 0.95 / 1.8 (targeting ~50% of estimated 5h ceiling of 19.4M).
+      Exact arithmetic was not recorded at derivation time; this reconstruction is
+      approximate. The derivation depends on the 95% figure from the UI bar and
+      the assumption that 18.4M at 95% implies a 5h ceiling of ~19.4M.
+      Both assumptions are unverified.
+
+    observation_count: 1
+    observation_date_approx: prior to 2026-05-22 (exact date not recorded)
+    observation_context: &gt;
+      Claude.ai session approaching session limit. Provider-reported UI bar
+      showed ~95% usage. JSONL rate_limit_tokens (cache-inclusive) read at that point.
+    observation_surface: &gt;
+      Two surfaces read simultaneously:
+      (1) claude.ai consumer product session bar — provider-reported percentage display
+      (2) JSONL cache_read_input_tokens field in ~/.claude/projects/**/*.jsonl
+      Whether these two surfaces measure the same accounting unit is unconfirmed.
+    calibration_value: cache-inclusive 5h rate_limit_tokens ≈ 18,400,000 at ~95% session usage
+
+    accounting_regime_confirmed: false
+    accounting_regime_note: &gt;
+      Four regimes may apply; none confirmed for this value:
+        1. Claude.ai session window limit (consumer product)
+        2. Anthropic API rate limit (anthropic-ratelimit-tokens-* headers)
+        3. Claude Code Pro subscription session accounting
+        4. Anthropic billing (cache reads charged at discounted rate)
+      NST-1 (generalized): cache_read_input_tokens JSONL field is not a confirmed
+      quota unit in Anthropic&#x27;s session accounting. Same field name != same
+      accounting regime across systems.
+
+    observer_notes: &gt;
+      Single data point. Observation was made during normal session use, not under
+      controlled experimental conditions. The provider-reported percentage (UI bar)
+      and the JSONL rate_limit_tokens field may measure different quantities.
+      No repeatability testing was performed across different session types,
+      model versions, or subscription tiers. The 95% figure is provider-reported
+      and its relationship to the underlying token accounting is unknown.
+
+    display_label: &quot;Observed saturation heuristic — NOT verified Anthropic quota boundary&quot;
+    display_footnote: &quot;cache_read accounting regime not confirmed&quot;
+
+    at_rule_compliance:
+      AT-1: &quot;PASS — identifier contains ADVISORY&quot;
+      AT-2: &quot;PASS — this registry entry&quot;
+      AT-3: &quot;no invalidity conditions triggered as of 2026-05-22&quot;
+      AT-4: &quot;no upgrade claimed or in progress&quot;
+      AT-5: &quot;applies to all closeout documents referencing this threshold&quot;
+
+    rename_history:
+      - from: CODEBURN_CLAUDE_5H_WARN_TOKENS
+        to: CODEBURN_CLAUDE_5H_ADVISORY_WARN_THRESHOLD
+        commit: 816966a
+        reason: Original name implied a verified token quantity; renamed to encode advisory status
+
+    source_freeze_reference: CODEBURN_V1_1_ARCHITECTURE_FREEZE.md §10
+    registered_date: 2026-05-22
+
+
+  - identifier: CODEBURN_CODEX_5H_ADVISORY_WARN_THRESHOLD
+    status: intentionally_inactive_no_observation_authority
+    epistemic_class: advisory_threshold_candidate
+
+    value: null
+    value_metric: &gt;
+      Would follow same rate_limit_tokens formula as Claude entry, applied to
+      Codex JSONL fields. Codex field semantics may differ from Claude fields
+      (NST-1: tokens not cross-provider comparable).
+    value_derivation: null
+
+    observation_count: 0
+    observation_date_approx: null
+    observation_context: null
+    calibration_value: null
+
+    accounting_regime_confirmed: false
+    accounting_regime_note: &gt;
+      No observation exists. Codex rate limit accounting is independently unverified
+      from Claude accounting. NST-1 applies: Codex token fields != Claude token fields.
+
+    at_rule_compliance:
+      AT-1: &quot;PASS — identifier contains ADVISORY&quot;
+      AT-2: &quot;NOT MET — observation_count = 0; no value may be used in governed closeout&quot;
+
+    note: &gt;
+      This identifier is referenced in codeburn_session_display.py as a valid env var.
+      A user may set a personal heuristic value for their own operational use.
+      No governed closeout document may reference this threshold until AT-2 is
+      satisfied: minimum one observation documented and committed to this registry.
+      Until then, any value set for this variable is ungoverned.
+
+    registered_date: 2026-05-22</code></pre>
+<hr>
+<h2 id="8-relationship-to-architecture-freeze">8. Relationship to Architecture Freeze</h2>
+<h3 id="8-1-this-document-does-not-modify-the-freeze">8.1 This document does not modify the freeze</h3>
+<p class="box-advisory">Section 10 of the architecture freeze documents the advisory threshold and the</p>
+<p class="box-advisory">unverified posture. P7 does not change those statements. Any phrase in P7 that could</p>
+<p>be read as relaxing §10 is a P7 drafting error, not a freeze amendment.</p>
+<h3 id="8-2-p7-operationalizes-10-without-claiming-to-resolve-it">8.2 P7 operationalizes §10 without claiming to resolve it</h3>
+<p class="box-advisory">The freeze §10 states the boundary is &quot;not verified&quot; and leaves the accounting regime</p>
+<p>question &quot;explicitly unresolved.&quot; P7 accepts that unresolved status and defines how to</p>
+<p>operate with it — how to name it, document it, maintain it, and prevent it from being</p>
+<p>implicitly resolved through use. P7 does not provide evidence that would resolve §10.</p>
+<h3 id="8-3-the-only-path-that-modifies-10-is-the-at-4-upgrade-path">8.3 The only path that modifies §10 is the AT-4 upgrade path</h3>
+<p>If AT-4 conditions are fully met (official Anthropic source document, confirmed</p>
+<p>accounting regime, committed verified boundary document), §10 of the freeze may be</p>
+<p>updated to reflect that the boundary is now verified, with a reference to the verified</p>
+<p>boundary document. That update is an amendment to §10 (subject to the freeze&#x27;s own</p>
+<p>amendment process in §9.4 of the freeze), not a consequence of P7 alone.</p>
+<h3 id="rule-to-freeze-mapping">Rule-to-freeze mapping</h3>
+<table>
+<tr><th>AT Rule</th><th>Relationship to Architecture Freeze</th></tr>
+<tr><td>AT-1 Naming</td><td>Extends §10 naming rationale (ADVISORY<em>WARN</em>THRESHOLD) to a formal rule</td></tr>
+<tr><td>AT-2 Provenance</td><td>Implements §10 &quot;single observation&quot; statement as a structured required record</td></tr>
+<tr><td>AT-3 Invalidity</td><td>Makes §10 &quot;explicitly unresolved&quot; concrete — names what would resolve it (negatively)</td></tr>
+<tr><td>AT-4 Upgrade prohibition</td><td>Extends TNP (§6) to advisory threshold promotion specifically</td></tr>
+<tr><td>AT-5 Closeout prohibition</td><td>Extends §10 forbidden posture (&quot;X% of Anthropic limit&quot; claims) to the closeout surface</td></tr>
+</table>
+
+<h3 id="note-on-advisory-only-field-in-schema">Note on advisory_only field in schema</h3>
+<p class="box-advisory">CodeBurn Phase 1 schema has a field <code>advisory_only INTEGER</code> for execution signals.</p>
+<p>This is a different governance concept:</p>
+<ul>
+<li><code>advisory_only</code> (schema): whether a signal can block execution</li>
+<li>Advisory threshold (AT rules): whether a threshold value carries verified authority</li>
+</ul>
+<p class="box-warn">The naming overlap is coincidental. They govern different surfaces and must not be</p>
+<p>conflated.</p>
+<hr>
+<h2 id="9-amendment-process">9. Amendment Process</h2>
+<h3 id="registry-only-updates-no-p7-version-bump-required">Registry-only updates (no P7 version bump required)</h3>
+<ul>
+<li>Adding a new advisory threshold entry to the registry</li>
+<li>Updating <code>at<em>rule</em>compliance</code> when a condition changes</li>
+<li>Recording an AT-3 invalidity trigger on an existing entry</li>
+<li>Recording an AT-4 upgrade on an existing entry (with pointer to verified boundary doc)</li>
+</ul>
+<h3 id="full-p7-amendment-required">Full P7 amendment required</h3>
+<ul>
+<li>Adding a new AT rule</li>
+<li>Relaxing any existing AT rule</li>
+<li>Changing the Section 1 definition of advisory threshold vs. verified boundary</li>
+<li>Changing the valid upgrade path in AT-4</li>
+<li>Changing the permitted/prohibited wording in AT-5</li>
+</ul>
+<h3 id="amendment-process">Amendment process</h3>
+<ol>
+<li>Name the specific AT rule or definition being changed and the reason.</li>
+<li>State the new rule text or definition.</li>
+<li>Record the operational finding or governance event that necessitated the change.</li>
+<li>Commit with a version bump (<code>version: 1</code> in header → <code>version: 2</code>).</li>
+<li>If the amendment affects AT-5, review active phase closeout templates.</li>
+</ol>
+<div class="doc-footer">
+  Source: <code>CODEBURN_P7_ADVISORY_THRESHOLD_GOVERNANCE.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

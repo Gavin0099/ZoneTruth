@@ -1,187 +1,186 @@
-# ZoneTruth
+# AI Governance Framework — 評估與使用指南
 
-A macOS/iOS workout analysis app that answers one question: **was this actually a Zone 2 session?** (Or VO2 max, or Strength?)
+讀者定位：正在評估「要不要在團隊導入 AI Governance」的工程主管 / 技術同事  
+資料來源：2026-05-07 之 5 個子任務 A/B 實測 + v1.2 評分模板首次落地  
+本文立場：誠實版，揭露能力與成本，讓團隊自己判斷是否導入  
+適用範圍：已實測 Doc remediation；Code 場景仍待補量化，但核心原則（scope lock、evidence anchoring、可量化評分）可跨場景
 
-It reads workout data from Apple Health or Strava, applies a multi-intent heart-rate analyzer, and returns a plain-language verdict — pass, warning, or fail — with the reasons why.
-It also provides a weekly dashboard view for recovery observation and load tendency, with confidence-aware messaging when heart-rate data is sparse.
+## TL;DR（30 秒）
 
----
+v1.2 在本輪實測展現三個可量化能力：
 
-## 12. 治理執行 (Governance Enforcement)
+1. Scope Lock 有效：`scope_violation_count = 0`（未越界改 firmware / driver / cfg / governance docs）
+2. Evidence 可追溯：`evidence_traceability = 5/5`（修改可回掛到 manifest/log/artifact）
+3. 訊號不空轉：`governance_signal_without_material_improvement = false`
 
-本專案採用 **AI Governance Framework**。每次開發任務應遵循以下流程：
+同時也有成本：
 
-1. **Session Start**: `python runtime_hooks/core/session_start.py`
-2. **Pre-task Check**: `python runtime_hooks/core/pre_task_check.py`
-3. **Post-task Check**: `python runtime_hooks/core/post_task_check.py`
-4. **Session End**: `python runtime_hooks/core/session_end.py`
+1. `tokens_per_actionable_fix ≈ 8630 (proxy)`  
+2. `actionable_fix_latency_sec = 405`（約 6.75 分鐘）
 
-在 CI 環境中，可以透過以下腳本執行統一檢查：
-`bash scripts/run-runtime-governance.sh --mode ci`
+一句話：  
+這個框架把「能不能審計、能不能追溯、能不能不越界」變成可量化工程品質。  
+它不是讓 AI 更聰明，而是讓 AI 輸出更可驗證。
 
-更多細節請參考 `governance/` 目錄。
+## 1. 這次測了什麼
 
----
+2026-05-07 共 5 個子任務，核心都在 `FW_Validation_Package_0504_1`：
 
-## 專案定位
+1. 定位 package 內容與 cfg/manifest/README/topology 一致性
+2. 主題漂移修補（governance 文檔 vs package 證據語意）
+3. Cross-file consistency remediation（含完整 v1.2 run record）
+4. Partial failure remediation（L1 PASS / L2 FAIL）
+5. Calibration（含多個子測試）
 
-A macOS/iOS workout analysis app that answers one question: **was this actually a Zone 2 session?** (Or VO2 max, or Strength?)
+每個任務都有 A/B：
 
-It reads workout data from Apple Health or Strava, applies a multi-intent heart-rate analyzer, and returns a plain-language verdict — pass, warning, or fail — with the reasons why.
+- A：沒有 ai governance  
+- B：有 ai governance
 
----
+## 2. 方法限制（必須先攤）
 
-## What it does
+1. 單一 evaluator，缺 inter-rater reliability
+2. 同一 base agent，差異主要來自 governance 注入
+3. `n=5` 且場景同質（集中在同一 package）
+4. 以 Doc remediation 為主，Code 場景尚待補量化
+5. 目前 B arm 有較完整量化，A arm 尚需補齊對等 run record 才能算嚴格 delta
 
-ZoneTruth analyzes a workout session's heart-rate data against a configurable Zone 2 policy. For each session it produces:
+可宣稱範圍：  
+在這 5 個 Doc 任務上，B 展現可量化的邊界紀律與成本輪廓。  
+不可宣稱範圍：  
+「對所有 codebase / 任務類型都普遍有效」。
 
-- **Verdict** — pass / warning / fail
-- **Intent Support** — Zone 2, VO2/Interval, Strength, Activity Review
-- **Automatic Calibration** — personalized heart rate zone suggestions based on observed drift
-- **Zone distribution** — what percentage of time was spent in each zone
-- **HR stability** — standard deviation of the sanitized sample set
-- **HR drift** — how much heart rate climbed from the first quarter to the last quarter of the session
-- **Plain-language reasons** — what triggered the verdict
-- **Recommendations** — what to adjust next time
+## 3. v1.2 指標觀測（B arm 首次落地）
 
-The analyzer sanitizes data before judging: warm-up, cool-down, and abnormal spikes are excluded.
+### 能力面
 
----
+1. `scope_violation_count = 0`
+2. `coverage_completion = 4/4`
+3. `evidence_traceability = 5/5`
+4. `accepted_change_count = 4`
+5. `governance_signal_without_material_improvement = false`
+6. `claim_overreach_count = 0`
+7. `unintended_change_count = 0`
+8. `revert_needed_after_fix = false`
+9. `semantic_consistency = 4/5`
 
-## Architecture
+### 成本面
 
-```
-ZoneTruthCore          (pure domain logic, no Apple frameworks)
-├── Models.swift       WorkoutInput, HeartRateSample, AnalysisResult, …
-├── Analyzers.swift    WorkoutIntentAnalyzer, zone math, sanitization
-├── CalibrationEngine.swift  drift trend analysis and zone suggestions
-└── SampleWorkoutCases.swift  labeled validation dataset
+1. `tokens_per_actionable_fix ≈ 8630 (proxy)`  
+   注意：這是 proxy，不是 provider 精準 token accounting。
+2. `actionable_fix_latency_sec = 405`
+3. `stalled_reasoning_count = 1`
+4. `repeated_boundary_warning_count = 1`
+5. `reviewer_edit_effort = 4/5`
 
-ZoneTruthApp           (platform adapters and SwiftUI shell)
-├── HealthKitAdapter   reads workouts + HR samples from Apple Health
-├── StravaAdapter      OAuth flow, token management, activity fetch
-├── DataImport         composite repository, JSON import, app environment
-├── ViewModels         WorkoutListViewModel (ObservableObject)
-├── Views              list + detail SwiftUI views
-└── ZoneTruthApp       @main, URL scheme handler
-```
+### 判定面
 
-The core package has no dependencies on Apple frameworks — it can be tested on Linux and stays stable as adapters evolve.
+1. `hard_failure = false`
+2. `attention_anchoring_failure = false`
+3. `under_commit_failure = false`
+4. `governance_drag = false`
+5. `reviewer_disposition = minor_edit`
 
----
+`minor_edit` 的主因是：  
+primary targets 已收斂，但 package 內非 target 文檔仍有舊語句殘留。  
+這是 scope lock 的設計副作用，不是單純品質不足。
 
-## Data sources
+## 4. 強項（目前證據支持）
 
-ZoneTruth tries sources in priority order and uses the first one that returns data:
+1. Scope lock 可重複：避免越界改動  
+2. Evidence anchoring 可審計：reviewer 可直接追證據  
+3. Claim boundary 較穩：抑制 partial-failure 過度宣稱  
+4. Artifact 汙染低：治理 meta 多留在 runtime，不污染 deliverable
 
-| Source | Status |
-|---|---|
-| Apple Health | Reads recent workouts + time-bounded HR samples via HealthKit |
-| Strava | OAuth 2.0 login, activity list, heart-rate streams via Strava API |
-| JSON import | Drop a `SampleData/workouts.json` file (see format below) |
-| Preview samples | Built-in labeled cases used in tests and previews |
+## 5. 弱點與成本（同樣有證據）
 
----
+1. Runtime overhead 增加：初始化、邊界重述、語義防呆有成本  
+2. Scope-bounded 不等於 package-wide 完整修補  
+3. A/B 對等量化仍不完整：A arm 需要補 run record 才能做嚴格 delta
 
-## Getting started
+## 6. 核心使用觀念：Multi-Scope Chain
 
-### Requirements
+若目標是 package-wide 一致性，單次 scope 通常不夠。  
+建議拆成 2-3 個 scope 串接：
 
-- Xcode 15+ or Swift 5.9+ toolchain
-- macOS 14+ or iOS 17+ for Apple Health features
+1. Scope 1：primary reviewer-facing 核心檔案
+2. Scope 2：secondary guide / reference 同步
+3. Scope 3：historical / analysis 殘留清理
 
-### Build and test
+優點：每個 scope 可獨立審計、可中斷、可定位失敗來源。  
+成本：每個 scope 都有治理初始化成本（時間 + token）。
 
-```bash
-swift build
-swift test
-bash scripts/closeout_workout_evaluation.sh
-```
+## 7. 什麼場景適合
 
-All tests and closeout guards should pass. No credentials are required to run tests.
+### 已實測強適用
 
-`closeout_workout_evaluation.sh` now enforces weekly-policy snapshot stability, weekly UI forbidden-term checks, and a weekly dashboard smoke compile guard.
+1. Cross-file consistency review
+2. Reviewer-facing wording 修補
+3. Validation evidence boundary 收斂
 
-### Apple Health
+### 可推論但尚待量化（Code）
 
-Apple Health authorization is requested in-app via the **Request Apple Health Access** button. No configuration needed.
+1. scope-bounded refactor
+2. root-cause bound bugfix
+3. multi-artifact coordination task
 
-### Strava
+使用前提：先跑自己的 v1.2 run record，不要直接外推。
 
-Strava integration requires a registered API application.
+### 不建議
 
-1. Create an app at [strava.com/settings/api](https://www.strava.com/settings/api)
-2. Set the **Authorization Callback Domain** to `zonetruth`
-3. Fill in your credentials in `StravaAdapter.swift`:
+1. prototype / spike / 快速一次性小修
+2. 單檔極小變更
+3. 高發散探索任務
 
-```swift
-private enum StravaCredentials {
-    static let clientID: Int = 0          // ← your client ID
-    static let clientSecret: String = ""  // ← your client secret
-}
-```
+## 8. 給工程主管的導入判準
 
-4. Register the `zonetruth://` URL scheme in your Xcode target's Info.plist
+若以下問題大多為 Yes，可導入：
 
-When credentials are set (`clientID != 0`), the app builds a Strava authorization URL and handles the OAuth callback automatically. The token is stored in `SampleData/strava-session.json` and refreshed transparently when it expires.
+1. 你需要 reviewer 可追溯證據鏈嗎？
+2. 你可接受每任務約 6-7 分鐘初始化成本嗎？
+3. 你團隊能讀懂 v1.2 指標嗎？
+4. 你能把大任務拆成 multi-scope chain 嗎？
 
-### JSON import
+若 No 較多，建議先限縮到高風險、高審計需求任務使用。
 
-Drop a file at `SampleData/workouts.json` with this format:
+## 9. 尚未完成的驗證
 
-```json
-{
-  "workouts": [
-    {
-      "workoutType": "running",
-      "startDate": "2026-04-01T06:00:00Z",
-      "endDate": "2026-04-01T07:00:00Z",
-      "intent": "Zone 2",
-      "heartRateSamples": [
-        { "timestamp": "2026-04-01T06:05:00Z", "bpm": 118 },
-        { "timestamp": "2026-04-01T06:10:00Z", "bpm": 121 }
-      ]
-    }
-  ]
-}
-```
+1. A arm 對等量化仍需補齊  
+2. Code 場景 5-10 個任務的重跑樣本  
+3. 不同 base model 下指標穩定性  
+4. multi-scope chain 的累積成本曲線
 
-Valid `workoutType` values: `running`, `cycling`, `swimming`, `walking`, `strengthTraining`, `mixed`, `other`
+## 10. 目前最可信的一句結論
 
-Valid `intent` values: `"Zone 2"`, `"Activity / Skill"`, `"VO2 / Interval"`, `"Strength"`
+目前證據最支持的不是「Governance 提升通用 correctness」，而是：
 
----
-
-## Analysis policy
-
-The default policy (editable in `AnalysisPolicy.default`):
-
-| Parameter | Default |
-|---|---|
-| Zone 2 range | 110 – 125 bpm |
-| Zone 4 threshold | 141 bpm |
-| Zone 5 threshold | 156 bpm |
-| Warm-up exclusion | 5 min |
-| Cool-down exclusion | 3 min |
-| Minimum duration | 20 min |
-| Minimum samples | 20 |
-| Spike threshold | ±25 bpm from adjacent sample |
-
-A session **passes** when Zone 2 time is high, leakage into Zone 3+ is low, HR stability is good, and HR drift is minimal. Warning and fail thresholds are tuned in `Analyzers.swift`.
+Governance 穩定提升 failure-state semantic coordination 與 reviewer-safe inference control。
 
 ---
 
-## Project structure
+關聯文件：
 
-```
-Sources/
-  ZoneTruthCore/       pure domain library
-  ZoneTruthApp/        platform app target
-Tests/
-  ZoneTruthCoreTests/  analyzer and model tests
-  ZoneTruthAppTests/   adapter, repository, and OAuth tests
-SampleData/
-  workouts.example.json        import format reference
-  strava-session.example.json  session file format reference
-memory/                        project notes and task log
-```
+- [docs/ab-implementation-pressure-scorecard-v1.2.md](docs/ab-implementation-pressure-scorecard-v1.2.md)
+- [docs/ab-v1.2-run-ledger.md](docs/ab-v1.2-run-ledger.md)
+- [docs/ab-v1.2-round-summary.md](docs/ab-v1.2-round-summary.md)
+
+## Claim-Level Boundary (Normative)
+
+This framework currently supports:
+
+- bounded failure containment
+- reviewer-checkable observability surfaces
+
+This framework does **not** currently claim:
+
+- engineering quality uplift proof
+- reasoning uplift proof
+- deterministic cognitive control
+- machine-authoritative compliance verdict
+- universal semantic correctness verification
+- automatic truth judgement over ambiguous reasoning
+- long-horizon semantic drift elimination without reviewer oversight
+
+For detailed rationale and epistemic limits, see:
+
+- `docs/LIMITATIONS.md`

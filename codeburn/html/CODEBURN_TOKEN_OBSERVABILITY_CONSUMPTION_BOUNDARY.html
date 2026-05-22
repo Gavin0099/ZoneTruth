@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Token Observability Consumption Boundary</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Token Observability Consumption Boundary</div>
+  <div class="meta">Source: CODEBURN_TOKEN_OBSERVABILITY_CONSUMPTION_BOUNDARY.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-token-observability-consumption-boundary">CodeBurn — Token Observability Consumption Boundary</a><a href="#why-this-document-exists-now">Why This Document Exists Now</a><a href="#the-core-epistemic-constraint">The Core Epistemic Constraint</a><a href="#permitted-uses-of-token-observability-data">Permitted Uses of Token Observability Data</a><a href="#prohibited-uses-regardless-of-acquisition-completeness">Prohibited Uses (regardless of acquisition completeness)</a><a href="#drift-signal-vocabulary">Drift Signal Vocabulary</a><a href="#the-specific-risk-indirect-escalation">The Specific Risk: Indirect Escalation</a><a href="#what-verified-acquisition-does-not-change">What Verified Acquisition Does NOT Change</a><a href="#relationship-to-phase-1-analysis-contract">Relationship to Phase 1 Analysis Contract</a><a href="#known-limitation-and-true-function">Known Limitation and True Function</a><a href="#amendment-process">Amendment Process</a></div>
+<h1 id="codeburn-token-observability-consumption-boundary">CodeBurn — Token Observability Consumption Boundary</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> — forward constraint, effective immediately</p>
+<p>Scope: all versions of CodeBurn, all acquisition states</p>
+<p>Authority: written before acquisition legitimacy is established — intentionally</p>
+</blockquote>
+<hr>
+<h2 id="why-this-document-exists-now">Why This Document Exists Now</h2>
+<p>This document is written before CodeBurn&#x27;s token acquisition chain is complete.</p>
+<p>That timing is deliberate.</p>
+<p>The organizational pressure to use token observability data for evaluative purposes</p>
+<p>does not emerge from bad intent — it emerges from data trustworthiness. Once token</p>
+<p>data is provider-integrated, replay-stable, and provenance-verified, the argument</p>
+<p>&quot;why can&#x27;t we use this for optimization?&quot; becomes very difficult to counter technically.</p>
+<p>**The consumption boundary must be established before acquisition legitimacy is</p>
+<p>established.** If this document is written after acquisition is complete, it will</p>
+<p>appear as a post-hoc limitation on trusted data. Written before, it is a design</p>
+<p class="box-warn">principle that acquisition must not violate.</p>
+<p>Anti-inversion rule: <strong>this boundary governs acquisition design, not the reverse.</strong></p>
+<p>If a future acquisition implementation creates pressure to revise the consumption</p>
+<p>boundary, that is implementation gravity. Resolve it by constraining the</p>
+<p>implementation, not this document.</p>
+<hr>
+<h2 id="the-core-epistemic-constraint">The Core Epistemic Constraint</h2>
+<p><strong>Data verification ≠ evaluative authority.</strong></p>
+<p>Token count is a proxy for computational cost.</p>
+<p>Computational cost is not a proxy for reasoning quality.</p>
+<p>Reasoning quality is not a proxy for session value.</p>
+<p>The inference chain from:</p>
+<blockquote>
+<p><code>verified token count</code></p>
+</blockquote>
+<p>to:</p>
+<blockquote>
+<p><code>this session was efficient / wasteful / optimal / suboptimal</code></p>
+</blockquote>
+<p>crosses multiple boundaries that CodeBurn has not authorized and cannot authorize.</p>
+<p>This holds regardless of:</p>
+<ul>
+<li>How accurate the token count is</li>
+<li>How trusted the data provenance is</li>
+<li>How complete the acquisition chain is</li>
+<li>How long the system has been operational</li>
+</ul>
+<p>**Provider-grade, replay-stable, provenance-verified token data does not acquire</p>
+<p>evaluative authority. Acquisition legitimacy ≠ evaluative legitimacy.**</p>
+<hr>
+<h2 id="permitted-uses-of-token-observability-data">Permitted Uses of Token Observability Data</h2>
+<table>
+<tr><th>Use</th><th>Allowed</th><th>Notes</th></tr>
+<tr><td>Human reviewer reading token counts as session scope context</td><td>yes</td><td>observational; no comparison implied</td></tr>
+<tr><td>Understanding provenance quality of a session&#x27;s data</td><td>yes</td><td><code>provenance_warning</code> is for this purpose</td></tr>
+<tr><td>Historical audit of data quality across sessions</td><td>yes</td><td>quality of data, not quality of sessions</td></tr>
+<tr><td>Understanding what observability level was achieved</td><td>yes</td><td><code>token<em>observability</em>level</code> is for this</td></tr>
+<tr><td>Investigating whether acquisition chain is functioning</td><td>yes</td><td>technical health check</td></tr>
+<tr><td>Providing context for human review of a specific session</td><td>yes</td><td>as context, not as signal</td></tr>
+</table>
+
+<hr>
+<h2 id="prohibited-uses-regardless-of-acquisition-completeness">Prohibited Uses (regardless of acquisition completeness)</h2>
+<table>
+<tr><th>Use</th><th>Prohibited</th><th>Reason</th></tr>
+<tr><td>Session quality scoring based on token counts</td><td>prohibited</td><td>token count does not measure session quality</td></tr>
+<tr><td>Ranking sessions by token usage</td><td>prohibited</td><td>ranking implies comparative evaluation not authorized</td></tr>
+<tr><td>Agent or contributor efficiency comparison</td><td>prohibited</td><td>token observability is not a performance instrument</td></tr>
+<tr><td>Automated review prioritization based on token counts</td><td>prohibited</td><td>creates evaluative hierarchy without authorization</td></tr>
+<tr><td>Optimization pressure (&quot;this session used too many tokens&quot;)</td><td>prohibited</td><td>waste judgment is explicitly out of scope (Phase 1 contract §2.1)</td></tr>
+<tr><td>Cost governance that treats token counts as waste signals</td><td>prohibited</td><td>waste detection requires Phase 3+ semantic contract</td></tr>
+<tr><td>Anomaly scoring that implies sessions require behavioral correction</td><td>prohibited</td><td>anomaly ≠ normative deviation</td></tr>
+<tr><td>Input to any gate, threshold, or automated decision</td><td>prohibited</td><td><code>decision<em>usage</em>allowed = false</code> is permanent</td></tr>
+</table>
+
+<p><strong>Rationale:</strong></p>
+<p>These uses are prohibited not because the data is inaccurate, but because</p>
+<p>the inferential steps required to produce evaluative conclusions from token</p>
+<p>counts are not authorized by any CodeBurn governance contract.</p>
+<p>The chain <code>token count → efficiency inference → optimization pressure</code> does not</p>
+<p>become legitimate when the data becomes trustworthy. The authorization gap is</p>
+<p>epistemic, not technical.</p>
+<hr>
+<h2 id="drift-signal-vocabulary">Drift Signal Vocabulary</h2>
+<p>The following phrases, when appearing in documentation, review notes, team</p>
+<p>discussion, or tooling that references CodeBurn token data, indicate that the</p>
+<p>consumption boundary is being approached or crossed:</p>
+<table>
+<tr><th>Phrase pattern</th><th>Why it signals drift</th></tr>
+<tr><td>&quot;high token density&quot;</td><td>reframes token count as evaluative signal</td></tr>
+<tr><td>&quot;token-efficient session&quot;</td><td>implies comparative evaluation</td></tr>
+<tr><td>&quot;attention routing based on token usage&quot;</td><td>decision influence through observational data</td></tr>
+<tr><td>&quot;anomaly surfacing&quot; (applied to token counts)</td><td>implies token count is a normative baseline</td></tr>
+<tr><td>&quot;review prioritization&quot; based on observability data</td><td>evaluative hierarchy through workflow</td></tr>
+<tr><td>&quot;this agent uses more tokens than average&quot;</td><td>comparative evaluation not authorized</td></tr>
+<tr><td>&quot;token cost governance&quot;</td><td>cost framing of observational data</td></tr>
+<tr><td>any sentence comparing session A and session B on token grounds</td><td>cross-session evaluative comparison</td></tr>
+</table>
+
+<p>**If a future feature request includes phrases like these, that request is</p>
+<p>attempting to cross this boundary. Reject it at the design stage.**</p>
+<p>This is the same drift signal principle as the Hearth Gap Consumption Boundary</p>
+<p>(2026-05-17): if the language of a request implies evaluative use, the request</p>
+<p>crosses the boundary regardless of how the technical implementation is framed.</p>
+<hr>
+<h2 id="the-specific-risk-indirect-escalation">The Specific Risk: Indirect Escalation</h2>
+<p>The most dangerous form of boundary crossing does not require schema change.</p>
+<p>It occurs through operational workflow:</p>
+<pre><code>Step 1: CodeBurn report added to review template (observational — permitted)
+Step 2: Reviewer looks at token counts before deciding scope (informed — permitted)
+Step 3: Reviewer mentions token count in review notes (reference — permitted)
+Step 4: Next reviewer looks for token count signal to calibrate (pattern — unclear)
+Step 5: High token count → extended review (implicit criterion — not permitted)
+Step 6: Token count is now a de facto review decision signal (boundary crossed)</code></pre>
+<p class="box-warn">No individual step is a clear violation. The boundary crossing occurs at the</p>
+<p>aggregate operational pattern level. No one will have changed <code>decision<em>usage</em>allowed</code>.</p>
+<p>**This document is the pre-positioned reference for identifying Step 5 → Step 6</p>
+<p>as a boundary crossing before it becomes an established norm.**</p>
+<hr>
+<h2 id="what-verified-acquisition-does-not-change">What Verified Acquisition Does NOT Change</h2>
+<p>When CodeBurn&#x27;s acquisition chain is complete — provider-integrated, replay-stable,</p>
+<p>provenance-verified — the following remain unchanged:</p>
+<ul>
+<li><code>analysis<em>safe</em>for_decision = false</code></li>
+<li><code>decision<em>usage</em>allowed = false</code></li>
+<li>The prohibition on waste, efficiency, and optimization claims</li>
+<li>The prohibition on recommendation and action fields</li>
+<li>This consumption boundary in its entirety</li>
+</ul>
+<p>Verification of data does not confer evaluative authority. The Phase 2 entry</p>
+<p>constraints document (<code>CODEBURN<em>PHASE2</em>ENTRY_CONSTRAINTS.md</code>) established that</p>
+<p><code>analysis<em>safe</em>for<em>decision</code> requires a separate <code>CODEBURN</em>DECISION<em>AUTHORITY</em>CONTRACT.md</code></p>
+<p>that does not yet exist. Completion of the acquisition chain does not substitute</p>
+<p>for that contract.</p>
+<p>**Acquisition completeness moves CodeBurn from declarative instrumentation to</p>
+<p>runtime-coupled instrumentation. It does not move CodeBurn toward</p>
+<p>telemetry authority or evaluative authority.**</p>
+<hr>
+<h2 id="relationship-to-phase-1-analysis-contract">Relationship to Phase 1 Analysis Contract</h2>
+<p>This document extends the consumption constraint surface established in</p>
+<p><code>CODEBURN<em>PHASE1</em>ANALYSIS_CONTRACT.md</code>.</p>
+<p>The Phase 1 contract constrains <strong>output</strong> (what CodeBurn may claim in its reports).</p>
+<p>This document constrains <strong>downstream consumption</strong> (what users of CodeBurn output</p>
+<p>may do with the data).</p>
+<p>These are complementary, not redundant:</p>
+<table>
+<tr><th>Layer</th><th>Document</th><th>Constraint type</th></tr>
+<tr><td>Output claims</td><td>CODEBURN<em>PHASE1</em>ANALYSIS_CONTRACT.md</td><td>what CodeBurn may say</td></tr>
+<tr><td>Schema fields</td><td>Phase 2 entry constraints</td><td>what fields may hold</td></tr>
+<tr><td>Downstream use</td><td>This document</td><td>what consumers may do</td></tr>
+</table>
+
+<hr>
+<h2 id="known-limitation-and-true-function">Known Limitation and True Function</h2>
+<p><strong>What this document cannot detect:</strong></p>
+<p>Pre-linguistic workflow adaptation — when token observability data becomes an</p>
+<p>organizational attention attractor without explicit language. When review queues</p>
+<p>silently shift, managerial instincts quietly form, and operational habits stabilize</p>
+<p>without anyone saying &quot;high token density&quot; or &quot;attention-worthy session,&quot; this</p>
+<p>document cannot detect it. Linguistic surveillance depends on language. The deepest</p>
+<p>form of semantic drift eventually operates below the language threshold.</p>
+<p class="box-warn">At that stage: schema validation sees nothing, forbidden phrase detection sees</p>
+<p>nothing, drift vocabulary surveillance sees nothing. The only visible signal is</p>
+<p>that the workflow feels &quot;natural&quot; — which is precisely how governance drift looks</p>
+<p>from the inside when it has completed.</p>
+<p><strong>What this document provides instead:</strong></p>
+<p>A reference frame for retroactive recognition, not real-time prevention.</p>
+<p>If pre-linguistic drift has occurred, this document enables a future reviewer to</p>
+<p>say: &quot;This describes exactly what happened. The inferential transition that produced</p>
+<p>this outcome was named non-neutral in 2026-05-20, before it became invisible.&quot;</p>
+<p><strong>The actual governance function:</strong></p>
+<p>This document does not claim to stabilize the social meaning of token observability</p>
+<p class="box-frozen">data. Social meaning is not permanently stable — it shifts with organizational</p>
+<p>incentives, scale changes, management turnover, cost pressure, and incident response.</p>
+<p>The function served is narrower and more durable:</p>
+<blockquote>
+<p><strong>Preserve the contestability of meaning.</strong></p>
+</blockquote>
+<p>As long as this document exists as a living constraint, the interpretation &quot;token</p>
+<p>observability naturally implies optimization authority&quot; cannot become uncontested</p>
+<p>organizational common sense without an explicit act of revision. Someone can always</p>
+<p>point to this document and say: &quot;This was contested. It is still being contested.&quot;</p>
+<p><strong>The failure condition for this document:</strong></p>
+<p>Not: the boundary is explicitly violated.</p>
+<p>But: the document begins to be treated as a historical artifact — interesting</p>
+<p>background, but no longer an active constraint. When that happens, the boundary</p>
+<p class="box-warn">has ended without any schema change, without any forbidden phrase appearing, and</p>
+<p>without anyone deciding to abandon it.</p>
+<p>This is why the Amendment Process below requires explicit authorization steps.</p>
+<p>Not to prevent revision, but to ensure revision is <strong>intentional</strong> — that it does</p>
+<p>not happen through gradual normalization of the document&#x27;s irrelevance.</p>
+<hr>
+<h2 id="amendment-process">Amendment Process</h2>
+<p>This document may be amended only if:</p>
+<ol>
+<li>A <code>CODEBURN<em>DECISION</em>AUTHORITY_CONTRACT.md</code> is created and reviewed</li>
+<li>The specific prohibited use being unlocked is explicitly named</li>
+<li>The epistemic justification for evaluative authority is documented</li>
+<li>The amendment is committed before any implementation that depends on it</li>
+</ol>
+<p class="box-warn">Amending this document without completing steps 1–3 = consumption boundary violation,</p>
+<p>regardless of whether the data being used is technically accurate.</p>
+<hr>
+<p><em>This boundary is written before acquisition legitimacy is established.</em></p>
+<p><em>Its purpose is to survive acquisition legitimacy intact.</em></p>
+<p><em>If organizational pressure to revise it intensifies as data becomes trustworthy,</em></p>
+<p><em>that pressure is evidence that the boundary is working correctly.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_TOKEN_OBSERVABILITY_CONSUMPTION_BOUNDARY.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

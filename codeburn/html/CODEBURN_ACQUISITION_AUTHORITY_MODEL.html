@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Acquisition Authority Model</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Acquisition Authority Model</div>
+  <div class="meta">Source: CODEBURN_ACQUISITION_AUTHORITY_MODEL.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-acquisition-authority-model">CodeBurn — Acquisition Authority Model</a><a href="#the-decision">The Decision</a><a href="#the-deferred-runtime-authority-principle">The Deferred Runtime Authority Principle</a><a href="#runtime-centralization-drift-the-risk-pattern">Runtime Centralization Drift — The Risk Pattern</a><a href="#why-l1-5-preserves-epistemic-honesty">Why L1.5 Preserves Epistemic Honesty</a><a href="#what-l1-5-means-in-practice-claude-code-acquisition">What L1.5 Means in Practice (Claude Code Acquisition)</a><a href="#boundary-between-l1-5-and-l1">Boundary Between L1.5 and L1</a><a href="#what-l1-would-require-to-be-reconsidered">What L1 Would Require to Be Reconsidered</a><a href="#acquisition-authority-level-reference">Acquisition Authority Level Reference</a><a href="#relationship-to-existing-boundary-documents">Relationship to Existing Boundary Documents</a><a href="#current-acquisition-state-2026-05-20">Current Acquisition State (2026-05-20)</a></div>
+<h1 id="codeburn-acquisition-authority-model">CodeBurn — Acquisition Authority Model</h1>
+<blockquote>
+<p>Written: 2026-05-20</p>
+<p>Status: <strong>BINDING</strong> — P2 governance decision, effective immediately</p>
+<p>Scope: all CodeBurn provider integrations, all acquisition implementations</p>
+<p>Decision: L1.5 / <span class="class-c">Class C</span> (observer-reconstructed) is the acquisition authority ceiling</p>
+<p>Depends on: CODEBURN<em>TOKEN</em>PROVENANCE<em>ONTOLOGY.md, CODEBURN</em>AUTHORITY<em>CEILING</em>CONTRACT.md</p>
+</blockquote>
+<hr>
+<h2 id="the-decision">The Decision</h2>
+<p>**CodeBurn selects L1.5 (post-hoc session log ingestion) as the initial and maximum</p>
+<p>acquisition authority level for all provider integrations.**</p>
+<p>This is a governance constraint, not a technical limitation.</p>
+<p>L1 (runtime command wrapper) is technically feasible. It is not selected because</p>
+<p>it changes the system&#x27;s epistemic topology in ways that are incompatible with</p>
+<p>CodeBurn&#x27;s governance trajectory.</p>
+<p>**L1 is deferred indefinitely, not as a temporary measure pending maturity,</p>
+<p>but as a principled boundary on how close CodeBurn approaches provider runtime.**</p>
+<hr>
+<h2 id="the-deferred-runtime-authority-principle">The Deferred Runtime Authority Principle</h2>
+<blockquote>
+<p>CodeBurn intentionally selects post-hoc reconstructed acquisition as the initial</p>
+<p>provider integration surface in order to preserve explicit observation distance</p>
+<p>and prevent premature runtime authority centralization.</p>
+</blockquote>
+<p>This principle encodes three decisions simultaneously:</p>
+<p><strong>1. &quot;Intentionally selects&quot;</strong> — the choice is active, not forced by capability gap.</p>
+<p>The absence of L1 is not an implementation debt. It is a design decision.</p>
+<p><strong>2. &quot;Initial and maximum&quot;</strong> — L1.5 is not a stepping stone toward L1. L1 requires</p>
+<p>a separate authority elevation process (see Amendment Process below).</p>
+<p><strong>3. &quot;Prevent premature runtime authority centralization&quot;</strong> — the primary risk</p>
+<p>being avoided is not token acquisition failure. It is Runtime Centralization Drift.</p>
+<hr>
+<h2 id="runtime-centralization-drift-the-risk-pattern">Runtime Centralization Drift — The Risk Pattern</h2>
+<p>The specific failure mode that L1 opens and L1.5 avoids:</p>
+<pre><code>Stage 1: Runtime Wrapper Introduced
+  &quot;just wrapping the command for token capture&quot;
+  → architectural change: CodeBurn now sits between caller and runtime
+
+Stage 2: Wrapper Controls Invocation
+  &quot;wrapper already intercepts the call&quot;
+  → natural extension: add pre-flight checks
+  → CodeBurn is now an invocation gate
+
+Stage 3: Wrapper Can Inspect Runtime
+  &quot;wrapper has runtime context&quot;
+  → natural extension: read runtime state for richer observability
+  → CodeBurn is now a runtime inspector
+
+Stage 4: Wrapper Can Mutate Runtime
+  &quot;wrapper already modifies invocation&quot;
+  → natural extension: add enforcement hooks
+  → CodeBurn is now an execution authority layer
+
+Stage 5: Operational Dependency
+  &quot;no CodeBurn → no runtime&quot;
+  → CodeBurn&#x27;s epistemic posture is now enforcement posture
+  → authority has fully transferred through implementation gravity</code></pre>
+<p class="box-warn">No individual step is an explicit violation. Each step feels like a natural</p>
+<p>extension of the previous one. The transition from observer to authority layer</p>
+<p>occurs through accumulated implementation decisions, not through a single</p>
+<p>deliberate choice.</p>
+<p><strong>L1.5 blocks this drift at Stage 1 by never introducing the runtime wrapper.</strong></p>
+<hr>
+<h2 id="why-l1-5-preserves-epistemic-honesty">Why L1.5 Preserves Epistemic Honesty</h2>
+<p>L1.5 (observer-reconstructed) has a structural property that L1 (observer-derived)</p>
+<p>does not: it carries an inherent, non-negotiable observation distance.</p>
+<pre><code>L1 topology:
+  runtime → [wrapper observes] → artifacts
+
+L1.5 topology:
+  runtime → artifacts → [CodeBurn reconstructs]</code></pre>
+<p>In L1, CodeBurn is present during the interaction.</p>
+<p>In L1.5, CodeBurn arrives after the interaction.</p>
+<p>This temporal asymmetry is not a deficiency — it is a governance feature.</p>
+<p>It enforces honesty about what CodeBurn can legitimately claim:</p>
+<table>
+<tr><th>Claim</th><th>L1</th><th>L1.5</th></tr>
+<tr><td>&quot;I observed this in real-time&quot;</td><td>possible (technically)</td><td>impossible (structurally)</td></tr>
+<tr><td>&quot;I reconstructed this from artifacts&quot;</td><td>misleading</td><td>accurate</td></tr>
+<tr><td>&quot;This count may be incomplete&quot;</td><td>understated</td><td>inherent</td></tr>
+<tr><td>&quot;Replay may differ from original&quot;</td><td>obscured</td><td>required to acknowledge</td></tr>
+</table>
+
+<p><strong>L1.5 makes the right epistemic claims structurally unavoidable.</strong></p>
+<p>The reconstruction gap cannot be hidden because the architecture makes it visible.</p>
+<p>This aligns with CodeBurn&#x27;s broader trajectory:</p>
+<ul>
+<li>Null Ontology: absence of data is a valid epistemic state</li>
+<li>Typed provenance: different acquisition modes produce different evidence types</li>
+<li>Fail-closed admissibility: missing data does not default to optimistic assumptions</li>
+<li>Analysis-safe-for-decision = false: permanent until explicitly contracted otherwise</li>
+</ul>
+<p>L1.5 produces <span class="class-c">Class C</span> evidence. <span class="class-c">Class C</span> evidence is honest about:</p>
+<ul>
+<li>Reconstruction gap (temporal distance)</li>
+<li>Replay incompleteness (logs may be partial)</li>
+<li>Provider opacity (what the provider computed vs. what it reported)</li>
+<li>Acquisition non-equivalence (<span class="class-c">Class C</span> ≠ Class A)</li>
+</ul>
+<p>These admissions are not weaknesses. They are the foundation for defensible</p>
+<p>observability.</p>
+<hr>
+<h2 id="what-l1-5-means-in-practice-claude-code-acquisition">What L1.5 Means in Practice (Claude Code Acquisition)</h2>
+<p>For Claude Code as the first provider integration target:</p>
+<p><strong>Acquisition mode:</strong> Session log ingestion from Claude Code <code>.jsonl</code> session files</p>
+<p><strong>What this captures:</strong></p>
+<ul>
+<li>Token counts as logged in session artifacts (if present in log format)</li>
+<li>Session timing and step boundaries from log records</li>
+<li>Tool use sequences from log entries</li>
+<li>Exit status and completion signals from log events</li>
+</ul>
+<p><strong>What this explicitly does NOT capture:</strong></p>
+<ul>
+<li>Real-time token streaming data</li>
+<li>Live API response objects</li>
+<li>Provider-side computation details</li>
+<li>Anything not present in the post-session log artifact</li>
+</ul>
+<p><strong>Epistemic class produced:</strong> <span class="class-c">Class C</span> (observer-reconstructed)</p>
+<p><strong>Token source field:</strong> <code>estimated</code> (with reconstruction gap declaration)</p>
+<p><strong>What CodeBurn may claim from <span class="class-c">Class C</span> evidence:</strong></p>
+<ul>
+<li>&quot;The session log recorded N tokens for this session segment&quot;</li>
+<li>&quot;Token data is post-hoc reconstructed from session artifacts&quot;</li>
+<li>&quot;Log completeness is not guaranteed&quot;</li>
+</ul>
+<p><strong>What CodeBurn may NOT claim from <span class="class-c">Class C</span> evidence:</strong></p>
+<ul>
+<li>&quot;N tokens were consumed&quot; (reconstruction ≠ original observation)</li>
+<li>&quot;This count is provider-grade&quot; (<span class="class-c">Class C</span> ≠ Class A)</li>
+<li>&quot;The session used fewer/more tokens than average&quot; (efficiency inference prohibited)</li>
+</ul>
+<hr>
+<h2 id="boundary-between-l1-5-and-l1">Boundary Between L1.5 and L1</h2>
+<p>The boundary between L1.5 and L1 is not a performance or completeness threshold.</p>
+<p>It is an architectural topology test:</p>
+<p><strong>L1.5:</strong> CodeBurn reads artifacts that already exist after the AI interaction completes.</p>
+<p><strong>L1:</strong> CodeBurn is present during the AI interaction through a wrapper or hook.</p>
+<p>Tests for boundary crossing:</p>
+<ul>
+<li>Does CodeBurn need to be invoked before or during the AI interaction? → L1 territory</li>
+<li>Does CodeBurn intercept, wrap, or modify the AI invocation? → L1 territory</li>
+<li>Does CodeBurn read log files, export artifacts, or session summaries after completion? → L1.5</li>
+<li>Does CodeBurn process data that only exists because CodeBurn created it during invocation? → L1 territory</li>
+</ul>
+<p>**If an acquisition implementation requires CodeBurn to be present at runtime,</p>
+<p>it is an L1 implementation regardless of how it is described.**</p>
+<hr>
+<h2 id="what-l1-would-require-to-be-reconsidered">What L1 Would Require to Be Reconsidered</h2>
+<p class="box-frozen">L1 is not permanently prohibited. It requires a separate governance process:</p>
+<ol>
+<li>A <code>CODEBURN<em>RUNTIME</em>WRAPPER<em>AUTHORITY</em>CONTRACT.md</code> must be created that:</li>
+<ul>
+<li>Names the specific runtime authority being accepted</li>
+<li>Documents the Runtime Centralization Drift mitigations in place</li>
+<li>Defines the operational dependency limit (what happens when CodeBurn fails)</li>
+<li>Specifies who holds authority over the wrapper&#x27;s enforcement scope</li>
+</ul>
+</ol>
+<ol>
+<li>The contract must be reviewed by a party independent of the L1 implementation</li>
+</ol>
+<ol>
+<li>The contract must be committed before any L1 implementation begins</li>
+</ol>
+<ol>
+<li>The Deferred Runtime Authority Principle in this document remains the governing</li>
+</ol>
+<p>statement until the contract explicitly supersedes it</p>
+<p>**Building an L1 wrapper before this contract exists = Runtime Centralization</p>
+<p>Drift at Stage 1 onset. The drift pattern begins at implementation, not at</p>
+<p class="box-warn">governance violation.**</p>
+<hr>
+<h2 id="acquisition-authority-level-reference">Acquisition Authority Level Reference</h2>
+<p>For all future acquisition implementation decisions:</p>
+<table>
+<tr><th>Level</th><th>Label</th><th>Architecture</th><th>Max epistemic class</th><th>Authority status</th></tr>
+<tr><td>L0</td><td>Passive recorder</td><td>Human-provided data</td><td>D (user-asserted)</td><td>Current state</td></tr>
+<tr><td>L1.5</td><td>Session log ingestion</td><td>Post-hoc artifact read</td><td>C (reconstructed)</td><td><strong>Selected ceiling</strong></td></tr>
+<tr><td>L1</td><td>Runtime wrapper</td><td>Present at invocation</td><td>B (observer-derived)</td><td>Deferred — requires contract</td></tr>
+<tr><td>L2</td><td>Direct API hook</td><td>In API response path</td><td>A (provider-originated)</td><td>Deferred — requires contract</td></tr>
+<tr><td>L3</td><td>Traffic substrate</td><td>All provider traffic</td><td>A (provider-originated)</td><td>Permanently deferred</td></tr>
+</table>
+
+<p>CodeBurn may move from L0 to L1.5 through implementation.</p>
+<p>CodeBurn may NOT move from L1.5 to L1 or above without <code>CODEBURN<em>RUNTIME</em>WRAPPER<em>AUTHORITY</em>CONTRACT.md</code>.</p>
+<hr>
+<h2 id="relationship-to-existing-boundary-documents">Relationship to Existing Boundary Documents</h2>
+<table>
+<tr><th>Document</th><th>Relationship</th></tr>
+<tr><td>Provenance Ontology</td><td>Defines <span class="class-c">Class C</span>; this document selects it as the ceiling</td></tr>
+<tr><td>Authority Ceiling Contract</td><td>Defines what CodeBurn may not become; this document applies those ceilings to the acquisition architecture</td></tr>
+<tr><td>Consumption Boundary</td><td>Constrains downstream use; this document constrains upstream architecture</td></tr>
+<tr><td>Comparability Boundary</td><td>Constrains cross-provider comparison; this document establishes that <span class="class-c">Class C</span> is the maximum evidence class for first integration</td></tr>
+</table>
+
+<hr>
+<h2 id="current-acquisition-state-2026-05-20">Current Acquisition State (2026-05-20)</h2>
+<pre><code>Current level:                L0 (passive recorder)
+Selected ceiling:             L1.5 (session log ingestion)
+Next implementation target:   L1.5 — Claude Code session log ingestion
+L1 status:                    Deferred — requires CODEBURN_RUNTIME_WRAPPER_AUTHORITY_CONTRACT.md
+L2+ status:                   Permanently deferred
+
+Deferred Runtime Authority Principle: ACTIVE
+Runtime Centralization Drift posture: MONITORED</code></pre>
+<p>The move from L0 to L1.5 is the scope of Phase 3 (Claude-only acquisition closure).</p>
+<p>That implementation is separate from this document.</p>
+<p>This document governs the boundary, not the implementation.</p>
+<hr>
+<p><em>The absence of a runtime wrapper is not a capability gap.</em></p>
+<p><em>It is a governance constraint that preserves observation distance.</em></p>
+<p><em>CodeBurn arrives after the interaction. That temporal asymmetry is the design.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_ACQUISITION_AUTHORITY_MODEL.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

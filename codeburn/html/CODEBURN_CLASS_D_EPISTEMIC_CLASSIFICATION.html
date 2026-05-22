@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Class D Epistemic Classification</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Class D Epistemic Classification</div>
+  <div class="meta">Source: CODEBURN_CLASS_D_EPISTEMIC_CLASSIFICATION.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-class-d-epistemic-classification">CodeBurn — Class D Epistemic Classification</a><a href="#definition">Definition</a><a href="#class-comparison">Class Comparison</a><a href="#what-class-d-does-not-mean">What Class D Does NOT Mean</a><a href="#schema-binding">Schema Binding</a><a href="#future-class-d-surfaces">Future Class D Surfaces</a></div>
+<h1 id="codeburn-class-d-epistemic-classification">CodeBurn — <span class="class-d">Class D</span> Epistemic Classification</h1>
+<blockquote>
+<p>Status: <strong><span class="status-active">ACTIVE</span> — effective from Copilot AI Credits admission</strong></p>
+<p>Written: 2026-05-21</p>
+<p>Prerequisite: <code>CODEBURN<em>COPILOT</em>AI<em>CREDITS</em>ADMISSION_GATE.md</code> (all 6 AG-Copilot answered)</p>
+</blockquote>
+<hr>
+<h2 id="definition">Definition</h2>
+<p><strong><span class="class-d">Class D</span></strong> is the epistemic class for billing-reported evidence:</p>
+<blockquote>
+<p>The observer did not observe token counts.</p>
+<p>The observer acquired billing-system ledger entries produced by converting token counts</p>
+<p>through pricing rates and plan-specific conditions.</p>
+<p>The original token counts are not recoverable without billing computation (IAF-4).</p>
+</blockquote>
+<p><span class="class-d">Class D</span> evidence has greater observation distance than <span class="class-c">Class C</span>.</p>
+<hr>
+<h2 id="class-comparison">Class Comparison</h2>
+<table>
+<tr><th>Dimension</th><th><span class="class-c">Class C</span> (Claude/Codex JSONL)</th><th><span class="class-d">Class D</span> (Copilot Billing CSV)</th></tr>
+<tr><td>Observation</td><td>JSONL session log</td><td>Billing ledger CSV</td></tr>
+<tr><td>Token counts</td><td>Reconstructed from log</td><td><strong>Not available</strong> (credits only)</td></tr>
+<tr><td>Session identity</td><td>UUID from filename</td><td><strong>None</strong> (daily aggregate)</td></tr>
+<tr><td>Provenance depth</td><td>Line + offset</td><td>File + date only</td></tr>
+<tr><td>Granularity</td><td>Per API turn</td><td>Per user / model / day</td></tr>
+<tr><td>real<em>time</em>observed</td><td>0</td><td>0</td></tr>
+<tr><td>analysis<em>safe</em>for_decision</td><td>0</td><td>0</td></tr>
+<tr><td>provider<em>truthfulness</em>assumed</td><td>0</td><td>0</td></tr>
+<tr><td>Billing computation</td><td>Forbidden</td><td>Forbidden</td></tr>
+<tr><td>Cross-provider compare</td><td>Forbidden</td><td>Forbidden</td></tr>
+<tr><td>Cross-class compare</td><td>N/A</td><td><strong>Forbidden</strong> (<span class="class-d">Class D</span> + <span class="class-c">Class C</span> not comparable)</td></tr>
+</table>
+
+<hr>
+<h2 id="what-class-d-does-not-mean">What <span class="class-d">Class D</span> Does NOT Mean</h2>
+<ul>
+<li><span class="class-d">Class D</span> does NOT mean &quot;lower quality&quot; in a general sense.</li>
+</ul>
+<p>It means the observation path is further from raw token counts.</p>
+<ul>
+<li><span class="class-d">Class D</span> does NOT unlock billing computation.</li>
+</ul>
+<p class="box-warn"><code>aic<em>gross</em>amount</code> remains categorically forbidden (C-1 + IAF-4).</p>
+<ul>
+<li><span class="class-d">Class D</span> does NOT enable cross-provider comparison.</li>
+</ul>
+<p><span class="class-d">Class D</span> + <span class="class-c">Class C</span> → not comparable (FSP-3 applies across epistemic classes).</p>
+<ul>
+<li><span class="class-d">Class D</span> does NOT relax the structural incompleteness annotation.</li>
+</ul>
+<p><code>completions_excluded = 1</code> is mandatory on every row regardless of class.</p>
+<hr>
+<h2 id="schema-binding">Schema Binding</h2>
+<p><span class="class-d">Class D</span> evidence is stored in <code>copilot<em>billing</em>events</code>, never in <code>steps</code>.</p>
+<p>The <code>acquisition<em>mode</code> for all <span class="class-d">Class D</span> rows MUST be <code>&amp;#x27;billing</em>report<em>daily</em>aggregate&amp;#x27;</code>.</p>
+<p>The <code>epistemic_class</code> for all <span class="class-d">Class D</span> rows MUST be <code>&amp;#x27;<span class="class-d">Class D</span>&amp;#x27;</code>.</p>
+<p><code>step<em>ingestion</em>provenance</code> is NOT used for <span class="class-d">Class D</span> rows.</p>
+<p><span class="class-d">Class D</span> provenance is embedded directly in <code>copilot<em>billing</em>events</code> columns.</p>
+<hr>
+<h2 id="future-class-d-surfaces">Future <span class="class-d">Class D</span> Surfaces</h2>
+<p>If additional billing-ledger surfaces are admitted in the future, they require:</p>
+<ol>
+<li>A surface research document (equivalent to <code>CODEBURN<em>GITHUB</em>COPILOT<em>AI</em>CREDITS<em>SURFACE</em>RESEARCH.md</code>)</li>
+<li>A full six-question admission gate (equivalent to <code>CODEBURN<em>COPILOT</em>AI<em>CREDITS</em>ADMISSION_GATE.md</code>)</li>
+<li><span class="class-d">Class D</span> classification confirmed</li>
+<li>Separate table (never <code>copilot<em>billing</em>events</code> cross-pollinated with other surfaces)</li>
+</ol>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CLASS_D_EPISTEMIC_CLASSIFICATION.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

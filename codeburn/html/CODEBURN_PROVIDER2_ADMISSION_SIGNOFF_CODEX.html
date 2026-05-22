@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn -- Provider 2 (Codex) Admission Sign-off</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn -- Provider 2 (Codex) Admission Sign-off</div>
+  <div class="meta">Source: CODEBURN_PROVIDER2_ADMISSION_SIGNOFF_CODEX.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-provider-2-codex-admission-sign-off">CodeBurn -- Provider 2 (Codex) Admission Sign-off</a><a href="#">이 문서의 역할</a><a href="#ag-1-comparability-boundary-reaffirmation">AG-1: Comparability Boundary Reaffirmation</a><a href="#ag-2-acquisition-non-equivalence-acknowledgement">AG-2: Acquisition Non-Equivalence Acknowledgement</a><a href="#ag-3-schema-similarity-disclaimer">AG-3: Schema Similarity Disclaimer</a><a href="#ag-4-semantic-freeze-acknowledgement">AG-4: Semantic Freeze Acknowledgement</a><a href="#ag-5-codex-specific-artifact-contract-required">AG-5: Codex-Specific Artifact Contract Required</a><a href="#ag-6-adversarial-re-interpretation-requirement">AG-6: Adversarial Re-Interpretation Requirement</a><a href="#ag-6-output-1-hidden-comparability-assumptions">AG-6 Output 1: Hidden Comparability Assumptions</a><a href="#ag-6-output-2-authority-expansion-vectors">AG-6 Output 2: Authority Expansion Vectors</a><a href="#ag-6-output-3-semantic-implications-differing-from-claude-admission">AG-6 Output 3: Semantic Implications Differing from Claude Admission</a><a href="#gate-sign-off">Gate Sign-off</a><a href="#p5-0">P5.0 시작 조건 확인</a></div>
+<h1 id="codeburn-provider-2-codex-admission-sign-off">CodeBurn -- Provider 2 (Codex) Admission Sign-off</h1>
+<blockquote>
+<p>Written: 2026-05-21</p>
+<p>Status: <strong>BINDING</strong> -- P5 admission sign-off</p>
+<p>Scope: P5 (Codex CLI) semantic admissibility gate clearance</p>
+<p>Depends on:</p>
+<p>CODEBURN<em>CODEX</em>ARTIFACT<em>SURFACE</em>RESEARCH.md (commit 9882d2b)</p>
+<p>CODEBURN<em>CODEX</em>ARTIFACT_CONTRACT.md (commit d98d21d)</p>
+<p>CODEBURN<em>PROVIDER2</em>ADVERSARIAL<em>REVIEW</em>CODEX.md (commit 4a2566b)</p>
+<p>CODEBURN<em>PROVIDER2</em>ADMISSION_GATE.md (gate definition)</p>
+<p>CODEBURN<em>ACQUISITION</em>SEMANTIC_FREEZE.md (semantic freeze)</p>
+<p>Role: gate sign-off -- P5.0 may begin after this document is committed</p>
+</blockquote>
+<hr>
+<h2 id="">이 문서의 역할</h2>
+<p>이 문서는 project management approval 이 아니다.</p>
+<p>이 문서는 <strong>semantic admissibility gate clearance</strong> 다.</p>
+<p>P5-admission.0 ~ P5-admission.2 를 완료한 후,</p>
+<p>AG-1 ~ AG-6 모든 조건이 충족되었음을 명시적으로 기록하는 문서다.</p>
+<p>이 문서 없이 P5.0 (Codex ingestor) 를 시작하는 것은 금지된다.</p>
+<p>이 문서가 존재하더라도, 아래 조건들이 모두 [x] 로 표시되지 않으면 P5.0 은 blocked 상태다.</p>
+<hr>
+<h2 id="ag-1-comparability-boundary-reaffirmation">AG-1: Comparability Boundary Reaffirmation</h2>
+<p>CODEBURN<em>CROSS</em>PROVIDER<em>COMPARABILITY</em>BOUNDARY.md 의 영구 금지 항목이</p>
+<p>Codex 도입 이후에도 동일하게 적용됨을 reaffirm 한다.</p>
+<p>각 금지 항목에 대해, Codex 도입이 새롭게 생성하는 비교 압력을 명시한다.</p>
+<ul>
+<li>[x] <strong>P1 (cross-provider aggregation): 영구 금지 -- Codex 추가 후에도 동일</strong></li>
+</ul>
+<p>Codex 가 추가됨으로써 생기는 신규 압력:</p>
+<li>&quot;Claude session + Codex session 의 총 token&quot; 을 계산하고 싶은 충동</li>
+<li>&quot;이번 달 AI token 총합&quot; 을 provider 무관하게 집계하려는 동기</li>
+<li>AR-1d (<span class="class-c">Class C</span> Convergence) 공격이 이 경로를 통해 P1 을 침식할 수 있음</li>
+<p>확인: Codex 추가 후에도 P1 은 동일하게 적용된다.</p>
+<p>두 개의 <span class="class-c">Class C</span> stream 이 존재하더라도 cross-provider aggregation 은 불가능하다.</p>
+<ul>
+<li>[x] <strong>P2 (cross-class comparison): 영구 금지 -- Codex 추가 후에도 동일</strong></li>
+</ul>
+<p>Codex 가 추가됨으로써 생기는 신규 압력:</p>
+<li>Codex 와 Claude 가 모두 <span class="class-c">Class C</span> 이므로 &quot;동일 class 비교는 가능하다&quot; 는 추론</li>
+<li>FSP-3 의 schema 차원 표현 (AR-1d, AR-1e)</li>
+<p>확인: <span class="class-c">Class C</span> + <span class="class-c">Class C</span> →/ cross-class comparison authorization.</p>
+<p>Codex 추가 후에도 P2 는 동일하게 적용된다.</p>
+<ul>
+<li>[x] <strong>P3 (unlabeled aggregation): 영구 금지 -- Codex 추가 후에도 동일</strong></li>
+</ul>
+<p>Codex 가 추가됨으로써 생기는 신규 압력:</p>
+<li>JSONL line count 가 aggregation 의 &quot;unit&quot; 으로 사용될 수 있는 경로 (AR-2d)</li>
+<li>reasoning<em>output</em>tokens 를 output_tokens 에 합산하는 경로 (AR-3a)</li>
+<p>확인: Codex 추가 후에도 P3 는 동일하게 적용된다.</p>
+<p>IAF-2 (reasoning<em>output</em>tokens inadmissible) 가 AR-3a 를 직접 차단한다.</p>
+<ul>
+<li>[x] <strong>P4 (normalization for comparison): 영구 금지 -- Codex 추가 후에도 동일</strong></li>
+</ul>
+<p>Codex 가 추가됨으로써 생기는 신규 압력:</p>
+<li>&quot;reasoning 토큰을 빼면 비교 가능하다&quot; 는 normalization 시도 (AR-3c)</li>
+<li>&quot;zero-reasoning turn 에서만 비교&quot; 라는 selective normalization (AR-3c)</li>
+<p>확인: Codex 추가 후에도 P4 는 동일하게 적용된다.</p>
+<p>Reasoning Separation Principle 이 이 경로를 차단한다.</p>
+<ul>
+<li>[x] <strong>P5 (efficiency inference): 영구 금지 -- Codex 추가 후에도 동일</strong></li>
+</ul>
+<p>Codex 가 추가됨으로써 생기는 신규 압력:</p>
+<li>reasoning<em>output</em>tokens / output_tokens 비율로 &quot;모델 효율성&quot; 을 추론하는 경로 (AR-3d)</li>
+<li>dual-provider replay stability 로 &quot;비교 가능한 품질&quot; 을 주장하는 경로 (AR-4d)</li>
+<p>확인: Codex 추가 후에도 P5 는 동일하게 적용된다.</p>
+<p class="box-frozen">IAF-2 와 Anti-Collapse Axiom 이 이 경로를 차단한다.</p>
+<hr>
+<h2 id="ag-2-acquisition-non-equivalence-acknowledgement">AG-2: Acquisition Non-Equivalence Acknowledgement</h2>
+<ul>
+<li>[x] Claude .jsonl ingestion 과 Codex CLI acquisition 은</li>
+</ul>
+<p>서로 다른 acquisition path 를 가진다</p>
+<p>Claude: type=assistant 레코드의 message.usage 필드</p>
+<p>Codex: type=event<em>msg + payload.type==token</em>count 레코드의 last<em>token</em>usage 필드</p>
+<p>레코드 타입 자체가 다르며, token 데이터의 위치도 다르다.</p>
+<ul>
+<li>[x] 서로 다른 acquisition path 는 epistemically non-equivalent evidence 를 생성한다</li>
+</ul>
+<p>두 경로 모두 JSONL 형식을 사용하지만:</p>
+<li>필드 명칭이 유사해도 측정 기준이 다름 (NST-1..5)</li>
+<li>acquisition path 의 차이가 epistemic non-equivalence 를 생성함</li>
+<li>path similarity →/ epistemic equivalence</li>
+<ul>
+<li>[x] 두 경로가 모두 <span class="class-c">Class C</span> 를 생성하더라도 그것이 비교 가능성을 의미하지 않는다</li>
+</ul>
+<p>Codex 의 epistemic class 는 CODEBURN<em>CODEX</em>ARTIFACT_CONTRACT.md 에서</p>
+<p>독립적으로 결정되었다 (Claude 가 <span class="class-c">Class C</span> 이기 때문이 아님).</p>
+<ul>
+<li>[x] &quot;둘 다 <span class="class-c">Class C</span> 이므로 합산할 수 있다&quot; 는 추론은 FSP-3 위반임</li>
+</ul>
+<p>이 문서에서 이 추론이 명시적으로 금지됨을 확인한다.</p>
+<p>AR-1d (<span class="class-c">Class C</span> Convergence Attack) 가 이 경로를 문서화하고 차단했다.</p>
+<hr>
+<h2 id="ag-3-schema-similarity-disclaimer">AG-3: Schema Similarity Disclaimer</h2>
+<ul>
+<li>[x] Codex artifact 에 <code>input<em>tokens</code>, <code>output</em>tokens</code> 필드가 존재하더라도</li>
+</ul>
+<p>Claude 의 동일 필드와 measurement equivalence 를 가정하지 않는다</p>
+<p>NST-1: Claude output<em>tokens ≠ Codex output</em>tokens (reasoning scope 차이)</p>
+<p>NST-2: Claude cache<em>read</em>input<em>tokens ≠ Codex cached</em>input_tokens (필드명도 다름)</p>
+<p>NST-3: Codex total<em>token</em>usage →/ Claude-style turn token semantics</p>
+<p>NST-4: reasoning<em>output</em>tokens →/ any Claude token category</p>
+<p>NST-5: Codex output<em>tokens (reasoning 제외) ≠ Claude output</em>tokens</p>
+<ul>
+<li>[x] field name similarity →/ measurement equivalence (명시적 확인)</li>
+</ul>
+<p>동일한 필드명은 동일한 tokenizer, context counting, billing alignment 를 보장하지 않는다.</p>
+<p>schema field = label; label similarity ≠ measurement equivalence.</p>
+<ul>
+<li>[x] field name similarity →/ comparability admissibility (명시적 확인)</li>
+</ul>
+<p>AR-1a (Field Name Gravity Attack) 가 이 drift route 를 문서화하고 차단했다.</p>
+<p>Reasoning Separation Principle 이 NST-1 을 통해 이 경로를 차단한다.</p>
+<ul>
+<li>[x] field name similarity →/ aggregation authorization (명시적 확인)</li>
+</ul>
+<p>이것은 P3 (unlabeled aggregation) 의 schema 차원 표현이다.</p>
+<p>label similarity 는 aggregation 권한을 부여하지 않는다.</p>
+<hr>
+<h2 id="ag-4-semantic-freeze-acknowledgement">AG-4: Semantic Freeze Acknowledgement</h2>
+<ul>
+<li>[x] CODEBURN<em>ACQUISITION</em>SEMANTIC_FREEZE.md 가 binding 상태로 존재함</li>
+</ul>
+<p class="box-frozen">commit c3fb909 (생성), commit ec7e433 (Anti-Collapse Axiom 추가)</p>
+<p>P5 admission 전에 작성되었으며 이미 binding 상태다.</p>
+<ul>
+<li>[x] FSP-1 (replay stability →/ provider correctness) 검토 완료</li>
+</ul>
+<p>Codex 에 대한 적용: Codex JSONL replay 가 stable 하더라도</p>
+<p>Codex 가 실제 token 을 정확하게 보고한다는 것을 의미하지 않는다.</p>
+<p>AR-4a (Stable Telemetry Trustworthiness Attack) 가 이 경로를 차단했다.</p>
+<ul>
+<li>[x] FSP-2 (cross-run consistency →/ runtime completeness) 검토 완료</li>
+</ul>
+<p>Codex 에 대한 적용: Codex session log 가 여러 run 에서 일치하더라도</p>
+<p>runtime 에서 실제로 발생한 token 사용을 완전히 반영한다는 것이 아니다.</p>
+<p>Reconstruction Distance Preservation 이 이 경로를 차단한다.</p>
+<ul>
+<li>[x] FSP-3 (multiple <span class="class-c">Class C</span> →/ comparability admissibility) 검토 완료</li>
+</ul>
+<p>Claude <span class="class-c">Class C</span> + Codex <span class="class-c">Class C</span> →/ comparability.</p>
+<p>AG-1 에서 각 P1..P5 에 대해 구체적으로 검토 완료.</p>
+<p>AR-1d 가 <span class="class-c">Class C</span> Convergence Attack 을 문서화했다.</p>
+<ul>
+<li>[x] FSP-4 (provider-reported →/ provider-actual) 검토 완료</li>
+</ul>
+<p>Codex 에 대한 적용: Codex log 의 last<em>token</em>usage 는</p>
+<p>Codex 가 실제로 소비한 token 이라는 것을 의미하지 않는다.</p>
+<p>provider<em>truthfulness</em>assumed = 0 은 Codex 에도 동일하게 적용된다.</p>
+<p>AR-4c (Provenance Identity Truth Attack) 가 이 경로를 차단했다.</p>
+<ul>
+<li>[x] FSP-5 (acquisition coverage growth →/ governance authority growth) 검토 완료</li>
+</ul>
+<p>Codex 에 대한 적용: Provider 2 추가가 CodeBurn 의 governance authority 를</p>
+<p>확장하지 않는다. AR-2b (Session Index Verification Attack) 가 이 경로를 차단했다.</p>
+<p>AG-6 Output 2 에서 5개 authority expansion vector 가 발견되었다.</p>
+<ul>
+<li>[x] Reconstruction Distance Preservation 선언 검토 완료</li>
+</ul>
+<p class="box-frozen">Anti-Collapse Axiom: &quot;Stable reconstruction does not collapse observation distance.&quot;</p>
+<p>Codex 에 대한 적용: Codex log replay 가 stable 하더라도</p>
+<p>CodeBurn 의 observation distance 는 유지된다.</p>
+<p>이것은 design intent 이지 technical debt 가 아니다.</p>
+<p>AR-4a..AR-4e (Replay Stability Inflation Attacks) 가 모두 이 공리에 의해 차단되었다.</p>
+<hr>
+<h2 id="ag-5-codex-specific-artifact-contract-required">AG-5: Codex-Specific Artifact Contract Required</h2>
+<ul>
+<li>[x] Codex CLI 의 출력 형식 분석 완료</li>
+</ul>
+<p>CODEBURN<em>CODEX</em>ARTIFACT<em>SURFACE</em>RESEARCH.md (commit 9882d2b).</p>
+<p>live inspection of ~/.codex/ (cli_version=0.130.0-alpha.5).</p>
+<p>4개 레코드 타입, 2개 token usage 객체, SQLite 보조 표면 확인.</p>
+<ul>
+<li>[x] Codex artifact 의 admissible fields 정의 완료</li>
+</ul>
+<p>CODEBURN<em>CODEX</em>ARTIFACT_CONTRACT.md (commit d98d21d):</p>
+<li>last<em>token</em>usage.input_tokens (단위 turn 입력)</li>
+<li>last<em>token</em>usage.output_tokens (단위 turn 출력, reasoning 제외)</li>
+<li>레코드 최상위 timestamp</li>
+<li>session_meta.payload.id (세션 UUID)</li>
+<ul>
+<li>[x] Codex artifact 의 inadmissible fields 명시 완료</li>
+</ul>
+<p>IAF-1: total<em>token</em>usage.* (세션 누적 -- 중복 집계 위험)</p>
+<p>IAF-2: reasoning<em>output</em>tokens (Reasoning Separation Principle)</p>
+<p>IAF-3: total_tokens (billing computation 비승인)</p>
+<p>IAF-4: cached<em>input</em>tokens (billing computation 비승인)</p>
+<p>IAF-5: model<em>context</em>window (운영 메타데이터)</p>
+<p>IAF-6: rate_limits.* (운영 메타데이터)</p>
+<p>IAF-7: session<em>meta 운영 필드 (cwd, cli</em>version, source, model_provider, originator)</p>
+<p>IAF-8: SQLite 표면 전체 (Dual Acquisition Surface Rule)</p>
+<ul>
+<li>[x] Codex 의 epistemic class 가 독립적으로 결정됨</li>
+</ul>
+<p>CODEBURN<em>CODEX</em>ARTIFACT_CONTRACT.md §Epistemic Class Determination:</p>
+<li>Codex 는 독립적으로 <span class="class-c">Class C</span> 로 결정됨</li>
+<li>Claude 가 <span class="class-c">Class C</span> 이기 때문이 아님</li>
+<li>결정 근거: observer-reconstructed (CodeBurn 이 artifact 를 해석),</li>
+<p>provider<em>truthfulness</em>assumed = 0 (동일 원칙 적용),</p>
+<p>reconstruction distance 존재 (runtime ↔ observation surface gap)</p>
+<li>이 결정은 비교 가능성 또는 aggregation 을 승인하지 않음</li>
+<ul>
+<li>[x] Codex 전용 schema extension 이 승인됨</li>
+</ul>
+<p>기존 schema 테이블 사용; 새로운 컬럼 없음.</p>
+<p>reasoning<em>output</em>tokens 용 컬럼: 추가 금지 (IAF-2).</p>
+<p>total_tokens 용 컬럼: 추가 금지 (IAF-3).</p>
+<p>total<em>token</em>usage.* 용 컬럼: 추가 금지 (IAF-1).</p>
+<p>Claude 용 schema 를 shared schema 로 재해석하는 것: 금지.</p>
+<hr>
+<h2 id="ag-6-adversarial-re-interpretation-requirement">AG-6: Adversarial Re-Interpretation Requirement</h2>
+<p>이 조건은 다른 조건들과 다르다.</p>
+<p>AG-6 은 &quot;실제로 문제를 찾으려고 시도했음&quot; 을 요구한다.</p>
+<p>Copy-forward reasoning 사용 여부: <strong>사용하지 않음</strong></p>
+<p>이전 provider admission (해당 없음 -- 이것이 첫 번째 추가 provider) 의 결론을</p>
+<p>이 sign-off 의 근거로 사용하지 않았다.</p>
+<p>모든 findings 는 Codex-surface-specific 분석에서 도출되었다.</p>
+<p>AG-6 adversarial review artifact:</p>
+<p>CODEBURN<em>PROVIDER2</em>ADVERSARIAL<em>REVIEW</em>CODEX.md (commit 4a2566b)</p>
+<p class="box-frozen">16 개의 plausible drift route 가 분석되었다. 모두 기존 invariant 에 의해 차단되었다.</p>
+<hr>
+<h3 id="ag-6-output-1-hidden-comparability-assumptions">AG-6 Output 1: Hidden Comparability Assumptions</h3>
+<p>이 provider 도입이 암묵적으로 가정하는 비교 가능성:</p>
+<p><strong>5개 발견:</strong></p>
+<ol>
+<li><strong>Field Name Gravity</strong> (AR-1a)</li>
+</ol>
+<p><code>input<em>tokens</code> / <code>output</em>tokens</code> 필드명 유사성이 &quot;같은 방식으로 측정된다&quot; 는 암묵적 가정을 생성.</p>
+<p>실제로는 reasoning scope, tokenizer, counting methodology 가 모두 다를 수 있다.</p>
+<ol>
+<li><strong>Cache Token Semantic Proxy</strong> (AR-1c)</li>
+</ol>
+<p>Claude 의 <code>cache<em>read</em>input<em>tokens</code> 와 Codex 의 <code>cached</em>input_tokens</code> 가</p>
+<p>&quot;비슷한 개념이므로 비교 가능하다&quot; 는 암묵적 가정.</p>
+<p>실제로는 필드명부터 다르며, caching mechanism 자체가 다를 수 있다.</p>
+<ol>
+<li><strong>Zero-Reasoning Selective Comparability</strong> (AR-3c)</li>
+</ol>
+<p><code>reasoning<em>output</em>tokens == 0</code> 인 turn 에서는 두 provider 가 비교 가능하다는 암묵적 가정.</p>
+<p>실제로는 zero-reasoning 이 reasoning 부재를 보장하지 않는다 (model 내부에서 발생 가능).</p>
+<ol>
+<li><strong><span class="class-c">Class C</span> Convergence</strong> (AR-1d)</li>
+</ol>
+<p>두 provider 가 모두 <span class="class-c">Class C</span> 이므로 &quot;동일한 epistemic quality&quot; 를 가진다는 암묵적 가정.</p>
+<p>실제로는 <span class="class-c">Class C</span> 는 quality label 이 아닌 epistemic category 이며, 비교 가능성을 보장하지 않는다.</p>
+<ol>
+<li><strong>Cross-Surface Consistency as Verification</strong> (AR-2c)</li>
+</ol>
+<p>JSONL 과 SQLite 가 동일한 값을 보여줄 때 &quot;서로 검증되었다&quot; 는 암묵적 가정.</p>
+<p>실제로는 두 surface 가 동일한 source 에서 쓰이면 동시 오류 가능성이 있으며,</p>
+<p>일치가 correctness 를 의미하지 않는다.</p>
+<p class="box-frozen"><strong>차단 상태: 모두 기존 invariant 에 의해 차단됨.</strong></p>
+<hr>
+<h3 id="ag-6-output-2-authority-expansion-vectors">AG-6 Output 2: Authority Expansion Vectors</h3>
+<p>이 provider 도입이 CodeBurn 의 authority 를 확장할 수 있는 경로:</p>
+<p><strong>5개 발견:</strong></p>
+<ol>
+<li><strong>Session Completeness Certification</strong> (AR-2b)</li>
+</ol>
+<p>session_index.jsonl 와 JSONL 세션 파일의 일치를 확인하면</p>
+<p>&quot;acquisition 이 완전하다&quot; 는 결론으로 이어지는 경로.</p>
+<p>실제로는 surface completeness →/ acquisition completeness.</p>
+<p>차단: Reconstruction Distance Preservation.</p>
+<ol>
+<li><strong>Replay-Based Verification Authority</strong> (AR-4b)</li>
+</ol>
+<p>동일한 artifact 에서 두 번 ingestion 한 결과가 같으면</p>
+<p>&quot;provider data 가 검증되었다&quot; 는 epistemic upgrade 경로.</p>
+<p>실제로는 replay stability →/ provider truthfulness.</p>
+<p class="box-frozen">차단: Anti-Collapse Axiom, FSP-1.</p>
+<ol>
+<li><strong>Reasoning Token Behavioral Characterization</strong> (AR-3e)</li>
+</ol>
+<p>reasoning<em>output</em>tokens 의 replay stability 가</p>
+<p>&quot;model 의 행동 패턴을 특성화할 수 있다&quot; 는 authority expansion 경로.</p>
+<p>차단: IAF-2, Reasoning Separation Principle.</p>
+<ol>
+<li><strong>Cross-Surface Certification Authority</strong> (AR-2c)</li>
+</ol>
+<p>JSONL + SQLite 의 일치로 &quot;교차 검증된 token count&quot; 를 주장하는 경로.</p>
+<p>차단: IAF-8, Dual Acquisition Surface Rule.</p>
+<ol>
+<li><strong>Turn Count Verification Authority</strong> (AR-2d)</li>
+</ol>
+<p>JSONL 의 token_count 레코드 수 = turn 수를 이용해</p>
+<p>&quot;session completeness 가 인증되었다&quot; 는 경로.</p>
+<p>차단: Reconstruction Distance Preservation.</p>
+<p class="box-frozen"><strong>차단 상태: 모두 기존 invariant 에 의해 차단됨.</strong></p>
+<hr>
+<h3 id="ag-6-output-3-semantic-implications-differing-from-claude-admission">AG-6 Output 3: Semantic Implications Differing from Claude Admission</h3>
+<p>이 provider admission 이 이전 Claude admission 과 다른 semantic implications 를 가지는 부분:</p>
+<p><strong>5개 발견:</strong></p>
+<ol>
+<li><strong>Reasoning Token Asymmetry</strong> (NST-1, NST-4)</li>
+</ol>
+<p>Claude admission 에는 reasoning token 카테고리가 없었다.</p>
+<p>Codex 는 <code>reasoning<em>output</em>tokens</code> 를 노출한다.</p>
+<p>이것은 새로운 inadmissibility category (IAF-2) 를 생성하며,</p>
+<p>Claude admission 에는 존재하지 않았던 semantic surface 다.</p>
+<ol>
+<li><strong>Dual Acquisition Surface</strong> (IAF-8, Dual Acquisition Surface Rule)</li>
+</ol>
+<p>Claude 는 단일 JSONL surface 를 가진다.</p>
+<p>Codex 는 JSONL + SQLite 두 개의 surface 를 가진다.</p>
+<p>이것은 새로운 inadmissibility category (IAF-8) 와 새로운 정책 원칙</p>
+<p>(Dual Acquisition Surface Rule) 을 생성한다.</p>
+<ol>
+<li><strong>Cumulative vs Turn-Scoped Object Distinction</strong> (IAF-1, NST-3)</li>
+</ol>
+<p>Claude 는 단일 usage 객체를 가진다 (turn-scoped).</p>
+<p>Codex 는 두 개의 객체를 가진다: total<em>token</em>usage (누적) vs last<em>token</em>usage (단위).</p>
+<p>이 구분은 Claude admission 에는 없었던 새로운 inadmissibility 경계다.</p>
+<p>첫 번째 turn 에서 두 값이 같아 보이는 현상 (AR-1b) 은 특히 위험한 ingestion bug 경로다.</p>
+<ol>
+<li><strong>Secondary Evidence Surface from SQLite</strong> (IAF-8)</li>
+</ol>
+<p>Claude 에는 SQLite 보조 표면이 없다.</p>
+<p>Codex 에는 <code>state<em>5.sqlite threads.tokens</em>used</code> 가 존재한다.</p>
+<p>이것은 admission gate 에 IAF-8 을 추가하게 된 새로운 semantic surface 다.</p>
+<ol>
+<li><strong>total_tokens Explicitly Present in Log</strong> (IAF-3)</li>
+</ol>
+<p>Claude: total_tokens = NULL (CodeBurn 정책 -- 집계 계산 비승인).</p>
+<p>Codex: total_tokens = 20364 (log 에 명시적으로 존재).</p>
+<p>이 존재 자체가 &quot;이번엔 저장해도 된다&quot; 는 추론 압력을 생성한다 (AR-1b 와 결합).</p>
+<p>IAF-3 이 명시적으로 차단하지만, 이 semantic pressure 는 Claude admission 에는 없었다.</p>
+<p class="box-frozen"><strong>차단 상태: 모두 기존 invariant 에 의해 차단됨.</strong></p>
+<hr>
+<h2 id="gate-sign-off">Gate Sign-off</h2>
+<p>모든 조건이 검토되었다. 아래 공식 기록으로 P5 admission 을 선언한다.</p>
+<pre><code>P5 Admission: GRANTED
+Gate conditions: AG-1, AG-2, AG-3, AG-4, AG-5, AG-6 -- all confirmed
+Prohibited narratives: acknowledged
+Schema similarity disclaimer: acknowledged
+Codex artifact contract: codeburn/CODEBURN_CODEX_ARTIFACT_CONTRACT.md (commit d98d21d)
+Anti-collapse axiom: acknowledged
+Copy-forward reasoning: not used
+AG-6 Output 1 (hidden comparability assumptions): 5 FOUND -- all blocked
+AG-6 Output 2 (authority expansion vectors): 5 FOUND -- all blocked
+AG-6 Output 3 (semantic diff from prior admissions): 5 FOUND -- all blocked
+Date: 2026-05-21</code></pre>
+<hr>
+<h2 id="p5-0">P5.0 시작 조건 확인</h2>
+<p>이 문서가 committed 상태가 되는 시점에:</p>
+<ul>
+<li>[x] P5 는 더 이상 <strong style="color:#c0392b">BLOCKED</strong> 가 아니다</li>
+<li>[x] P5.0 (Codex ingestor 구현) 을 시작할 수 있다</li>
+</ul>
+<p>P5.0 이 준수해야 하는 boundary:</p>
+<ol>
+<li>admissible fields 만 ingestion (<code>last<em>token</em>usage.input<em>tokens</code>, <code>last</em>token<em>usage.output</em>tokens</code>, timestamp, session UUID)</li>
+<li>IAF-1..8 을 code level 에서 강제 (AR-2d open item: 코드에서 IAF-8 enforced)</li>
+<li>multi-turn fixture 필요 (AR-1b open item: first-turn camouflage 탐지)</li>
+<li>zero-reasoning 과 non-zero-reasoning fixture 모두 필요 (AR-3c open item)</li>
+<li><code>total_tokens = NULL</code> 정책 유지 (IAF-3)</li>
+<li>reasoning<em>output</em>tokens 용 컬럼 추가 금지 (IAF-2)</li>
+<li>SQLite surface 를 acquisition path 로 사용 금지 (IAF-8)</li>
+<li><span class="class-c">Class C</span> (Codex) 는 <span class="class-c">Class C</span> (Claude) 와 separately labeled 유지</li>
+</ol>
+<hr>
+<p><em>이 gate 는 P5 를 막기 위한 것이 아니었다.</em></p>
+<p><em>이 gate 는 P5 가 올바른 semantic basis 위에서 시작되도록 하기 위한 것이었다.</em></p>
+<p><em>gate 를 통과한 P5 는 더 강하다.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_PROVIDER2_ADMISSION_SIGNOFF_CODEX.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

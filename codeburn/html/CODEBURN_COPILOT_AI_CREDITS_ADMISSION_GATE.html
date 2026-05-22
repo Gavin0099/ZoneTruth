@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn — Copilot AI Credits Admission Gate</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn — Copilot AI Credits Admission Gate</div>
+  <div class="meta">Source: CODEBURN_COPILOT_AI_CREDITS_ADMISSION_GATE.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-copilot-ai-credits-admission-gate">CodeBurn — Copilot AI Credits Admission Gate</a><a href="#ag-copilot-1-structural-absence-of-code-completions">AG-Copilot-1: Structural Absence of Code Completions</a><a href="#ag-copilot-2-provenance-identity-under-daily-aggregate-granularity">AG-Copilot-2: Provenance Identity Under Daily-Aggregate Granularity</a><a href="#ag-copilot-3-preview-vs-actual-billing-ambiguity">AG-Copilot-3: Preview vs. Actual Billing Ambiguity</a><a href="#ag-copilot-4-preventing-back-calculation-from-aic-quantity-to-tokens-cp-1">AG-Copilot-4: Preventing Back-Calculation from aic_quantity to Tokens (CP-1)</a><a href="#ag-copilot-5-preventing-cross-model-credit-comparison-cp-2">AG-Copilot-5: Preventing Cross-Model Credit Comparison (CP-2)</a><a href="#ag-copilot-6-adversarial-re-interpretation-attempts">AG-Copilot-6: Adversarial Re-Interpretation Attempts</a><a href="#attempt-a6-1-normalize-credits-to-tokens-using-public-pricing">Attempt A6-1: "Normalize credits to tokens using public pricing"</a><a href="#attempt-a6-2-aic-quantity-is-just-a-unit-change-from-tokens">Attempt A6-2: "aic_quantity is just a unit change from tokens"</a><a href="#attempt-a6-3-code-completions-are-negligible-omit-the-annotation">Attempt A6-3: "Code completions are negligible — omit the annotation"</a><a href="#attempt-a6-4-store-aic-quantity-as-total-tokens-for-unified-querying">Attempt A6-4: "Store aic_quantity as total_tokens for unified querying"</a><a href="#attempt-a6-5-preview-data-is-close-enough-skip-the-is-preview-flag">Attempt A6-5: "Preview data is close enough — skip the is_preview flag"</a><a href="#attempt-a6-6-cross-provider-comparison-is-fine-if-we-label-it-approximate">Attempt A6-6: "Cross-provider comparison is fine if we label it 'approximate'"</a><a href="#admission-gate-decision">Admission Gate Decision</a><a href="#document-status">Document Status</a></div>
+<h1 id="codeburn-copilot-ai-credits-admission-gate">CodeBurn — Copilot AI Credits Admission Gate</h1>
+<blockquote>
+<p>Status: <strong>ADMISSION GATE OPEN — <span class="class-d">Class D</span>, billing<em>report</em>daily_aggregate</strong></p>
+<p>Written: 2026-05-21</p>
+<p>Prerequisite: <code>CODEBURN<em>GITHUB</em>COPILOT<em>AI</em>CREDITS<em>SURFACE</em>RESEARCH.md</code> (P6 research)</p>
+<p>Purpose: Answer all six AG-Copilot questions required before ingestion is permitted.</p>
+<p></p>
+<p>All six answers below are binding constraints on the implementation.</p>
+<p>Any implementation that contradicts an answer below is non-compliant.</p>
+</blockquote>
+<hr>
+<h2 id="ag-copilot-1-structural-absence-of-code-completions">AG-Copilot-1: Structural Absence of Code Completions</h2>
+<p><strong>Question:</strong> How does the ingestor represent the structural absence of code completions?</p>
+<p>Does it annotate that the surface is systematically incomplete?</p>
+<p><strong>Answer:</strong></p>
+<p>Every row written to <code>copilot<em>billing</em>events</code> carries a hard-coded column:</p>
+<pre><code class="language-sql">completions_excluded INTEGER NOT NULL DEFAULT 1 CHECK (completions_excluded = 1)</code></pre>
+<p>This column is:</p>
+<ul>
+<li>Non-nullable</li>
+<li>Always 1 (cannot be set to 0)</li>
+<li>Not overridable by any ingestor argument or caller parameter</li>
+<li>Present on every row regardless of model or report date</li>
+</ul>
+<p class="box-advisory">The column is not an advisory flag. It is a schema-enforced structural fact.</p>
+<p>Any query that reads <code>copilot<em>billing</em>events</code> receives the annotation with every row.</p>
+<p>The ingestor MUST also write a <code>copilot<em>surface</em>annotations</code> metadata row per CSV file</p>
+<p>ingested, recording <code>completions<em>surface</em>present = 0</code> and</p>
+<p><code>completions<em>surface</em>reason = &amp;#x27;GitHub<em>billing</em>design: completions<em>do</em>not<em>consume</em>AI_Credits&amp;#x27;</code>.</p>
+<p><strong>Implementation gate:</strong> The table DDL must be rejected by SQLite if <code>completions_excluded</code></p>
+<p>is set to any value other than 1. The constraint <code>CHECK (completions_excluded = 1)</code> enforces this.</p>
+<hr>
+<h2 id="ag-copilot-2-provenance-identity-under-daily-aggregate-granularity">AG-Copilot-2: Provenance Identity Under Daily-Aggregate Granularity</h2>
+<p><strong>Question:</strong> How does the daily-aggregate granularity affect provenance identity?</p>
+<p>Is a &quot;session&quot; even a meaningful unit for this surface?</p>
+<p><strong>Answer:</strong></p>
+<p><strong>Session is not a meaningful unit for this surface. The unit is (user, model, date).</strong></p>
+<p>The provenance identity model used for JSONL ingestion (artifact → line → offset → session_id)</p>
+<p>partially applies, partially does not:</p>
+<table>
+<tr><th>Provenance field</th><th>JSONL (<span class="class-c">Class C</span>)</th><th>Copilot CSV (<span class="class-d">Class D</span>)</th><th>Notes</th></tr>
+<tr><td><code>source<em>artifact</em>path</code></td><td>JSONL file path</td><td>CSV file path</td><td><strong>Applies</strong></td></tr>
+<tr><td><code>source<em>record</em>line</code></td><td>Line number in JSONL</td><td>Row number in CSV</td><td><strong>Applies</strong></td></tr>
+<tr><td><code>source<em>record</em>offset</code></td><td>Byte offset</td><td>NULL</td><td><strong>Not applicable</strong> (CSV has no byte identity)</td></tr>
+<tr><td><code>session_id</code></td><td>UUID from filename</td><td>NULL</td><td><strong>Not applicable</strong> (no session in billing CSV)</td></tr>
+<tr><td><code>report_date</code></td><td>Not applicable</td><td>YYYY-MM-DD</td><td><strong>New field: billing aggregate date</strong></td></tr>
+<tr><td><code>user_login</code></td><td>Not applicable</td><td>GitHub username</td><td><strong>New field: user-level granularity</strong></td></tr>
+</table>
+
+<p>The <code>copilot<em>billing</em>events</code> table uses <code>(report<em>date, user</em>login, model, source<em>artifact</em>path)</code></p>
+<p>as the natural identity key. Duplicate ingestion is detected by this composite key.</p>
+<p class="box-warn"><code>source<em>record</em>offset</code> MUST be NULL. <code>session_id</code> MUST NOT be stored.</p>
+<p class="box-warn">Any attempt to synthesize a <code>session_id</code> from billing data is forbidden (CP-3).</p>
+<hr>
+<h2 id="ag-copilot-3-preview-vs-actual-billing-ambiguity">AG-Copilot-3: Preview vs. Actual Billing Ambiguity</h2>
+<p><strong>Question:</strong> How does the ingestor handle the preview-vs-actual ambiguity?</p>
+<p>Does it re-ingest corrected reports? What happens to records already in the DB?</p>
+<p><strong>Answer:</strong></p>
+<p>Every row in <code>copilot<em>billing</em>events</code> carries:</p>
+<pre><code class="language-sql">is_preview INTEGER NOT NULL DEFAULT 1 CHECK (is_preview IN (0, 1))</code></pre>
+<p><strong>Default is <code>is_preview = 1</code></strong> (conservative). GitHub has stated that preview reports</p>
+<p>are directional signals, not precise billing. Any report ingested before GitHub confirms</p>
+<p>it as final MUST be marked <code>is_preview = 1</code>.</p>
+<p><strong>Re-ingestion handling:</strong></p>
+<p>The ingestor supports a <code>--mark-final</code> flag that re-ingests a CSV with <code>is_preview = 0</code></p>
+<p>for rows that match the existing <code>(report<em>date, user</em>login, model, source<em>artifact</em>path)</code>.</p>
+<p>This is a soft update, not a delete-and-reinsert, to preserve append semantics.</p>
+<p>When <code>is<em>preview</code> changes from 1 → 0, a <code>copilot</em>surface_annotations</code> row is written</p>
+<p>recording the correction event with a <code>correction_timestamp</code>.</p>
+<p><strong>Aggregation restriction:</strong></p>
+<p>Any query that reads <code>copilot<em>billing</em>events</code> MUST filter on <code>is_preview</code>.</p>
+<p>Mixed-preview aggregation (combining <code>is<em>preview = 0</code> and <code>is</em>preview = 1</code> rows</p>
+<p class="box-warn">for the same date range) is forbidden at the query layer.</p>
+<p>The schema does not enforce this; it is a query contract.</p>
+<hr>
+<h2 id="ag-copilot-4-preventing-back-calculation-from-aic-quantity-to-tokens-cp-1">AG-Copilot-4: Preventing Back-Calculation from aic_quantity to Tokens (CP-1)</h2>
+<p><strong>Question:</strong> How does CP-1 prevent back-calculation from <code>aic_quantity</code> to tokens?</p>
+<p>What schema constraints enforce this?</p>
+<p><strong>Answer:</strong></p>
+<p>Three enforcement layers:</p>
+<p><strong>Layer 1: Column exclusion.</strong></p>
+<p><code>aic<em>gross</em>amount</code> is NOT a column in <code>copilot<em>billing</em>events</code>. The column is never</p>
+<p>ingested, never stored, never displayed. Its absence makes cost computation impossible</p>
+<p>from DB data alone.</p>
+<p><strong>Layer 2: No <code>token_count</code> column.</strong></p>
+<p>The table has <code>aic<em>quantity</code> (REAL) and no <code>prompt</em>tokens</code>, <code>completion_tokens</code>, or</p>
+<p><code>total_tokens</code> columns. The normal token columns from the <code>steps</code> table do not exist here.</p>
+<p>Any JOIN attempt between <code>copilot<em>billing</em>events</code> and <code>steps</code> on token columns will find</p>
+<p>no columns to JOIN on.</p>
+<p><strong>Layer 3: Schema documentation hard constraint.</strong></p>
+<p>The column comment for <code>aic_quantity</code> reads:</p>
+<pre><code class="language-sql">-- aic_quantity: billing credits only. NOT a token count.
+-- Back-calculation to tokens is FORBIDDEN (CP-1, IAF-4).
+-- No pricing rate may be applied to this value.</code></pre>
+<p>The ingestor enforces: if any caller passes a <code>model<em>pricing</em>rate</code> argument, it raises</p>
+<p class="box-warn"><code>ValueError(&amp;quot;CP-1 violation: pricing rate application forbidden&amp;quot;)</code>.</p>
+<hr>
+<h2 id="ag-copilot-5-preventing-cross-model-credit-comparison-cp-2">AG-Copilot-5: Preventing Cross-Model Credit Comparison (CP-2)</h2>
+<p><strong>Question:</strong> How does CP-2 prevent cross-model credit comparison in reports and</p>
+<p>visualizations? What query-level guards enforce this?</p>
+<p><strong>Answer:</strong></p>
+<p><strong>Schema-level:</strong> <code>copilot<em>billing</em>events</code> has a <code>model</code> column. Credits are stored</p>
+<p>per-model (as the CSV provides). This means cross-model data exists in the table.</p>
+<p><strong>Query-level guard (not schema, but documented contract):</strong></p>
+<p class="box-warn">Any query that aggregates <code>aic_quantity</code> across multiple models is forbidden.</p>
+<p>This includes:</p>
+<ul>
+<li><code>SUM(aic<em>quantity) GROUP BY user</em>login</code> (aggregates across models for a user)</li>
+<li><code>AVG(aic_quantity)</code> without <code>WHERE model = ?</code> filter</li>
+</ul>
+<p>The only permitted <code>aic<em>quantity</code> aggregation: <code>SUM(aic</em>quantity) WHERE model = ? AND report_date = ?</code></p>
+<p>(same model, same date — this is reconstruction of the daily total for one model for one user).</p>
+<p><strong>Display-level:</strong> Any display of <code>aic_quantity</code> MUST include the <code>model</code> field in the</p>
+<p class="box-warn">same row. Displaying a total without model context is forbidden.</p>
+<p><strong>Reason documented in schema:</strong></p>
+<pre><code class="language-sql">-- Cross-model comparison of aic_quantity is FORBIDDEN (CP-2).
+-- Credits embed pricing decisions. Claude Opus ≠ GPT-4o credits even if quantity equals.
+-- model column MUST appear in any query that reads aic_quantity.</code></pre>
+<hr>
+<h2 id="ag-copilot-6-adversarial-re-interpretation-attempts">AG-Copilot-6: Adversarial Re-Interpretation Attempts</h2>
+<p><strong>Question:</strong> What adversarial re-interpretation attempts were made, and which</p>
+<p class="box-frozen">existing invariants blocked them? (AG-6 requirement)</p>
+<p><strong>Answer: Six adversarial attempts tested. All blocked.</strong></p>
+<h3 id="attempt-a6-1-normalize-credits-to-tokens-using-public-pricing">Attempt A6-1: &quot;Normalize credits to tokens using public pricing&quot;</h3>
+<blockquote>
+<p>*Claim: GitHub publishes model pricing (e.g., Claude Haiku = 0.25x, GPT-4o = 1x).</p>
+<p>We can divide aic_quantity by the published rate to recover token counts.*</p>
+</blockquote>
+<p class="box-warn"><strong>Blocked by:</strong> CP-1 + IAF-4 (billing computation forbidden).</p>
+<p>The rate applied at billing time may differ from the published rate (plan multipliers,</p>
+<p>promotional rates, retroactive corrections). The public rate is not the actual rate used.</p>
+<p>Even if rates matched, recovering token counts from billing data is billing computation.</p>
+<h3 id="attempt-a6-2-aic-quantity-is-just-a-unit-change-from-tokens">Attempt A6-2: &quot;aic_quantity is just a unit change from tokens&quot;</h3>
+<blockquote>
+<p>*Claim: 1 AI Credit = $0.01, and pricing is per million tokens, so credits and tokens</p>
+<p>are proportional within a single model. It&#x27;s just a unit conversion.*</p>
+</blockquote>
+<p class="box-warn"><strong>Blocked by:</strong> CP-1. Proportionality holds only if:</p>
+<p>(a) The exact rate used at billing time is known (it is not — platform applies corrections).</p>
+<p>(b) The plan multiplier is known (monthly vs. annual subscribers differ).</p>
+<p>(c) No promotional or trial-rate adjustment applied.</p>
+<p>All three conditions are unverifiable by the observer. Proportionality claim fails.</p>
+<h3 id="attempt-a6-3-code-completions-are-negligible-omit-the-annotation">Attempt A6-3: &quot;Code completions are negligible — omit the annotation&quot;</h3>
+<blockquote>
+<p>*Claim: Code completions are low-token interactions. The gap is small enough</p>
+<p>to ignore in aggregate analysis.*</p>
+</blockquote>
+<p class="box-warn"><strong>Blocked by:</strong> AG-Copilot-1 structural annotation requirement + A-1.</p>
+<p>Code completions are the <strong>highest-frequency</strong> Copilot usage pattern.</p>
+<p>Frequency, not token size per call, determines aggregate significance.</p>
+<p>The gap is unquantifiable — &quot;small&quot; cannot be asserted without measuring completions,</p>
+<p>which the surface does not expose. The annotation is mandatory regardless of assumed magnitude.</p>
+<h3 id="attempt-a6-4-store-aic-quantity-as-total-tokens-for-unified-querying">Attempt A6-4: &quot;Store aic<em>quantity as total</em>tokens for unified querying&quot;</h3>
+<blockquote>
+<p>*Claim: The steps table has total_tokens = NULL by policy anyway. We could store</p>
+<p>aic_quantity there to make reporting simpler.*</p>
+</blockquote>
+<p class="box-warn"><strong>Blocked by:</strong> CP-3 + NST-1 (Non-Transferable Semantics Theorem).</p>
+<p><code>total_tokens</code> in the steps table has a specific semantic: observer-reconstructed</p>
+<p>sum of provider-reported token counts. <code>aic_quantity</code> is a billing credit quantity.</p>
+<p>These are different quantities. Storing <code>aic<em>quantity</code> in <code>total</em>tokens</code> would create</p>
+<p>a field whose semantic is false for Copilot rows.</p>
+<p><code>copilot<em>billing</em>events</code> is a separate table precisely to prevent this.</p>
+<h3 id="attempt-a6-5-preview-data-is-close-enough-skip-the-is-preview-flag">Attempt A6-5: &quot;Preview data is close enough — skip the is_preview flag&quot;</h3>
+<blockquote>
+<p>*Claim: GitHub&#x27;s preview reports are usually within 5% of final billing.</p>
+<p>The is_preview flag adds complexity for minimal gain.*</p>
+</blockquote>
+<p class="box-warn"><strong>Blocked by:</strong> AG-Copilot-3 answer + <span class="class-d">Class D</span> epistemic definition.</p>
+<p>GitHub explicitly documented a May 14, 2026 correction where April preview showed</p>
+<p>credits higher than expected. &quot;Usually within 5%&quot; is a probabilistic claim that</p>
+<p>cannot be verified before correction arrives. The <code>is_preview</code> flag is mandatory.</p>
+<p>Default <code>is_preview = 1</code> ensures conservative handling; re-ingestion corrects.</p>
+<h3 id="attempt-a6-6-cross-provider-comparison-is-fine-if-we-label-it-approximate">Attempt A6-6: &quot;Cross-provider comparison is fine if we label it &#x27;approximate&#x27;&quot;</h3>
+<blockquote>
+<p>*Claim: Comparing Copilot AI Credits with direct Claude API costs is useful</p>
+<p>if we add a disclaimer that values are approximate.*</p>
+</blockquote>
+<p class="box-warn"><strong>Blocked by:</strong> FSP-3 (Field Semantic Permanence) + CP-2.</p>
+<p>A disclaimer does not change the epistemic class of the underlying data.</p>
+<p><span class="class-d">Class D</span> (Copilot billing-reported) + <span class="class-c">Class C</span> (Claude observer-reconstructed) →</p>
+<p>not comparable regardless of labeling. The comparison would require asserting</p>
+<p>a common unit of measurement that does not exist between the two surfaces.</p>
+<p>The prohibition is categorical, not annotation-resolvable.</p>
+<hr>
+<h2 id="admission-gate-decision">Admission Gate Decision</h2>
+<p>All six AG-Copilot questions have been answered. All six adversarial attempts are blocked</p>
+<p class="box-frozen">by existing invariants plus the new CP-1, CP-2, CP-3 constraints.</p>
+<p>**Copilot AI Credits may be admitted as a <span class="class-d">Class D</span> acquisition surface under the following</p>
+<p>conditions (all mandatory):**</p>
+<ol>
+<li>Stored in <code>copilot<em>billing</em>events</code> table only — never in <code>steps</code> or <code>step<em>ingestion</em>provenance</code></li>
+<li><code>completions_excluded = 1</code> on every row (schema-enforced)</li>
+<li><code>aic<em>gross</em>amount</code> never ingested (C-1)</li>
+<li><code>is_preview</code> default 1; <code>--mark-final</code> re-ingestion required for confirmed data</li>
+<li>No <code>token_count</code> columns in the table (CP-1)</li>
+<li>Cross-model <code>aic_quantity</code> aggregation forbidden at query layer (CP-2)</li>
+<li><code>acquisition<em>mode = &amp;#x27;billing</em>report<em>daily</em>aggregate&amp;#x27;</code> on every provenance row (CP-3)</li>
+<li><code>epistemic_class = &amp;#x27;<span class="class-d">Class D</span>&amp;#x27;</code> on every provenance row</li>
+<li><span class="class-d">Class D</span> evidence MUST NOT be joined with or aggregated against <span class="class-c">Class C</span> evidence</li>
+</ol>
+<hr>
+<h2 id="document-status">Document Status</h2>
+<ul>
+<li>Admission gate: <strong>OPEN</strong></li>
+<li>Implementation: See <code>codeburn/phase2/copilot<em>billing</em>ingestor.py</code></li>
+<li>Schema extension: See <code>codeburn/phase1/schema.sql</code> (copilot<em>billing</em>events table)</li>
+<li><span class="class-d">Class D</span> definition: See <code>CODEBURN<em>CLASS</em>D<em>EPISTEMIC</em>CLASSIFICATION.md</code></li>
+</ul>
+<div class="doc-footer">
+  Source: <code>CODEBURN_COPILOT_AI_CREDITS_ADMISSION_GATE.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

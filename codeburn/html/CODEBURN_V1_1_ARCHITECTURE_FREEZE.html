@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn v1.1 — Architecture Freeze Snapshot</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn v1.1 — Architecture Freeze Snapshot</div>
+  <div class="meta">Source: CODEBURN_V1_1_ARCHITECTURE_FREEZE.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-v1-1-architecture-freeze-snapshot">CodeBurn v1.1 — Architecture Freeze Snapshot</a><a href="#1-what-was-built">1. What Was Built</a><a href="#2-supported-evidence-classes">2. Supported Evidence Classes</a><a href="#class-c-observer-reconstructed-session-evidence">Class C — Observer-Reconstructed Session Evidence</a><a href="#class-d-billing-reported-evidence">Class D — Billing-Reported Evidence</a><a href="#3-provider-evidence-class-mapping">3. Provider → Evidence Class Mapping</a><a href="#4-non-transferable-semantics-frozen">4. Non-Transferable Semantics (Frozen)</a><a href="#nst-1-token-fields-are-not-cross-provider-comparable">NST-1: Token Fields Are Not Cross-Provider Comparable</a><a href="#nst-2-ai-credits-are-not-token-counts">NST-2: AI Credits Are Not Token Counts</a><a href="#nst-3-rate-limit-tokens-are-not-billing-tokens">NST-3: Rate-Limit Tokens Are Not Billing Tokens</a><a href="#5-admission-gate-requirements-for-any-new-provider">5. Admission Gate Requirements (for any new provider)</a><a href="#6-frozen-invariants">6. Frozen Invariants</a><a href="#anti-collapse-axiom">Anti-Collapse Axiom</a><a href="#field-semantic-permanence-fsp-3">Field Semantic Permanence (FSP-3)</a><a href="#temporal-non-promotion-rule-tnp">Temporal Non-Promotion Rule (TNP)</a><a href="#iaf-4-billing-computation-forbidden">IAF-4: Billing Computation Forbidden</a><a href="#7-closeout-obligations">7. Closeout Obligations</a><a href="#8-forbidden-convergence-paths">8. Forbidden Convergence Paths</a><a href="#fcp-1-the-normalization-slide">FCP-1: The Normalization Slide</a><a href="#fcp-2-the-cost-efficiency-ranking">FCP-2: The Cost Efficiency Ranking</a><a href="#fcp-3-the-historical-calibration-drift">FCP-3: The Historical Calibration Drift</a><a href="#fcp-4-the-dashboard-authority-inflation">FCP-4: The Dashboard Authority Inflation</a><a href="#fcp-5-the-billing-to-token-inversion">FCP-5: The Billing-to-Token Inversion</a><a href="#9-what-the-system-is-not-and-will-not-become-without-formal-upgrade">9. What the System Is Not (and Will Not Become Without Formal Upgrade)</a><a href="#10-rate-limit-observation-posture-unverified-boundary">10. Rate Limit Observation Posture (Unverified Boundary)</a><a href="#unresolved-cache-read-accounting-regime">Unresolved: cache_read accounting regime</a><a href="#permitted-posture">Permitted posture</a><a href="#11-freeze-confirmation">11. Freeze Confirmation</a></div>
+<h1 id="codeburn-v1-1-architecture-freeze-snapshot">CodeBurn v1.1 — Architecture Freeze Snapshot</h1>
+<blockquote>
+<p>Status: <strong><span class="status-frozen">FROZEN</span> BASELINE</strong></p>
+<p>Written: 2026-05-22</p>
+<p>Phases completed: P0 – P6 (admission research through observability tooling)</p>
+<p>Purpose: Capture the governed architecture baseline before any new ingestion or</p>
+<p>analytics work begins. This document defines what the system IS,</p>
+<p class="box-warn" style="margin:0;background:none;border:none;padding:0">what it is NOT, and what convergence paths are permanently forbidden.</p>
+<p></p>
+<p>This document does not authorize new work.</p>
+<p>It is a precise record of what was built and why the boundaries are where they are.</p>
+</blockquote>
+<hr>
+<h2 id="1-what-was-built">1. What Was Built</h2>
+<p><strong>CodeBurn v1.1 is a multi-provider evidence acquisition architecture.</strong></p>
+<p>It is not a multi-provider analytics platform.</p>
+<p>The distinction is load-bearing:</p>
+<table>
+<tr><th>Evidence Acquisition Architecture</th><th>Analytics Platform</th></tr>
+<tr><td>Acquires evidence from multiple providers</td><td>Aggregates data from multiple providers</td></tr>
+<tr><td>Preserves provenance identity per record</td><td>Blends records into unified views</td></tr>
+<tr><td>Enforces epistemic class per source</td><td>Normalizes to a common unit</td></tr>
+<tr><td>Forbids cross-class comparison</td><td>Enables cross-source dashboards</td></tr>
+<tr><td>authority_flags = all false permanently</td><td>Presents evidence as decision input</td></tr>
+</table>
+
+<p>CodeBurn is the first column. It will not become the second column without a formal</p>
+<p>epistemic upgrade process that does not currently exist.</p>
+<hr>
+<h2 id="2-supported-evidence-classes">2. Supported Evidence Classes</h2>
+<h3 id="class-c-observer-reconstructed-session-evidence"><span class="class-c">Class C</span> — Observer-Reconstructed Session Evidence</h3>
+<blockquote>
+<p>The observer read a session log written by the provider&#x27;s client software.</p>
+<p>Token counts are reconstructed from log entries, not directly measured.</p>
+<p>The observer cannot verify provider truthfulness.</p>
+</blockquote>
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td><code>epistemic_class</code></td><td><code><span class="class-c">Class C</span></code></td></tr>
+<tr><td><code>real<em>time</em>observed</code></td><td><code>0</code> (permanently)</td></tr>
+<tr><td><code>analysis<em>safe</em>for_decision</code></td><td><code>0</code> (permanently)</td></tr>
+<tr><td><code>provider<em>truthfulness</em>assumed</code></td><td><code>0</code> (permanently)</td></tr>
+<tr><td>Granularity</td><td>Per API turn (JSONL line)</td></tr>
+<tr><td>Provenance identity</td><td>source<em>artifact</em>path + line + offset</td></tr>
+<tr><td>Token counts</td><td>Reconstructed from <code>input<em>tokens</code> + <code>output</em>tokens</code></td></tr>
+<tr><td>Rate-limit tokens</td><td><code>input + cache<em>creation + cache</em>read</code> (display only, rate limit estimation)</td></tr>
+</table>
+
+<h3 id="class-d-billing-reported-evidence"><span class="class-d">Class D</span> — Billing-Reported Evidence</h3>
+<blockquote>
+<p>The observer acquired billing-system ledger entries produced by converting</p>
+<p>token counts through pricing rates and plan-specific conditions.</p>
+<p>The original token counts are not recoverable without billing computation (IAF-4).</p>
+</blockquote>
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td><code>epistemic_class</code></td><td><code><span class="class-d">Class D</span></code></td></tr>
+<tr><td><code>real<em>time</em>observed</code></td><td><code>0</code> (permanently)</td></tr>
+<tr><td><code>analysis<em>safe</em>for_decision</code></td><td><code>0</code> (permanently)</td></tr>
+<tr><td><code>provider<em>truthfulness</em>assumed</code></td><td><code>0</code> (permanently)</td></tr>
+<tr><td>Granularity</td><td>Per user / model / day (billing aggregate)</td></tr>
+<tr><td>Provenance identity</td><td>source<em>artifact</em>path + CSV row line</td></tr>
+<tr><td>Token counts</td><td><strong>Not available</strong> — <code>aic_quantity</code> (credits) only</td></tr>
+<tr><td>Session identity</td><td><strong>None</strong> — daily aggregate has no session UUID</td></tr>
+</table>
+
+<p><strong><span class="class-d">Class D</span> is weaker than <span class="class-c">Class C</span>.</strong> The observation distance is greater.</p>
+<p><span class="class-d">Class D</span> + <span class="class-c">Class C</span> → NOT comparable (FSP-3 applies across classes).</p>
+<hr>
+<h2 id="3-provider-evidence-class-mapping">3. Provider → Evidence Class Mapping</h2>
+<table>
+<tr><th>Provider</th><th>Surface</th><th>Class</th><th>Table</th><th>Admission Gate</th></tr>
+<tr><td>Claude (Anthropic)</td><td>Session JSONL (<code>~/.claude/projects/*<em>/</em>.jsonl</code>)</td><td>C</td><td><code>steps</code> + <code>step<em>ingestion</em>provenance</code></td><td>P3 (original design)</td></tr>
+<tr><td>Codex (OpenAI)</td><td>Session JSONL + rate_limits payload</td><td>C</td><td><code>steps</code> + <code>step<em>ingestion</em>provenance</code></td><td>P5 admission gate</td></tr>
+<tr><td>GitHub Copilot</td><td>AI Credits billing CSV (2026-06-01+)</td><td>D</td><td><code>copilot<em>billing</em>events</code> + <code>copilot<em>surface</em>annotations</code></td><td>Copilot admission gate (AG-Copilot-1..6)</td></tr>
+</table>
+
+<p><strong>Any new provider requires a full admission gate before any ingestion work begins.</strong></p>
+<p>The admission gate minimum requirements are defined in Section 6.</p>
+<hr>
+<h2 id="4-non-transferable-semantics-frozen">4. Non-Transferable Semantics (Frozen)</h2>
+<p class="box-warn">The following field-level semantic equivalences are <strong>permanently forbidden</strong>:</p>
+<h3 id="nst-1-token-fields-are-not-cross-provider-comparable">NST-1: Token Fields Are Not Cross-Provider Comparable</h3>
+<p><code>Claude.input<em>tokens ≠ Codex.input</em>tokens</code></p>
+<p>Both fields are named identically and both are integers. They are not the same thing:</p>
+<ul>
+<li>Claude <code>input_tokens</code> counts tokens in the Anthropic tokenizer after prompt construction</li>
+<li>Codex <code>input_tokens</code> counts tokens in the OpenAI tokenizer after prompt construction</li>
+</ul>
+<p>Different tokenizers, different models, different context construction strategies.</p>
+<p>The numeric values cannot be compared, averaged, or aggregated across providers.</p>
+<h3 id="nst-2-ai-credits-are-not-token-counts">NST-2: AI Credits Are Not Token Counts</h3>
+<p><code>aic<em>quantity ≠ input</em>tokens</code> (in either direction, for any provider)</p>
+<p>AI Credits are a billing construct. They are produced by:</p>
+<pre><code>tokens → model pricing rate → plan multiplier → AI Credits</code></pre>
+<p>The original token count is not recoverable from AI Credits without billing computation.</p>
+<p class="box-warn">Treating <code>aic_quantity</code> as a token count is a CP-1 violation.</p>
+<h3 id="nst-3-rate-limit-tokens-are-not-billing-tokens">NST-3: Rate-Limit Tokens Are Not Billing Tokens</h3>
+<p><code>rate<em>limit</em>tokens ≠ billable_tokens</code></p>
+<p><code>rate<em>limit</em>tokens</code> (input + cache<em>creation + cache</em>read) is the total token volume</p>
+<p>sent to the API, used for rate limit estimation. It differs from billable tokens because:</p>
+<ul>
+<li>Cache reads are charged at a discounted rate (billing perspective)</li>
+<li>But cache reads count fully toward rate limits (consumption perspective)</li>
+</ul>
+<p class="box-warn"><code>rate<em>limit</em>tokens</code> is stored for rate limit observability only. It must not be used</p>
+<p>in any cost or billing context.</p>
+<hr>
+<h2 id="5-admission-gate-requirements-for-any-new-provider">5. Admission Gate Requirements (for any new provider)</h2>
+<p>Before any new provider may be ingested, the following must exist as committed documents:</p>
+<ol>
+<li><strong>Surface Research Document</strong> (equivalent to P6 admission research):</li>
+<ul>
+<li>What is the surface? What does it actually contain?</li>
+<li>What are the structural gaps? (What is systematically absent?)</li>
+<li>What is the observation distance? (How many transforms from raw signal?)</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Admission Gate Document</strong> answering at minimum:</li>
+<ul>
+<li>AG-N-1: How is structural incompleteness represented? (schema-enforced annotation)</li>
+<li>AG-N-2: What is the provenance identity model? (line-level or aggregate?)</li>
+<li>AG-N-3: How are corrections / retroactive changes handled?</li>
+<li>AG-N-4: How is billing computation prevented? (column exclusions + schema guards)</li>
+<li>AG-N-5: How is cross-provider comparison prevented? (query-level contracts)</li>
+<li>AG-N-6: What adversarial re-interpretation attempts were tested?</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Epistemic class confirmed</strong> (<span class="class-c">Class C</span> or <span class="class-d">Class D</span>, or new class if warranted)</li>
+</ol>
+<ol>
+<li><strong>Separate table</strong> if <span class="class-d">Class D</span> or below (never <code>steps</code> or <span class="class-c">Class C</span> tables)</li>
+</ol>
+<ol>
+<li><strong>Semantic freeze updated</strong> with new provider&#x27;s non-transferable semantics</li>
+</ol>
+<hr>
+<h2 id="6-frozen-invariants">6. Frozen Invariants</h2>
+<p class="box-frozen">These invariants cannot be relaxed by implementation convenience or scope pressure.</p>
+<h3 id="anti-collapse-axiom">Anti-Collapse Axiom</h3>
+<blockquote>
+<p>Stable reconstruction does not collapse observation distance.</p>
+<p></p>
+<p>100 consistent replays of a session = reconstruction method is stable.</p>
+<p>100 consistent replays ≠ the reconstructed values are measurements.</p>
+</blockquote>
+<h3 id="field-semantic-permanence-fsp-3">Field Semantic Permanence (FSP-3)</h3>
+<blockquote>
+<p>The semantic meaning of a field is determined at acquisition time and is permanent.</p>
+<p>No accumulation of data, no historical consistency, no cross-provider co-occurrence</p>
+<p>changes the semantic type of a field.</p>
+</blockquote>
+<h3 id="temporal-non-promotion-rule-tnp">Temporal Non-Promotion Rule (TNP)</h3>
+<blockquote>
+<p class="box-warn" style="margin:0;background:none;border:none;padding:0">Replay stability / persistence / historical consistency MUST NOT upgrade</p>
+<p>provider equivalence, field equivalence, or aggregation admissibility.</p>
+</blockquote>
+<h3 id="iaf-4-billing-computation-forbidden">IAF-4: Billing Computation Forbidden</h3>
+<blockquote>
+<p class="box-warn" style="margin:0;background:none;border:none;padding:0"><code>cached<em>input</em>tokens</code> (for billing) and <code>aic<em>gross</em>amount</code> (Copilot) must not be stored.</p>
+<p>Any feature that multiplies token counts by a price rate is out of scope.</p>
+<p><code>rate<em>limit</em>tokens</code> is the only permitted use of cache token data, and it is</p>
+<p>annotated for rate-limit estimation only, not for billing computation.</p>
+</blockquote>
+<hr>
+<h2 id="7-closeout-obligations">7. Closeout Obligations</h2>
+<p>Every phase must produce a closeout document before the next phase opens.</p>
+<p>The closeout document must confirm:</p>
+<ul>
+<li>[ ] All evidence admitted in this phase is <span class="class-c">Class C</span> or <span class="class-d">Class D</span></li>
+<li>[ ] <code>real<em>time</em>observed = 0</code> on all rows</li>
+<li>[ ] <code>analysis<em>safe</em>for_decision = 0</code> on all rows</li>
+<li>[ ] <code>provider<em>truthfulness</em>assumed = 0</code> on all rows</li>
+<li>[ ] No cross-provider aggregation introduced</li>
+<li>[ ] No cost estimation introduced</li>
+<li>[ ] Semantic freeze not violated</li>
+</ul>
+<p>Closeout documents are <strong>append-only</strong> records. A closed phase cannot be reopened</p>
+<p>by overwriting its closeout document.</p>
+<hr>
+<h2 id="8-forbidden-convergence-paths">8. Forbidden Convergence Paths</h2>
+<p class="box-warn">The following convergence paths are permanently forbidden. They are listed explicitly</p>
+<p>because they are the natural drift direction of any system that acquires multi-provider data.</p>
+<h3 id="fcp-1-the-normalization-slide">FCP-1: The Normalization Slide</h3>
+<pre><code>tokens (Claude) + credits (Copilot) + tokens (Codex)
+  → normalize to common unit
+  → unified usage aggregate
+  → &quot;total AI consumption&quot; dashboard</code></pre>
+<p class="box-warn"><strong>Why forbidden:</strong> The normalization step requires asserting cross-class, cross-provider</p>
+<p>comparability that does not exist. Any common unit is fabricated.</p>
+<p>The output would present fabricated comparability as measurement.</p>
+<h3 id="fcp-2-the-cost-efficiency-ranking">FCP-2: The Cost Efficiency Ranking</h3>
+<pre><code>session token counts
+  → multiply by provider pricing rate
+  → cost per session
+  → rank sessions / prompts by cost efficiency
+  → optimization recommendations</code></pre>
+<p class="box-warn"><strong>Why forbidden:</strong> Billing computation (IAF-4). Token counts are <span class="class-c">Class C</span> reconstructions,</p>
+<p>not measurements. Cost efficiency claims on <span class="class-c">Class C</span> data are authority inflation.</p>
+<h3 id="fcp-3-the-historical-calibration-drift">FCP-3: The Historical Calibration Drift</h3>
+<pre><code>provider X has been stable for N months
+  → &quot;we have enough history to calibrate&quot;
+  → treat historical mean as ground truth
+  → reduce epistemic disclaimers
+  → begin using as decision input</code></pre>
+<p class="box-warn"><strong>Why forbidden:</strong> TNP (Temporal Non-Promotion Rule). Historical consistency does not</p>
+<p>upgrade the epistemic class of reconstructed evidence. N months of consistent <span class="class-c">Class C</span></p>
+<p>evidence is still <span class="class-c">Class C</span> evidence.</p>
+<h3 id="fcp-4-the-dashboard-authority-inflation">FCP-4: The Dashboard Authority Inflation</h3>
+<pre><code>Class C data displayed in a chart
+  → chart looks authoritative
+  → users make decisions from chart
+  → system implicitly accepts decision use
+  → &quot;analysis_safe_for_decision&quot; becomes effectively 1 through practice</code></pre>
+<p class="box-warn"><strong>Why forbidden:</strong> V-1 (Visualization constraint). All visualizations must carry explicit</p>
+<p><code>observer-reconstructed, <span class="class-c">Class C</span>, not decision-authoritative</code> annotation.</p>
+<p>Display design that omits this annotation is an authority inflation surface.</p>
+<h3 id="fcp-5-the-billing-to-token-inversion">FCP-5: The Billing-to-Token Inversion</h3>
+<pre><code>aic_quantity (Copilot AI Credits)
+  → divide by published GitHub pricing rate
+  → estimate token counts
+  → store as token evidence
+  → compare with Claude/Codex token evidence</code></pre>
+<p class="box-warn"><strong>Why forbidden:</strong> CP-1 violation. The published rate may differ from the rate actually</p>
+<p>applied at billing time (plan multipliers, promotional rates, retroactive corrections).</p>
+<p>The inversion is non-invertible without knowing the exact billing rate used.</p>
+<hr>
+<h2 id="9-what-the-system-is-not-and-will-not-become-without-formal-upgrade">9. What the System Is Not (and Will Not Become Without Formal Upgrade)</h2>
+<table>
+<tr><th>Category</th><th>Status</th></tr>
+<tr><td>Token measurement system</td><td>NOT — all counts are <span class="class-c">Class C</span> reconstructions</td></tr>
+<tr><td>Cost tracking system</td><td>NOT — IAF-4 permanently forbids billing computation</td></tr>
+<tr><td>Cross-provider comparison system</td><td>NOT — FSP-3 + NST-1 permanently forbid this</td></tr>
+<tr><td>Optimization recommendation system</td><td>NOT — O-1 permanently forbids this</td></tr>
+<tr><td>Decision-support system</td><td>NOT — <code>analysis<em>safe</em>for_decision = 0</code> permanently</td></tr>
+<tr><td>Billing approximation system</td><td>NOT — C-1 permanently forbids this</td></tr>
+</table>
+
+<p>Upgrading any of these would require:</p>
+<ol>
+<li>A new epistemic class definition (above <span class="class-c">Class C</span>)</li>
+<li>A formal claim that provider data meets the bar for that class</li>
+<li>Adversarial review of that claim</li>
+<li>Formal amendment to this freeze document</li>
+</ol>
+<p>This process does not currently exist. It cannot be triggered by implementation alone.</p>
+<hr>
+<h2 id="10-rate-limit-observation-posture-unverified-boundary">10. Rate Limit Observation Posture (Unverified Boundary)</h2>
+<p class="box-advisory">CodeBurn&#x27;s session display includes an advisory warning based on <code>rate<em>limit</em>tokens</code></p>
+<p>(input + cache<em>creation + cache</em>read) compared against a user-set threshold.</p>
+<p class="box-advisory"><strong>This boundary is NOT verified.</strong> The following is explicitly unresolved:</p>
+<h3 id="unresolved-cache-read-accounting-regime">Unresolved: cache_read accounting regime</h3>
+<p>One calibration observation was made:</p>
+<blockquote>
+<p>At 95% session usage (Claude.ai), cache-inclusive 5h tokens ≈ 18.4M</p>
+</blockquote>
+<p>This is a single observation, not a verified Anthropic quota boundary.</p>
+<p>The following accounting regimes may differ for <code>cache<em>read</em>input_tokens</code>:</p>
+<ul>
+<li><strong>Claude.ai session limit</strong>: tracks some measure of window consumption</li>
+<li><strong>Anthropic API rate limit</strong> (<code>anthropic-ratelimit-tokens-*</code> headers): per-minute API quota</li>
+<li><strong>Claude Code subscription accounting</strong>: how Pro subscription counts session usage</li>
+<li><strong>Billing</strong>: cache reads charged at discounted rate vs. full rate for new tokens</li>
+</ul>
+<p><code>cache<em>read</em>input_tokens</code> appears in the JSONL. Its semantic meaning within Anthropic&#x27;s</p>
+<p>quota accounting system has not been confirmed against any official documentation.</p>
+<p><strong>This is NST-1 applied to internal accounting systems:</strong></p>
+<blockquote>
+<p><code>cache<em>read</em>input_tokens</code> (JSONL field)</p>
+<p>≠ confirmed quota unit in Anthropic&#x27;s session limit accounting</p>
+</blockquote>
+<h3 id="permitted-posture">Permitted posture</h3>
+<p class="box-advisory">The threshold variable is named <code>CODEBURN<em>CLAUDE</em>5H<em>ADVISORY</em>WARN<em>THRESHOLD</code> (not <code>WARN</em>TOKENS</code>)</p>
+<p>to signal its epistemic status. The display explicitly says:</p>
+<ul>
+<li><code>&amp;quot;Observed saturation heuristic — NOT verified Anthropic quota boundary&amp;quot;</code></li>
+<li><code>&amp;quot;cache_read accounting regime not confirmed&amp;quot;</code></li>
+</ul>
+<p class="box-advisory">This posture permits: advisory warning, usage anomaly observation.</p>
+<p>This posture forbids: &quot;X% of Anthropic limit&quot; claims, decision authority.</p>
+<hr>
+<h2 id="11-freeze-confirmation">11. Freeze Confirmation</h2>
+<p>This snapshot confirms the governed architecture baseline as of CodeBurn v1.1 (2026-05-22).</p>
+<table>
+<tr><th>Component</th><th>Status</th></tr>
+<tr><td>Claude ingestion (<span class="class-c">Class C</span>)</td><td><span class="status-complete">COMPLETE</span> — smoke + replay stable</td></tr>
+<tr><td>Codex ingestion (<span class="class-c">Class C</span>)</td><td><span class="status-complete">COMPLETE</span> — smoke + replay stable</td></tr>
+<tr><td>Copilot billing ingestion (<span class="class-d">Class D</span>)</td><td><span class="status-complete">COMPLETE</span> — admission gate answered</td></tr>
+<tr><td>Semantic freeze</td><td><span class="status-active">ACTIVE</span> — NST-1..3, FSP-3, Anti-Collapse, TNP</td></tr>
+<tr><td>P6 scope constraints</td><td><span class="status-active">ACTIVE</span> — A-1, T-1, C-1, R-1, O-1, V-1</td></tr>
+<tr><td>Closeout recognition</td><td>STABLE — canonical path valid</td></tr>
+<tr><td>Forbidden convergence paths</td><td>DOCUMENTED — FCP-1..5</td></tr>
+<tr><td>Architecture type</td><td>Multi-provider evidence acquisition (NOT analytics platform)</td></tr>
+</table>
+
+<div class="doc-footer">
+  Source: <code>CODEBURN_V1_1_ARCHITECTURE_FREEZE.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

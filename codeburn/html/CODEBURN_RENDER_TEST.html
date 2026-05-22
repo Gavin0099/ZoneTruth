@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn Render Test</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn Render Test</div>
+  <div class="meta">Source: CODEBURN_RENDER_TEST.md &nbsp;·&nbsp; Generated: 2026-05-22 16:44 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-render-test">CodeBurn Render Test</a><a href="#1-epistemic-class-badges">1. Epistemic Class Badges</a><a href="#2-warning-boxes">2. Warning Boxes</a><a href="#3-frozen-boxes">3. Frozen Boxes</a><a href="#4-advisory-boxes">4. Advisory Boxes</a><a href="#5-blockquotes">5. Blockquotes</a><a href="#6-tables">6. Tables</a><a href="#7-code-blocks">7. Code Blocks</a><a href="#8-inline-formatting">8. Inline Formatting</a><a href="#9-nested-lists">9. Nested Lists</a><a href="#10-mixed-paragraph-sequence">10. Mixed Paragraph Sequence</a><a href="#11-navigation-anchor-test">11. Navigation Anchor Test</a><a href="#11a-sub-section-anchor">11a. Sub-section anchor</a><a href="#11b-another-sub-section">11b. Another sub-section</a></div>
+<h1 id="codeburn-render-test">CodeBurn Render Test</h1>
+<blockquote>
+<p>Type: <strong>render test</strong> — verifies md→html renderer feature coverage</p>
+<p>Written: 2026-05-22</p>
+<p>Purpose: Confirm render_docs.py correctly handles all styled element types.</p>
+</blockquote>
+<hr>
+<h2 id="1-epistemic-class-badges">1. Epistemic Class Badges</h2>
+<p>This sentence references <span class="class-c">Class C</span> evidence.</p>
+<p>This sentence references <span class="class-d">Class D</span> evidence.</p>
+<hr>
+<h2 id="2-warning-boxes">2. Warning Boxes</h2>
+<p class="box-warn"><strong style="color:#c0392b">FORBIDDEN</strong>: this paragraph contains a prohibited pattern.</p>
+<p class="box-warn">FCP-1 applies here. This is a normalization slide warning paragraph.</p>
+<p><strong style="color:#c0392b">BLOCKED</strong> surface detected — this operation is not permitted.</p>
+<hr>
+<h2 id="3-frozen-boxes">3. Frozen Boxes</h2>
+<p class="box-frozen"><span class="status-frozen">FROZEN</span> INVARIANT: this rule does not change across versions.</p>
+<p class="box-frozen">LOCKED RULE: the Anti-Collapse Axiom applies at all abstraction layers.</p>
+<p class="box-warn">PERMANENTLY blocked by architecture decision.</p>
+<hr>
+<h2 id="4-advisory-boxes">4. Advisory Boxes</h2>
+<p class="box-advisory">ADVISORY threshold in use — not a verified provider boundary.</p>
+<p class="box-advisory">HEURISTIC value: 9,705,984 tokens. Single observation. UNVERIFIED.</p>
+<p class="box-advisory">NOT VERIFIED — accounting regime unconfirmed.</p>
+<p class="box-advisory">OBSERVABILITY ONLY: this surface does not provide decision-safe evidence.</p>
+<hr>
+<h2 id="5-blockquotes">5. Blockquotes</h2>
+<blockquote>
+<p>This is a standard blockquote. It should render in a blockquote box.</p>
+</blockquote>
+<blockquote>
+<p class="box-warn" style="margin:0;background:none;border:none;padding:0"><strong style="color:#c0392b">FORBIDDEN</strong> inside a blockquote — should render as a warn-styled blockquote paragraph.</p>
+</blockquote>
+<blockquote>
+<p>Boundedness is part of the architecture.</p>
+</blockquote>
+<hr>
+<h2 id="6-tables">6. Tables</h2>
+<table>
+<tr><th>Evidence Class</th><th>Provider</th><th>Token fields</th><th>Decision-safe</th></tr>
+<tr><td><span class="class-c">Class C</span></td><td>Claude, Codex</td><td>input<em>tokens, output</em>tokens</td><td>No</td></tr>
+<tr><td><span class="class-d">Class D</span></td><td>Copilot</td><td>aic_quantity (AI Credits, not tokens)</td><td>No</td></tr>
+</table>
+
+<table>
+<tr><th>Forbidden phrase</th><th>Blocking rule</th></tr>
+<tr><td><code>&amp;quot;total AI consumption&amp;quot;</code></td><td>FCP-1</td></tr>
+<tr><td><code>&amp;quot;cost per session&amp;quot;</code></td><td>FCP-2, IAF-4</td></tr>
+<tr><td><code>&amp;quot;X% of Anthropic limit&amp;quot;</code></td><td>Architecture Freeze §10</td></tr>
+</table>
+
+<hr>
+<h2 id="7-code-blocks">7. Code Blocks</h2>
+<pre><code class="language-yaml">identifier: CODEBURN_CLAUDE_5H_ADVISORY_WARN_THRESHOLD
+status: active
+value: 9705984
+value_unit: tokens
+at_rule_compliance:
+  AT-1: PASS
+  AT-2: PASS
+  AT-4: no upgrade claimed</code></pre>
+<pre><code class="language-sql">SELECT provider, SUM(input_tokens) AS total
+FROM steps
+WHERE provider = &#x27;claude&#x27;
+GROUP BY provider;
+-- Cross-provider SUM is FORBIDDEN by NST-1</code></pre>
+<hr>
+<h2 id="8-inline-formatting">8. Inline Formatting</h2>
+<p>This paragraph has <strong>bold</strong>, <em>italic</em>, <code>inline code</code>, and a <a href="#1-epistemic-class-badges">link</a>.</p>
+<p>The value <code>analysis<em>safe</em>for_decision = 0</code> is enforced by a schema CHECK constraint.</p>
+<p class="box-warn">Forbidden vocabulary: <code>quota</code>, <code>actual token usage</code>, <code>billing-grade</code>, <code>cross-provider</code>.</p>
+<hr>
+<h2 id="9-nested-lists">9. Nested Lists</h2>
+<ul>
+<li>Tier 1 — scaffolded surfaces</li>
+<ul>
+<li>hook code exists</li>
+<li>not yet connected to live data</li>
+</ul>
+<li>Tier 2 — blocked by external dependency</li>
+<ul>
+<li>requires provider-side changes</li>
+<li>cannot be unblocked unilaterally</li>
+</ul>
+</ul>
+<ol>
+<li>Read the governing document</li>
+<li>Check the evidence class</li>
+<li>Confirm <code>real<em>time</em>observed = 0</code></li>
+</ol>
+<hr>
+<h2 id="10-mixed-paragraph-sequence">10. Mixed Paragraph Sequence</h2>
+<p>This is a normal paragraph before a warn paragraph.</p>
+<p class="box-warn"><strong style="color:#c0392b">FORBIDDEN</strong> operation: aggregating <span class="class-c">Class C</span> and <span class="class-d">Class D</span> without normalization disclosure.</p>
+<p>This is a normal paragraph after the warn paragraph. It should not inherit warn styling.</p>
+<p class="box-frozen"><span class="status-frozen">FROZEN</span> INVARIANT: the evidence class cannot be upgraded through consistency.</p>
+<p class="box-frozen">This is another normal paragraph after a frozen paragraph.</p>
+<hr>
+<h2 id="11-navigation-anchor-test">11. Navigation Anchor Test</h2>
+<p>The nav sidebar should contain links to all sections 1–11 above.</p>
+<p>Each <code>##</code> heading should produce a nav entry.</p>
+<p><code>###</code> headings should also appear in nav (up to h3).</p>
+<h3 id="11a-sub-section-anchor">11a. Sub-section anchor</h3>
+<p>This sub-section heading should appear in nav.</p>
+<h3 id="11b-another-sub-section">11b. Another sub-section</h3>
+<p>This one too.</p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_RENDER_TEST.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

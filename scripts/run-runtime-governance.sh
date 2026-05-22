@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared runtime-governance enforcement entrypoint for local hooks and CI.
 
-set -eo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/lib/python.sh"

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn P5 Final Closeout (2026-05-21)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn P5 Final Closeout (2026-05-21)</div>
+  <div class="meta">Source: CODEBURN_P5_FINAL_CLOSEOUT_2026-05-21.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-p5-final-closeout-2026-05-21">CodeBurn P5 Final Closeout (2026-05-21)</a><a href="#1-final-state-freeze">1. Final State Freeze</a><a href="#2-supported-acquisition-surface">2. Supported Acquisition Surface</a><a href="#claude-codex-ingestion-are-both-supported">Claude + Codex ingestion are both supported</a><a href="#epistemic-position-remains-unchanged">Epistemic position remains unchanged</a><a href="#3-non-negotiable-boundaries-preserved">3. Non-Negotiable Boundaries (Preserved)</a><a href="#4-evidence-stability-snapshot">4. Evidence Stability Snapshot</a><a href="#smoke-replay">Smoke / Replay</a><a href="#closeout-surface">Closeout Surface</a><a href="#5-interpretation-guardrails-explicit">5. Interpretation Guardrails (Explicit)</a><a href="#6-p5-exit-criteria-check">6. P5 Exit Criteria Check</a></div>
+<h1 id="codeburn-p5-final-closeout-2026-05-21">CodeBurn P5 Final Closeout (2026-05-21)</h1>
+<blockquote>
+<p>Status: <strong>CLOSED (P5)</strong></p>
+<p>Scope: Codex ingestion path closure and closeout-surface stabilization</p>
+<p>Boundary: observation-only, <span class="class-c">Class C</span>, no cross-provider comparison</p>
+</blockquote>
+<hr>
+<h2 id="1-final-state-freeze">1. Final State Freeze</h2>
+<ul>
+<li>P5 Codex ingestion: implemented</li>
+<li>P5 smoke/replay evidence: stable</li>
+<li>P5 closeout recognition: valid + consistent</li>
+<li>memory_significance advisory warning: fixed</li>
+<li>stale test-result artifact advisory: remediated via fresh artifact update</li>
+</ul>
+<hr>
+<h2 id="2-supported-acquisition-surface">2. Supported Acquisition Surface</h2>
+<h3 id="claude-codex-ingestion-are-both-supported">Claude + Codex ingestion are both supported</h3>
+<ul>
+<li>Claude ingestion path remains active under existing Phase 1/Phase 2 contracts.</li>
+<li>Codex ingestion path is implemented in:</li>
+<ul>
+<li><code>codeburn/phase2/codex<em>log</em>ingestor.py</code></li>
+</ul>
+</ul>
+<h3 id="epistemic-position-remains-unchanged">Epistemic position remains unchanged</h3>
+<ul>
+<li>Both providers remain <strong><span class="class-c">Class C</span></strong> observer-reconstructed evidence.</li>
+<li><code>real<em>time</em>observed = 0</code></li>
+<li><code>analysis<em>safe</em>for_decision = 0</code></li>
+<li><code>provider<em>truthfulness</em>assumed = 0</code></li>
+</ul>
+<p>This closeout does not authorize any authority-tier promotion.</p>
+<hr>
+<h2 id="3-non-negotiable-boundaries-preserved">3. Non-Negotiable Boundaries (Preserved)</h2>
+<ul>
+<li>No cross-provider comparison is allowed.</li>
+<li>No cross-provider aggregation is allowed.</li>
+<li>Codex <code>reasoning<em>output</em>tokens</code> is not folded into generic output evidence.</li>
+<li>Codex <code>total<em>token</em>usage</code> is not consumed as turn-scoped evidence.</li>
+<li><code>total_tokens</code> remains <code>NULL</code> by policy.</li>
+</ul>
+<hr>
+<h2 id="4-evidence-stability-snapshot">4. Evidence Stability Snapshot</h2>
+<h3 id="smoke-replay">Smoke / Replay</h3>
+<ul>
+<li>Codex smoke + replay test set executed and stable:</li>
+<ul>
+<li><code>tests/test<em>codeburn</em>codex_smoke.py</code></li>
+<li><code>tests/test<em>codeburn</em>codex_replay.py</code></li>
+</ul>
+<li>Combined result: <strong>10 passed</strong></li>
+</ul>
+<h3 id="closeout-surface">Closeout Surface</h3>
+<ul>
+<li>Canonical closeout path recognizes current evidence chain consistently.</li>
+<li>Closeout run reports:</li>
+<ul>
+<li><code>closeout_status=valid</code></li>
+<li><code>gate_verdict=OK</code></li>
+<li><code>warnings=[]</code></li>
+</ul>
+</ul>
+<hr>
+<h2 id="5-interpretation-guardrails-explicit">5. Interpretation Guardrails (Explicit)</h2>
+<ul>
+<li>Replay stability does <strong>not</strong> imply provider truthfulness.</li>
+<li>Duplicate ingest allowed does <strong>not</strong> authorize duplicate semantic consumption.</li>
+</ul>
+<p>These remain governance interpretation boundaries, not optional guidance.</p>
+<hr>
+<h2 id="6-p5-exit-criteria-check">6. P5 Exit Criteria Check</h2>
+<ul>
+<li>Ingestion implementation landed: <strong>PASS</strong></li>
+<li>Smoke evidence stabilized: <strong>PASS</strong></li>
+<li>Replay/provenance identity stabilized: <strong>PASS</strong></li>
+<li>Closeout evidence recognition stabilized: <strong>PASS</strong></li>
+<li>Advisory hygiene for P5 path cleared: <strong>PASS</strong></li>
+</ul>
+<p>P5 is closed as an evidence-observability slice, not as a decision-authority expansion.</p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_P5_FINAL_CLOSEOUT_2026-05-21.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

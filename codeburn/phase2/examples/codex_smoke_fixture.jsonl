@@ -1,0 +1,6 @@
+{"timestamp":"2026-05-21T01:00:00.000Z","type":"session_meta","payload":{"id":"codex-smoke-fixture-0001","cli_version":"0.130.0-alpha.5","model_provider":"openai","cwd":"/tmp/project"}}
+{"timestamp":"2026-05-21T01:01:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":111,"output_tokens":120,"reasoning_output_tokens":40,"total_tokens":1120},"last_token_usage":{"input_tokens":1000,"cached_input_tokens":55,"output_tokens":80,"reasoning_output_tokens":40,"total_tokens":1080},"model_context_window":258400}}}
+{"timestamp":"2026-05-21T01:02:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":2200,"cached_input_tokens":222,"output_tokens":300,"reasoning_output_tokens":60,"total_tokens":2500},"last_token_usage":{"input_tokens":1200,"cached_input_tokens":66,"output_tokens":180,"reasoning_output_tokens":60,"total_tokens":1380},"model_context_window":258400}}}
+{"timestamp":"2026-05-21T01:03:00.000Z","type":"response_item","payload":{"content":"non-token record for skip path"}}
+{"timestamp":"2026-05-21T01:04:00.000Z","type":"event_msg","payload":{"type":"status_update","info":{"text":"not a token_count"}}}
+{"timestamp":"2026-05-21T01:05:00.000Z","type":"event_msg","payload":{"type":"token_count","info":"malformed-info-not-dict"}}

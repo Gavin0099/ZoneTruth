@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn -- Provider 2 (Codex) Adversarial Review</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn -- Provider 2 (Codex) Adversarial Review</div>
+  <div class="meta">Source: CODEBURN_PROVIDER2_ADVERSARIAL_REVIEW_CODEX.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-provider-2-codex-adversarial-review">CodeBurn -- Provider 2 (Codex) Adversarial Review</a><a href="#">이 문서의 역할</a><a href="#">방법론</a><a href="#ar-1-schema-projection-attacks">AR-1: Schema Projection Attacks</a><a href="#ar-1a-field-name-gravity-attack">AR-1a: Field Name Gravity Attack</a><a href="#ar-1b-first-turn-cumulative-camouflage-attack">AR-1b: First-Turn Cumulative Camouflage Attack</a><a href="#ar-1c-cache-token-semantic-proxy-attack">AR-1c: Cache Token Semantic Proxy Attack</a><a href="#ar-1d-class-c-convergence-attack">AR-1d: Class C Convergence Attack</a><a href="#ar-1e-token-source-convergence-attack">AR-1e: Token Source Convergence Attack</a><a href="#ar-2-completeness-superiority-attacks">AR-2: Completeness Superiority Attacks</a><a href="#ar-2a-sqlite-persistence-superiority-attack">AR-2a: SQLite Persistence Superiority Attack</a><a href="#ar-2b-session-index-verification-attack">AR-2b: Session Index Verification Attack</a><a href="#ar-2c-cross-surface-consistency-verification-attack">AR-2c: Cross-Surface Consistency Verification Attack</a><a href="#ar-2d-jsonl-line-count-authority-attack">AR-2d: JSONL Line Count Authority Attack</a><a href="#ar-3-reasoning-assimilation-attacks">AR-3: Reasoning Assimilation Attacks</a><a href="#ar-3a-just-add-it-up-attack">AR-3a: "Just Add It Up" Attack</a><a href="#ar-3b-reasoning-as-cache-overhead-attack">AR-3b: Reasoning as Cache Overhead Attack</a><a href="#ar-3c-zero-reasoning-turn-comparability-attack">AR-3c: "Zero Reasoning Turn" Comparability Attack</a><a href="#ar-3d-provider-efficiency-inference-attack">AR-3d: Provider Efficiency Inference Attack</a><a href="#ar-3e-reasoning-stability-anti-collapse-attack">AR-3e: Reasoning Stability Anti-Collapse Attack</a><a href="#ar-4-replay-stability-inflation-attacks">AR-4: Replay Stability Inflation Attacks</a><a href="#ar-4a-stable-telemetry-attack">AR-4a: "Stable Telemetry" Attack</a><a href="#ar-4b-cross-run-verification-attack">AR-4b: Cross-Run Verification Attack</a><a href="#ar-4c-provenance-identity-truth-attack">AR-4c: Provenance Identity Truth Attack</a><a href="#ar-4d-dual-provider-stability-convergence-attack">AR-4d: Dual Provider Stability Convergence Attack</a><a href="#ar-4e-growing-confidence-accumulation-attack">AR-4e: "Growing Confidence" Accumulation Attack</a><a href="#ag-6-required-outputs">AG-6 Required Outputs</a><a href="#output-1-hidden-comparability-assumptions">Output 1: Hidden Comparability Assumptions</a><a href="#output-2-authority-expansion-vectors">Output 2: Authority Expansion Vectors</a><a href="#output-3-semantic-implications-differing-from-prior-admissions-claude">Output 3: Semantic Implications Differing from Prior Admissions (Claude)</a><a href="#open-items">차단되지 않는 것 (Open Items)</a><a href="#">리뷰 결론</a></div>
+<h1 id="codeburn-provider-2-codex-adversarial-review">CodeBurn -- Provider 2 (Codex) Adversarial Review</h1>
+<blockquote>
+<p>Written: 2026-05-21</p>
+<p>Status: P5-admission.2 -- AG-6 fulfillment artifact</p>
+<p>Scope: Codex CLI admission adversarial pressure testing</p>
+<p>Depends on: CODEBURN<em>CODEX</em>ARTIFACT<em>SURFACE</em>RESEARCH.md (attack surface basis),</p>
+<p>CODEBURN<em>CODEX</em>ARTIFACT_CONTRACT.md (invariant basis),</p>
+<p>CODEBURN<em>PROVIDER2</em>ADMISSION_GATE.md (AG-6 requirements)</p>
+<p>Role: attempted semantic attack -- not review, not verification</p>
+<p>Copy-forward reasoning used: NO (all findings are Codex-surface-specific)</p>
+</blockquote>
+<hr>
+<h2 id="">이 문서의 역할</h2>
+<p>이 문서는 review 가 아니다.</p>
+<p>이 문서는 <strong>attempted semantic attack</strong> 이다.</p>
+<p>목표는 &quot;문제가 없음을 확인&quot; 이 아니라:</p>
+<p>&quot;미래의 사람이 이 boundary 들을 어떻게 조용히 무너뜨릴 수 있는가&quot; 를 미리 시뮬레이션하는 것이다.</p>
+<p>성공 기준:</p>
+<ul>
+<li>많은 plausible drift route 를 발견한다</li>
+<li>모두 기존 invariant 에 의해 차단됨을 확인한다</li>
+<li>차단되지 않는 drift route 가 있다면, 그것은 새로운 invariant 의 필요를 의미한다</li>
+</ul>
+<p>리뷰 결과가 너무 깨끗하다면, 그것은 adversarial review 가 아니라 declaration 이다.</p>
+<hr>
+<h2 id="">방법론</h2>
+<p>각 attack 의 기술 형식:</p>
+<pre><code>[attack name]
+공격 벡터:   &quot;...&quot; (구체적인 주장 형태)
+드리프트 메커니즘:  X → Y → Z (단계별 추론 슬라이딩)
+의미론적 결과:  무엇이 침식되는가
+차단 invariant: 어떤 규칙이 이것을 막는가
+차단 강도:  [hard/soft] -- hard = schema constraint 등, soft = policy only</code></pre>
+<hr>
+<h2 id="ar-1-schema-projection-attacks">AR-1: Schema Projection Attacks</h2>
+<p>이 category 는 <strong>필드명 유사성이 comparability 압력을 생성하는</strong> attack 들이다.</p>
+<h3 id="ar-1a-field-name-gravity-attack">AR-1a: Field Name Gravity Attack</h3>
+<pre><code>공격 벡터: &quot;두 provider 모두 input_tokens, output_tokens 를 사용한다.
+           같은 이름이므로 같은 것을 측정하는 것이다.&quot;
+드리프트: field name similarity
+         → assumed measurement equivalence
+         → cross-provider token comparison
+         → cost/efficiency narrative
+의미론적 결과: FSP-3 위반 (multiple Class C →/ comparability admissibility)
+차단 invariant: NST-1, NST-5, FSP-3, CODEBURN_CODEX_ARTIFACT_CONTRACT.md IAF-1
+차단 강도: soft (policy-based, schema 는 직접 차단 불가)</code></pre>
+<p>위험 평가: 가장 쉬운 attack 이며, 가장 자연스럽게 발생한다.</p>
+<p>&quot;직관적으로 느껴지는&quot; drift 이기 때문에 특히 위험하다.</p>
+<h3 id="ar-1b-first-turn-cumulative-camouflage-attack">AR-1b: First-Turn Cumulative Camouflage Attack</h3>
+<pre><code>공격 벡터: &quot;첫 번째 turn 에서 total_token_usage 와 last_token_usage 의 값이 동일하다.
+           따라서 어느 것을 읽어도 상관없다.&quot;
+드리프트: first-turn value identity
+         → ingestion code uses total_token_usage (simpler access path)
+         → second turn: cumulative value ingested as turn-level
+         → third turn: values diverge but code is already deployed
+         → silent data corruption
+의미론적 결과: 세션이 길어질수록 ingested token 수가 exponentially 과장됨
+차단 invariant: IAF-1 (total_token_usage.* 는 always inadmissible, turn 수 무관)
+차단 강도: soft (code-level enforcement required in ingestor)</code></pre>
+<p>위험 평가: 매우 위험. 첫 번째 turn 에서는 테스트가 통과하기 때문에 버그를 발견하기 어렵다.</p>
+<p>smoke test 와 fixture 설계 시 반드시 multi-turn session 을 포함해야 한다.</p>
+<h3 id="ar-1c-cache-token-semantic-proxy-attack">AR-1c: Cache Token Semantic Proxy Attack</h3>
+<pre><code>공격 벡터: &quot;두 provider 모두 cache 관련 token 을 기록한다.
+           Claude 는 cache_read_input_tokens, Codex 는 cached_input_tokens.
+           이름이 다를 뿐 같은 개념이므로 비교하거나 합산할 수 있다.&quot;
+드리프트: similar concept (cache hit) recognized across providers
+         → treat as comparable operational metric
+         → aggregate cache efficiency across providers
+         → &quot;Claude caches better than Codex&quot; narrative
+의미론적 결과: cross-provider comparison via proxy fields
+차단 invariant: NST-2, IAF-4, FSP-3
+차단 강도: soft</code></pre>
+<h3 id="ar-1d-class-c-convergence-attack">AR-1d: <span class="class-c">Class C</span> Convergence Attack</h3>
+<pre><code>공격 벡터: &quot;Claude 도 Class C, Codex 도 Class C.
+           같은 epistemic class 이므로 동일한 신뢰도를 가지며 비교 가능하다.&quot;
+드리프트: same label
+         → assumed same epistemic quality
+         → comparability
+         → cross-provider aggregate
+의미론적 결과: FSP-3 의 핵심 위반 (multiple Class C →/ comparability)
+차단 invariant: FSP-3, Anti-Collapse Axiom (같은 reconstruction 방식이 같은 관찰 거리를 의미하지 않음)
+차단 강도: soft</code></pre>
+<h3 id="ar-1e-token-source-convergence-attack">AR-1e: Token Source Convergence Attack</h3>
+<pre><code>공격 벡터: &quot;두 provider 의 token_source = &#x27;estimated&#x27;.
+           둘 다 estimated 이므로 동일한 estimation basis 를 가진다.&quot;
+드리프트: same token_source value
+         → assumed same estimation methodology
+         → estimated + estimated = double-estimated, comparable
+         → cross-provider token confidence assessment
+의미론적 결과: token_source 를 comparability basis 로 오용
+차단 invariant: FSP-3, NST-1..5
+차단 강도: soft</code></pre>
+<hr>
+<h2 id="ar-2-completeness-superiority-attacks">AR-2: Completeness Superiority Attacks</h2>
+<p>이 category 는 <strong>acquisition surface 가 hierarchy 를 형성하는</strong> attack 들이다.</p>
+<h3 id="ar-2a-sqlite-persistence-superiority-attack">AR-2a: SQLite Persistence Superiority Attack</h3>
+<pre><code>공격 벡터: &quot;JSONL 파일은 write 중단으로 truncated 될 수 있다.
+           SQLite 는 ACID 트랜잭션이 있으므로 더 reliable 하다.
+           따라서 SQLite 에서 읽는 것이 더 완전한 증거다.&quot;
+드리프트: SQLite persistence reliability
+         → completeness superiority
+         → provenance superiority
+         → should switch acquisition surface to SQLite
+         → JSONL-based provenance identity is suboptimal
+의미론적 결과: Dual Acquisition Surface Rule 위반 + provenance identity 포기
+차단 invariant: Dual Acquisition Surface Rule (surface completeness →/ provenance superiority)
+차단 강도: soft
+비고: JSONL 선택 이유는 truthfulness 가 아니라 line/offset provenance identity 가능성이다.
+     SQLite 가 더 reliable 해도 provenance identity 를 지원하지 않는다.</code></pre>
+<h3 id="ar-2b-session-index-verification-attack">AR-2b: Session Index Verification Attack</h3>
+<pre><code>공격 벡터: &quot;session_index.jsonl 을 통해 모든 세션 ID 를 알 수 있다.
+           이를 통해 모든 세션이 ingested 되었는지 검증할 수 있다.
+           따라서 우리는 acquisition completeness 를 보장할 수 있다.&quot;
+드리프트: session index awareness
+         → can verify all sessions ingested
+         → acquisition completeness claim
+         → governance authority expansion (&quot;우리는 완전히 기록했다&quot;)
+의미론적 결과: FSP-5 위반 (acquisition coverage growth →/ governance authority growth)
+차단 invariant: FSP-5, AC1 (Runtime Authority Ceiling)
+차단 강도: soft</code></pre>
+<h3 id="ar-2c-cross-surface-consistency-verification-attack">AR-2c: Cross-Surface Consistency Verification Attack</h3>
+<pre><code>공격 벡터: &quot;JSONL 에서 읽은 token 수와 state_5.sqlite 의 threads.tokens_used 가 일치한다면,
+           데이터의 일관성이 검증된 것이다. 이것은 더 신뢰할 수 있는 증거다.&quot;
+드리프트: cross-surface consistency check
+         → verified evidence
+         → elevated epistemic status (beyond Class C)
+         → &quot;since both sources agree, this is provider-confirmed&quot;
+의미론적 결과: Anti-Collapse Axiom 위반 (consistency →/ provider truth)
+차단 invariant: Anti-Collapse Axiom, FSP-4 (provider-reported →/ provider-actual)
+차단 강도: soft
+비고: 두 surface 의 일치는 provider 가 올바르게 계산했음을 증명하지 않는다.</code></pre>
+<h3 id="ar-2d-jsonl-line-count-authority-attack">AR-2d: JSONL Line Count Authority Attack</h3>
+<pre><code>공격 벡터: &quot;JSONL 파일의 token_count 레코드 수를 세면 세션의 turn 수를 알 수 있다.
+           이를 통해 sesson completeness 를 확인할 수 있다.&quot;
+드리프트: line counting capability
+         → turn count verification
+         → completeness verification authority
+         → &quot;we can certify this session is complete&quot;
+의미론적 결과: CodeBurn 이 session completeness 를 certify 하는 authority 획득
+차단 invariant: FSP-5, reconstruction distance preservation
+              (CodeBurn 은 log 를 읽는다 -- session 이 완전한지 판단할 수 없다)
+차단 강도: soft</code></pre>
+<hr>
+<h2 id="ar-3-reasoning-assimilation-attacks">AR-3: Reasoning Assimilation Attacks</h2>
+<p>이 category 는 <strong>reasoning<em>output</em>tokens 를 일반 token semantics 에 편입하는</strong> attack 들이다.</p>
+<h3 id="ar-3a-just-add-it-up-attack">AR-3a: &quot;Just Add It Up&quot; Attack</h3>
+<pre><code>공격 벡터: &quot;total_output = output_tokens + reasoning_output_tokens.
+           이것이 실제 token 사용량의 전체 그림이다.
+           더하면 완전한 값을 얻을 수 있다.&quot;
+드리프트: arithmetic aggregation desire
+         → reasoning + visible output = &quot;real&quot; output
+         → total output billing computation
+         → cost comparison with Claude
+의미론적 결과: IAF-2, IAF-3 위반 + billing computation authorization 주장
+차단 invariant: IAF-2 (reasoning_output_tokens inadmissible),
+               IAF-3 (total_tokens inadmissible),
+               Reasoning Separation Principle
+차단 강도: soft</code></pre>
+<h3 id="ar-3b-reasoning-as-cache-overhead-attack">AR-3b: Reasoning as Cache Overhead Attack</h3>
+<pre><code>공격 벡터: &quot;reasoning_output_tokens 는 cache tokens 처럼 &#x27;내부 overhead&#x27; 다.
+           cache tokens 와 동일하게 취급하면 된다 -- 즉, inadmissible 이지만 무해하다.&quot;
+드리프트: reasoning = overhead category
+         → symmetric treatment with cache tokens
+         → future admission possible (&quot;cache tokens 도 언젠가 admissible 해질 수 있다&quot;)
+         → reasoning tokens 에 대한 conditional admission 논의 시작
+의미론적 결과: NST-4 위반 + reasoning 에 대한 future admission pressure 생성
+차단 invariant: NST-4 (reasoning_output_tokens →/ any Claude token category),
+               Reasoning Separation Principle
+차단 강도: soft</code></pre>
+<h3 id="ar-3c-zero-reasoning-turn-comparability-attack">AR-3c: &quot;Zero Reasoning Turn&quot; Comparability Attack</h3>
+<pre><code>공격 벡터: &quot;reasoning_output_tokens = 0 인 turn 에서는
+           Codex 의 output_tokens = Claude 의 output_tokens 와 동일한 의미다.
+           non-reasoning turns 에 한해서는 비교할 수 있다.&quot;
+드리프트: conditional comparability (zero-reasoning turns only)
+         → selective cross-provider comparison
+         → &quot;at least for simple responses we can compare&quot;
+         → erosion of blanket non-comparability rule
+의미론적 결과: FSP-3 의 조건부 위반 -- &quot;특별한 경우&quot; 예외가 drift의 시작점이 됨
+차단 invariant: NST-5, FSP-3
+               (금지는 reasoning_output_tokens 값에 관계없이 적용됨)
+차단 강도: soft
+비고: &quot;특별한 경우&quot; 예외를 허용하는 것이 가장 흔한 drift pattern 이다.</code></pre>
+<h3 id="ar-3d-provider-efficiency-inference-attack">AR-3d: Provider Efficiency Inference Attack</h3>
+<pre><code>공격 벡터: &quot;reasoning_output_tokens / output_tokens 비율이 높다면
+           모델이 더 많이 생각하고 있다는 것이다.
+           이 비율이 높은 provider 가 더 sophisticated 하다.&quot;
+드리프트: token ratio → reasoning quality inference
+         → provider sophistication ranking
+         → governance claim (&quot;Codex is more capable&quot;)
+의미론적 결과: AC3 위반 (Evaluative Authority), FSP-3, IAF-2
+차단 invariant: AC3, FSP-3, Reasoning Separation Principle
+차단 강도: soft</code></pre>
+<h3 id="ar-3e-reasoning-stability-anti-collapse-attack">AR-3e: Reasoning Stability Anti-Collapse Attack</h3>
+<pre><code>공격 벡터: &quot;reasoning_output_tokens 가 replay 에서 안정적이라면
+           reasoning 이 일관적으로 발생했음을 알 수 있다.
+           이것은 provider 의 reasoning 동작을 이해하는 데 유용하다.&quot;
+드리프트: reasoning token replay stability
+         → stable reasoning behavior observation
+         → runtime reasoning characterization
+         → provider behavioral modeling
+의미론적 결과: Anti-Collapse Axiom 위반 (reconstruction stability →/ runtime truth)
+차단 invariant: Anti-Collapse Axiom, AC1 (Runtime Authority)
+차단 강도: soft</code></pre>
+<hr>
+<h2 id="ar-4-replay-stability-inflation-attacks">AR-4: Replay Stability Inflation Attacks</h2>
+<p>이 category 는 <strong>결정론적 replay 가 epistemic 승급의 근거가 되는</strong> attack 들이다.</p>
+<p class="box-frozen">이것들은 Anti-Collapse Axiom 에 대한 직접 공격이다.</p>
+<h3 id="ar-4a-stable-telemetry-attack">AR-4a: &quot;Stable Telemetry&quot; Attack</h3>
+<pre><code>공격 벡터: &quot;Codex 의 JSONL 은 deterministic 하게 replay 된다.
+           이것은 신뢰할 수 있는 telemetry 임을 의미한다.
+           신뢰할 수 있는 telemetry = 더 높은 epistemic quality.&quot;
+드리프트: replay determinism
+         → reliable telemetry
+         → trustworthy data
+         → provider_truthfulness_assumed could be relaxed
+의미론적 결과: Anti-Collapse Axiom 의 핵심 violation
+차단 invariant: Anti-Collapse Axiom
+               (&quot;Stable reconstruction does not collapse observation distance.&quot;)
+차단 강도: soft (Anti-Collapse Axiom 자체가 이 attack 을 위해 존재)</code></pre>
+<h3 id="ar-4b-cross-run-verification-attack">AR-4b: Cross-Run Verification Attack</h3>
+<pre><code>공격 벡터: &quot;동일한 Codex session 을 두 번 ingest 해서 동일한 (line, offset) 을 얻었다.
+           이것은 데이터가 검증되었음을 의미한다.
+           검증된 데이터 = 더 reliable = epistemic upgrade&quot;
+드리프트: replay stability
+         → data verification
+         → epistemic upgrade (Class C → Class B or A)
+의미론적 결과: CODEBURN_CLAUDE_REPLAY_PROVENANCE_CONTRACT.md Boundary 1 위반
+               + Anti-Collapse Axiom 위반
+차단 invariant: Anti-Collapse Axiom,
+               Replay Provenance Contract Boundary 1
+               (&quot;replay stable != runtime observed&quot;)
+차단 강도: soft</code></pre>
+<h3 id="ar-4c-provenance-identity-truth-attack">AR-4c: Provenance Identity Truth Attack</h3>
+<pre><code>공격 벡터: &quot;(artifact_path, line, offset) 의 조합이 유일하게 결정된다.
+           이 위치에서 추출된 값은 권위 있는 기록이다.
+           권위 있는 기록 = provider truth.&quot;
+드리프트: unique identification
+         → authoritative record
+         → provider truth
+의미론적 결과: FSP-4 위반 (provider-reported →/ provider-actual)
+차단 invariant: FSP-4, Anti-Collapse Axiom
+차단 강도: soft</code></pre>
+<h3 id="ar-4d-dual-provider-stability-convergence-attack">AR-4d: Dual Provider Stability Convergence Attack</h3>
+<pre><code>공격 벡터: &quot;Claude 도 replay stable, Codex 도 replay stable.
+           둘 다 같은 stability property 를 가지므로 같은 epistemic quality 를 가진다.
+           같은 epistemic quality = 비교 가능하다.&quot;
+드리프트: same stability property
+         → same epistemic quality
+         → comparability
+         → FSP-3 erosion
+의미론적 결과: FSP-3 위반, Anti-Collapse Axiom 위반
+차단 invariant: FSP-3, Anti-Collapse Axiom, NST-1..5
+차단 강도: soft
+비고: 이것은 AR-1d (Class C Convergence) 의 replay 차원 변형이다.
+     같은 drift 가 다른 각도에서 반복해서 시도된다.</code></pre>
+<h3 id="ar-4e-growing-confidence-accumulation-attack">AR-4e: &quot;Growing Confidence&quot; Accumulation Attack</h3>
+<pre><code>공격 벡터: &quot;같은 세션을 1000번 ingesting 해도 같은 결과가 나온다.
+           이 정도의 반복이라면 그것은 사실상 검증된 것이나 다름없다.&quot;
+드리프트: repetition count
+         → confidence accumulation
+         → de facto verification
+         → epistemic class upgrade pressure
+의미론적 결과: Anti-Collapse Axiom 의 가장 극단적인 형태 위반
+차단 invariant: Anti-Collapse Axiom (반복은 관찰 거리를 줄이지 않는다)
+               CODEBURN_CLAUDE_REPLAY_PROVENANCE_CONTRACT.md Boundary 1
+차단 강도: soft
+비고: 이것은 &quot;무한히 반복하면 확률은 0에 가까워진다&quot; 류의 추론이다.
+     관찰 거리는 반복 횟수가 아니라 관찰 구조(epistemic position)로 결정된다.</code></pre>
+<hr>
+<h2 id="ag-6-required-outputs">AG-6 Required Outputs</h2>
+<p>Copy-forward reasoning 사용 여부: <strong>NO</strong></p>
+<p>이 review 는 이전 어떤 provider admission 의 결론도 인용하지 않는다.</p>
+<p>모든 발견은 Codex 특유의 artifact surface 에 근거한다.</p>
+<hr>
+<h3 id="output-1-hidden-comparability-assumptions">Output 1: Hidden Comparability Assumptions</h3>
+<p>이 provider 도입이 암묵적으로 가정하는 비교 가능성:</p>
+<p><strong>발견된 항목:</strong></p>
+<ol>
+<li><strong>Field name gravity</strong> (AR-1a): <code>input<em>tokens</code>/<code>output</em>tokens</code> 필드명이 동일하므로</li>
+</ol>
+<p>직관적으로 &quot;같은 것을 측정한다&quot; 고 가정하게 된다.</p>
+<p>이것은 가장 광범위하게 퍼질 수 있는 숨겨진 가정이다.</p>
+<ol>
+<li><strong>Cache token proxy comparability</strong> (AR-1c): 두 provider 모두 cache token 을 기록한다는</li>
+</ol>
+<p>사실이 &quot;cache efficiency 는 비교 가능하다&quot; 는 숨겨진 가정을 생성한다.</p>
+<ol>
+<li><strong>Zero-reasoning-turn selective comparability</strong> (AR-3c): reasoning<em>output</em>tokens = 0 인 경우</li>
+</ol>
+<p>output_tokens 가 비교 가능하다는 조건부 가정이 숨어있다.</p>
+<p>이것은 &quot;특별한 경우&quot; 예외로 drift 를 시작시키는 가정이다.</p>
+<ol>
+<li><strong><span class="class-c">Class C</span> equivalence gravity</strong> (AR-1d): 두 provider 가 모두 <span class="class-c">Class C</span> 이므로</li>
+</ol>
+<p>&quot;같은 신뢰 수준&quot; 이라는 숨겨진 가정이 있다.</p>
+<ol>
+<li><strong>Cross-surface consistency as verification</strong> (AR-2c): JSONL 과 SQLite 가 일치하면</li>
+</ol>
+<p>&quot;검증되었다&quot; 는 숨겨진 가정이 있다.</p>
+<hr>
+<h3 id="output-2-authority-expansion-vectors">Output 2: Authority Expansion Vectors</h3>
+<p>이 provider 도입이 CodeBurn 의 authority 를 확장할 수 있는 경로:</p>
+<p><strong>발견된 항목:</strong></p>
+<ol>
+<li><strong>Session completeness authority</strong> (AR-2b): session_index.jsonl 로 모든 세션을 알 수 있으므로</li>
+</ol>
+<p>&quot;모든 세션이 ingested 되었다&quot; 를 claim 하려는 압력이 생긴다.</p>
+<p>이것은 acquisition completeness authority 확장이다.</p>
+<ol>
+<li><strong>Replay verification authority</strong> (AR-4b): 두 번 ingest 해서 동일한 결과를 얻으면</li>
+</ol>
+<p>&quot;검증했다&quot; 고 claim 하는 authority 확장이다.</p>
+<ol>
+<li><strong>Reasoning behavior characterization authority</strong> (AR-3e): reasoning token 의 재현성을</li>
+</ol>
+<p>근거로 &quot;provider 의 reasoning 동작을 characterize 할 수 있다&quot; 는 authority 확장이다.</p>
+<ol>
+<li><strong>Cross-surface consistency certification authority</strong> (AR-2c): 두 surface 가 일치할 때</li>
+</ol>
+<p>&quot;데이터가 certified 되었다&quot; 고 주장하는 authority 확장이다.</p>
+<ol>
+<li><strong>Turn count verification authority</strong> (AR-2d): token_count 레코드 수 counting 으로</li>
+</ol>
+<p>&quot;session completeness 를 verify 할 수 있다&quot; 는 authority 확장이다.</p>
+<p>이 authority expansion vectors 는 모두 FSP-5 (acquisition coverage →/ governance authority) 와</p>
+<p>재구성 거리 보존 원칙으로 차단된다.</p>
+<hr>
+<h3 id="output-3-semantic-implications-differing-from-prior-admissions-claude">Output 3: Semantic Implications Differing from Prior Admissions (Claude)</h3>
+<p>이 Codex admission 이 Claude admission 과 다른 semantic implications:</p>
+<p><strong>발견된 항목:</strong></p>
+<ol>
+<li><strong>Reasoning token asymmetry</strong> (AR-3): Claude 는 reasoning 전용 token category 를 노출하지 않는다.</li>
+</ol>
+<p>Codex 는 노출한다. 이것은 output_tokens 의 의미를 비대칭적으로 만든다.</p>
+<p>Claude admission 에는 이 asymmetry 가 없었다.</p>
+<p><strong>Reasoning Separation Principle 이 이 asymmetry 로 인해 Codex admission 에서 처음 도입되었다.</strong></p>
+<ol>
+<li><strong>Dual acquisition surface</strong> (AR-2): Claude 는 JSONL 단일 surface 를 가진다.</li>
+</ol>
+<p>Codex 는 JSONL + SQLite 의 두 surface 를 가진다.</p>
+<p>Claude admission 에는 dual surface drift 가 없었다.</p>
+<p><strong>Dual Acquisition Surface Rule 이 Codex admission 에서 처음 도입되었다.</strong></p>
+<ol>
+<li><strong>Cumulative vs turn-scoped ambiguity</strong> (AR-1b): Claude 의 token 레코드는 turn-scoped 다.</li>
+</ol>
+<p>Codex 는 동일한 레코드에 cumulative 와 turn-scoped 가 모두 존재한다.</p>
+<p>Claude admission 에는 이 ambiguity 가 없었다.</p>
+<ol>
+<li><strong>SQLite as secondary evidence surface</strong> (AR-2): Claude 에는 SQLite 표면이 없다.</li>
+</ol>
+<p>Codex 에는 <code>threads.tokens_used</code> 라는 별도 token 표면이 있다.</p>
+<p>이것은 Claude 에 없었던 새로운 surface hierarchy drift vector 다.</p>
+<ol>
+<li><strong><code>total<em>tokens</code> in log</strong> (AR-3a): Claude log 에는 <code>total</em>tokens</code> 가 없다.</li>
+</ol>
+<p>Codex log 에는 있다. 이것이 &quot;이번엔 저장해도 되지 않을까&quot; 압력을 생성한다.</p>
+<p>Claude admission 에서는 이 압력이 없었다.</p>
+<hr>
+<h2 id="open-items">차단되지 않는 것 (Open Items)</h2>
+<p class="box-frozen">다음은 현재 invariant 로 <strong>충분히 차단되지 않거나 추가 검토가 필요한</strong> 항목이다:</p>
+<ol>
+<li><strong>multi-turn fixture absence</strong>: AR-1b (First-Turn Cumulative Camouflage) 는</li>
+</ol>
+<p>soft policy 로 차단되지만, P5.0 ingestor 구현 시 multi-turn fixture 가 없으면</p>
+<p>이 bug 를 발견하지 못한다.</p>
+<p><strong>요구</strong>: P5.0 spec/tests 에 반드시 multi-turn session fixture 포함.</p>
+<ol>
+<li><strong>reasoning<em>output</em>tokens = 0 turn 의 테스트 부재</strong>: AR-3c 의 &quot;zero reasoning turn&quot;</li>
+</ol>
+<p>attack 이 실제 ingestor 에서 발생하지 않는다는 것을 보장하려면</p>
+<p>reasoning = 0 인 fixture 와 reasoning &gt; 0 인 fixture 모두 필요하다.</p>
+<p><strong>요구</strong>: P5.0 fixture 에 두 케이스 모두 포함.</p>
+<ol>
+<li><strong>SQLite surface 의 inadmissibility 가 code 수준에서 강제되지 않음</strong>: IAF-8 은 policy 이며</li>
+</ol>
+<p>schema constraint 가 아니다. ingestor 가 SQLite 를 실수로 읽을 경우 기술적으로 차단되지 않는다.</p>
+<p><strong>요구</strong>: P5.0 ingestor 가 SQLite 표면을 코드 수준에서 사용하지 않음을 명시적으로 확인.</p>
+<hr>
+<h2 id="">리뷰 결론</h2>
+<p>총 <strong>16개의 plausible drift route</strong> 를 발견하였다.</p>
+<p class="box-frozen">모두 기존 invariant 에 의해 차단되었음을 확인하였다.</p>
+<p>차단 pattern 별 분류:</p>
+<table>
+<tr><th>차단 Invariant</th><th>차단한 Attack</th></tr>
+<tr><td>Anti-Collapse Axiom</td><td>AR-4a, AR-4b, AR-4c, AR-4d, AR-4e, AR-2c, AR-3e</td></tr>
+<tr><td>FSP-3 (Multiple <span class="class-c">Class C</span>)</td><td>AR-1a, AR-1d, AR-1e, AR-3c, AR-4d</td></tr>
+<tr><td>NST-1..5</td><td>AR-1a, AR-1b, AR-1c, AR-1d, AR-3b, AR-3c, AR-4d</td></tr>
+<tr><td>Reasoning Separation Principle</td><td>AR-3a, AR-3b, AR-3c, AR-3d, AR-3e</td></tr>
+<tr><td>Dual Acquisition Surface Rule</td><td>AR-2a, AR-2c</td></tr>
+<tr><td>FSP-5 (coverage growth)</td><td>AR-2b, AR-2d, AR-4b</td></tr>
+<tr><td>IAF-1..8</td><td>AR-1b, AR-3a, AR-3d</td></tr>
+<tr><td>AC3 (Evaluative Authority)</td><td>AR-3d</td></tr>
+</table>
+
+<p>차단되지 않은 항목: 0개 (그러나 Open Items 3개가 P5.0 구현 시 주의를 요함)</p>
+<p>이 review 는 성공적이다.</p>
+<p>16개의 drift route 를 발견한 것이 성공이다.</p>
+<p>모두 차단된 것이 안전을 의미한다.</p>
+<p>Open Items 3개는 P5.0 구현 요구사항으로 전달된다.</p>
+<hr>
+<p><em>이 review 는 &quot;문제가 없다&quot; 를 확인하지 않았다.</em></p>
+<p><em>이 review 는 &quot;문제가 있을 수 있는 곳을 공격하고, 모두 차단됨을 확인&quot; 했다.</em></p>
+<p><em>이 두 가지는 다르다.</em></p>
+<p><em>그리고 두 번째 방식만이 진짜 adversarial review 다.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_PROVIDER2_ADVERSARIAL_REVIEW_CODEX.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

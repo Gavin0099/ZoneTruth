@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn -- Codex CLI Artifact Contract</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn -- Codex CLI Artifact Contract</div>
+  <div class="meta">Source: CODEBURN_CODEX_ARTIFACT_CONTRACT.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-codex-cli-artifact-contract">CodeBurn -- Codex CLI Artifact Contract</a><a href="#">이 문서의 역할</a><a href="#">레코드 타입 분류</a><a href="#claude-code">Claude Code 와의 구조적 차이</a><a href="#admissible-fields">Admissible Fields</a><a href="#">레코드 선택 조건</a><a href="#admissible-field">Admissible Field 목록</a><a href="#reasoning-separation-output-tokens">Reasoning Separation 이후 output_tokens 의 의미</a><a href="#inadmissible-fields">Inadmissible Fields</a><a href="#iaf-1-total-token-usage">IAF-1: total_token_usage (세션 누적 금지)</a><a href="#iaf-2-reasoning-output-tokens-reasoning-separation">IAF-2: reasoning_output_tokens (Reasoning Separation)</a><a href="#iaf-3-total-tokens">IAF-3: total_tokens (집계 계산 금지)</a><a href="#iaf-4-cached-input-tokens">IAF-4: cached_input_tokens (청구 계산 금지)</a><a href="#iaf-5-model-context-window">IAF-5: model_context_window (운영 메타데이터)</a><a href="#iaf-6-rate-limits">IAF-6: rate_limits (운영 메타데이터)</a><a href="#iaf-7-session-meta">IAF-7: session_meta 운영 필드</a><a href="#iaf-8-sqlite-acquisition-surface-dual-acquisition-surface-rule">IAF-8: SQLite acquisition surface (Dual Acquisition Surface Rule)</a><a href="#non-transferable-semantics">Non-Transferable Semantics (금지된 의미론적 이전)</a><a href="#nst-1-claude-output-tokens-codex-output-tokens">NST-1: Claude output_tokens !≡ Codex output_tokens</a><a href="#nst-2-claude-cache-tokens-codex-cached-input-tokens">NST-2: Claude cache tokens !≡ Codex cached_input_tokens</a><a href="#nst-3-codex-total-token-usage-claude-turn-token-semantics">NST-3: Codex total_token_usage !≡ Claude turn token semantics</a><a href="#nst-4-codex-reasoning-output-tokens-claude-output-overhead">NST-4: Codex reasoning_output_tokens !≡ Claude output overhead</a><a href="#nst-5-codex-output-tokens-no-reasoning-claude-output-tokens">NST-5: Codex `output_tokens` (no reasoning) !≡ Claude `output_tokens`</a><a href="#reasoning-separation-principle">Reasoning Separation Principle</a><a href="#">선언</a><a href="#">이 원칙이 차단하는 것</a><a href="#">이 원칙이 발생하는 이유</a><a href="#dual-acquisition-surface-rule">Dual Acquisition Surface Rule</a><a href="#">선언</a><a href="#">금지된 추론</a><a href="#">이유</a><a href="#codeburn">CodeBurn 의 선택</a><a href="#epistemic-invariants">Epistemic Invariants</a><a href="#i1-epistemic-class-class-c">I1: Epistemic Class = Class C (독립적으로 결정됨)</a><a href="#i2-real-time-observed-0">I2: real_time_observed = 0 (항상)</a><a href="#i3-analysis-safe-for-decision-0">I3: analysis_safe_for_decision = 0 (항상)</a><a href="#i4-provider-truthfulness-assumed-0">I4: provider_truthfulness_assumed = 0 (항상)</a><a href="#i5-token-null-0">I5: token 부재 = NULL (0 아님)</a><a href="#i6-last-token-usage-null-0">I6: last_token_usage 부재 = NULL (0 아님)</a><a href="#schema-extension-authorization">Schema Extension Authorization</a><a href="#contract">이 Contract 가 남긴 열린 질문</a></div>
+<h1 id="codeburn-codex-cli-artifact-contract">CodeBurn -- Codex CLI Artifact Contract</h1>
+<blockquote>
+<p>Written: 2026-05-21</p>
+<p>Status: <strong>BINDING</strong> -- P5-admission.1 semantic non-equivalence contract</p>
+<p>Scope: all Codex CLI session log acquisition</p>
+<p>Depends on: CODEBURN<em>CODEX</em>ARTIFACT<em>SURFACE</em>RESEARCH.md (empirical basis),</p>
+<p>CODEBURN<em>ACQUISITION</em>SEMANTIC_FREEZE.md (constitutional frame),</p>
+<p>CODEBURN<em>TOKEN</em>PROVENANCE_ONTOLOGY.md,</p>
+<p>CODEBURN<em>AUTHORITY</em>CEILING_CONTRACT.md</p>
+<p>Authorizes: P5-admission.2 (AG-6 adversarial review)</p>
+<p>Observed version: Codex CLI 0.130.0-alpha.5</p>
+</blockquote>
+<hr>
+<h2 id="">이 문서의 역할</h2>
+<p>이 문서는 Codex CLI 아티팩트 형식을 설명하는 것이 아니다.</p>
+<p>이 문서는 <strong>Codex Semantic Non-Equivalence Contract</strong> 다.</p>
+<p>가장 위험한 시나리오는 Codex ingestion 의 기술적 실패가 아니다.</p>
+<p>가장 위험한 시나리오는:</p>
+<blockquote>
+<p>Claude mental model 이 Codex semantic surface 에 투영되는 것</p>
+</blockquote>
+<p>Claude 의 schema 는 CodeBurn 의 default ontology 가 아니다.</p>
+<p>Codex 의 필드는 Claude 의 동일 이름 필드와 동일한 의미를 가지지 않는다.</p>
+<p>이 문서는 그 투영을 명시적으로 차단한다.</p>
+<hr>
+<h2 id="">레코드 타입 분류</h2>
+<p>실제 관찰 (P5-admission.0) 에서 확인된 레코드 타입:</p>
+<table>
+<tr><th>type</th><th>설명</th><th>token evidence 포함</th></tr>
+<tr><td><code>session_meta</code></td><td>세션 메타데이터</td><td>아니오</td></tr>
+<tr><td><code>event_msg</code></td><td>이벤트 메시지</td><td><strong>일부</strong> -- <code>payload.type == &amp;quot;token_count&amp;quot;</code> 인 경우만</td></tr>
+<tr><td><code>response_item</code></td><td>응답 내용, tool calls</td><td>아니오</td></tr>
+<tr><td><code>turn_context</code></td><td>턴 컨텍스트</td><td>아니오</td></tr>
+</table>
+
+<h3 id="claude-code">Claude Code 와의 구조적 차이</h3>
+<p>Claude Code: <code>type == &amp;quot;assistant&amp;quot;</code> 레코드의 <code>message.usage</code> 에 token 데이터 존재</p>
+<p>Codex: <code>type == &amp;quot;event<em>msg&amp;quot;</code> 레코드 중 <code>payload.type == &amp;quot;token</em>count&amp;quot;</code> 인 레코드에 존재</p>
+<p>이 두 레코드 타입은 동일한 위치 규칙을 가지지 않는다.</p>
+<p>Claude 용 ingestor 의 필터 조건은 Codex 에 직접 적용할 수 없다.</p>
+<hr>
+<h2 id="admissible-fields">Admissible Fields</h2>
+<h3 id="">레코드 선택 조건</h3>
+<pre><code>type == &quot;event_msg&quot;
+AND payload.type == &quot;token_count&quot;</code></pre>
+<p>이 조건을 충족하지 않는 모든 레코드는:</p>
+<ul>
+<li>non-assistant (token evidence 아님) -- skip</li>
+<li>malformed -- quarantine</li>
+</ul>
+<h3 id="admissible-field">Admissible Field 목록</h3>
+<table>
+<tr><th>필드 경로</th><th>의미</th><th>비고</th></tr>
+<tr><td><code>payload.info.last<em>token</em>usage.input_tokens</code></td><td>이 turn 의 입력 token 수</td><td>turn-scoped 만 admissible</td></tr>
+<tr><td><code>payload.info.last<em>token</em>usage.output_tokens</code></td><td>이 turn 의 출력 token 수</td><td>Reasoning Separation 원칙 적용</td></tr>
+<tr><td><code>timestamp</code></td><td>레코드 타임스탬프</td><td></td></tr>
+<tr><td><code>payload</code> 의 부모 레코드 UUID</td><td>세션 내 레코드 식별</td><td>session_meta 에서 추출</td></tr>
+</table>
+
+<h3 id="reasoning-separation-output-tokens">Reasoning Separation 이후 output_tokens 의 의미</h3>
+<p><code>last<em>token</em>usage.output_tokens</code> 는 <strong>visible completion tokens</strong> 을 의미한다.</p>
+<p>이것은 <code>reasoning<em>output</em>tokens</code> 를 포함하지 않는다.</p>
+<p>이 contract 에서 output_tokens 는 다음을 의미한다:</p>
+<pre><code>output_tokens = completion tokens - reasoning tokens</code></pre>
+<p>이는 Claude Code 의 output_tokens 와 의미가 다를 수 있다.</p>
+<p>(Claude Code 의 output_tokens 가 reasoning 을 포함하는지 여부는 이 계약의 범위 밖이다)</p>
+<hr>
+<h2 id="inadmissible-fields">Inadmissible Fields</h2>
+<h3 id="iaf-1-total-token-usage">IAF-1: total<em>token</em>usage (세션 누적 금지)</h3>
+<pre><code>INADMISSIBLE: payload.info.total_token_usage.*</code></pre>
+<p><code>total<em>token</em>usage</code> 는 세션 누적 합계다.</p>
+<p><code>last<em>token</em>usage</code> 는 직전 turn 의 단위 사용량이다.</p>
+<p>이 두 객체는 동일한 필드명을 가지지만 의미가 전혀 다르다.</p>
+<p><code>total<em>token</em>usage</code> 를 ingest 하면:</p>
+<ul>
+<li>누적 값이 turn-level 증거로 잘못 기록됨</li>
+<li>세션이 길어질수록 값이 선형 증가하여 의미 없는 데이터 생성</li>
+<li>Claude 의 turn-level token 과 비교 불가능한 데이터 생성</li>
+</ul>
+<h3 id="iaf-2-reasoning-output-tokens-reasoning-separation">IAF-2: reasoning<em>output</em>tokens (Reasoning Separation)</h3>
+<pre><code>INADMISSIBLE: last_token_usage.reasoning_output_tokens
+INADMISSIBLE: total_token_usage.reasoning_output_tokens</code></pre>
+<p>Claude Code 의 session log 에는 이 필드가 존재하지 않는다.</p>
+<p>이 필드를 무시하거나 0 으로 처리하는 것은 두 provider 의 output_tokens 의미를 변경한다.</p>
+<p>이 필드를 저장하는 것도 승인되지 않는다 -- 이 필드는 reasoning 에 특유한 개념이며,</p>
+<p>reasoning 이 없는 provider 와의 비교를 통한 의미 왜곡을 방지해야 한다.</p>
+<p>이유: Reasoning Separation Principle (이 문서의 별도 절) 참조.</p>
+<h3 id="iaf-3-total-tokens">IAF-3: total_tokens (집계 계산 금지)</h3>
+<pre><code>INADMISSIBLE: last_token_usage.total_tokens
+INADMISSIBLE: total_token_usage.total_tokens</code></pre>
+<p><code>total<em>tokens = input</em>tokens + output_tokens + ...</code> 는 집계 계산 결과다.</p>
+<p>Claude Code 에서와 동일하게, CodeBurn 은 집계 계산을 수행하거나 저장하지 않는다.</p>
+<p>total_tokens 가 Codex log 에 명시적으로 존재한다는 사실은</p>
+<p>CodeBurn 이 그것을 저장하도록 승인하지 않는다.</p>
+<h3 id="iaf-4-cached-input-tokens">IAF-4: cached<em>input</em>tokens (청구 계산 금지)</h3>
+<pre><code>INADMISSIBLE: last_token_usage.cached_input_tokens
+INADMISSIBLE: total_token_usage.cached_input_tokens</code></pre>
+<p>Claude Code 와 동일한 이유로 청구 계산 금지.</p>
+<h3 id="iaf-5-model-context-window">IAF-5: model<em>context</em>window (운영 메타데이터)</h3>
+<pre><code>INADMISSIBLE: payload.info.model_context_window</code></pre>
+<h3 id="iaf-6-rate-limits">IAF-6: rate_limits (운영 메타데이터)</h3>
+<pre><code>INADMISSIBLE: payload.rate_limits.*
+  including: used_percent, window_minutes, resets_at, limit_id</code></pre>
+<h3 id="iaf-7-session-meta">IAF-7: session_meta 운영 필드</h3>
+<pre><code>INADMISSIBLE: payload.cwd
+INADMISSIBLE: payload.cli_version
+INADMISSIBLE: payload.source
+INADMISSIBLE: payload.model_provider
+INADMISSIBLE: payload.originator</code></pre>
+<h3 id="iaf-8-sqlite-acquisition-surface-dual-acquisition-surface-rule">IAF-8: SQLite acquisition surface (Dual Acquisition Surface Rule)</h3>
+<pre><code>INADMISSIBLE: state_5.sqlite threads.tokens_used
+INADMISSIBLE: state_5.sqlite threads.*
+INADMISSIBLE: logs_2.sqlite *</code></pre>
+<p>이유: Dual Acquisition Surface Rule (이 문서의 별도 절) 참조.</p>
+<hr>
+<h2 id="non-transferable-semantics">Non-Transferable Semantics (금지된 의미론적 이전)</h2>
+<p>이 절은 이 contract 의 핵심이다.</p>
+<p class="box-warn">다음 각 항목은 <strong>forbidden semantic transfer</strong> 다.</p>
+<p>&quot;필드명이 같으므로 동일한 의미다&quot; 또는 &quot;유사하므로 비교 가능하다&quot; 라는 추론은</p>
+<p>이 계약에서 명시적으로 금지된다.</p>
+<p>기호: <code>!≡</code> -- &quot;의미론적으로 동일하지 않다&quot;</p>
+<h3 id="nst-1-claude-output-tokens-codex-output-tokens">NST-1: Claude output<em>tokens !≡ Codex output</em>tokens</h3>
+<pre><code>Claude Code output_tokens
+!= (semantically equivalent to)
+Codex last_token_usage.output_tokens</code></pre>
+<p>Claude Code 의 output_tokens 는 완성 토큰 전체를 나타낼 가능성이 있다.</p>
+<p>Codex 의 output<em>tokens 는 reasoning</em>output_tokens 를 제외한 visible completion 이다.</p>
+<p>두 값을 비교하는 것은 FSP-3 위반이며, 이 NST-1 로 추가 차단된다.</p>
+<h3 id="nst-2-claude-cache-tokens-codex-cached-input-tokens">NST-2: Claude cache tokens !≡ Codex cached<em>input</em>tokens</h3>
+<pre><code>Claude Code cache_read_input_tokens
+!= (semantically equivalent to)
+Codex cached_input_tokens</code></pre>
+<p>필드명이 다르다. 그러나 의미가 유사해 보인다.</p>
+<p>&quot;유사해 보인다&quot; 는 비교 가능성을 의미하지 않는다.</p>
+<p>두 provider 의 cache 구현, cache 경계, cache 만료 정책이 동일하다는 보장이 없다.</p>
+<p>이 두 필드는 각각 inadmissible 이다. 비교는 이중으로 불가하다.</p>
+<h3 id="nst-3-codex-total-token-usage-claude-turn-token-semantics">NST-3: Codex total<em>token</em>usage !≡ Claude turn token semantics</h3>
+<pre><code>Codex total_token_usage.input_tokens
+-&gt;/ (cannot be interpreted as)
+Claude-style turn-scoped input evidence</code></pre>
+<p>Codex <code>total<em>token</em>usage</code> 는 세션 전체의 누적 합계다.</p>
+<p>Claude Code 의 token 레코드는 turn 단위다.</p>
+<p>이 두 개념은 동일한 필드명에도 불구하고 집계 단위가 다르다.</p>
+<h3 id="nst-4-codex-reasoning-output-tokens-claude-output-overhead">NST-4: Codex reasoning<em>output</em>tokens !≡ Claude output overhead</h3>
+<pre><code>Codex reasoning_output_tokens
+-&gt;/ (cannot be treated as)
+equivalent to any Claude token category</code></pre>
+<p>Claude Code 에는 reasoning 전용 token 카테고리가 없다.</p>
+<p>Codex 의 reasoning<em>output</em>tokens 를 Claude 의 어떤 category 에 맞추는 것은 허용되지 않는다.</p>
+<p>이 값은 admissible 하지 않으며, 다른 category 에 편입하는 것도 허용되지 않는다.</p>
+<h3 id="nst-5-codex-output-tokens-no-reasoning-claude-output-tokens">NST-5: Codex <code>output<em>tokens</code> (no reasoning) !≡ Claude <code>output</em>tokens</code></h3>
+<pre><code>Codex last_token_usage.output_tokens
+!= (semantically equivalent to)
+Claude Code output_tokens
+
+REASON: Codex output_tokens excludes reasoning_output_tokens
+        Claude output_tokens scope is not separately declared
+        These values are not comparable without explicit constitutional upgrade</code></pre>
+<hr>
+<h2 id="reasoning-separation-principle">Reasoning Separation Principle</h2>
+<h3 id="">선언</h3>
+<blockquote>
+<p><strong>Providers exposing reasoning-specific token categories</strong></p>
+<p class="box-warn" style="margin:0;background:none;border:none;padding:0"><strong>must not be normalized into generic output_token semantics</strong></p>
+<p><strong>without explicit constitutional upgrade.</strong></p>
+</blockquote>
+<h3 id="">이 원칙이 차단하는 것</h3>
+<p>다음의 암묵적 또는 명시적 행동이 금지된다:</p>
+<pre><code>reasoning_output_tokens
+→ silently fold into output_tokens
+→ treat as zero (as if reasoning did not occur)
+→ aggregate with output_tokens for &quot;total generation&quot;
+→ use to infer reasoning effort or model quality</code></pre>
+<h3 id="">이 원칙이 발생하는 이유</h3>
+<p>reasoning 을 visible output 과 분리하는 것은:</p>
+<ul>
+<li>Codex 가 reasoning token 을 노출한다는 것을 의미하지 않는다</li>
+<li>Claude 가 reasoning 을 사용하지 않는다는 것을 의미하지 않는다</li>
+</ul>
+<p>단지: 두 provider 는 다른 수준의 세분성으로 token 을 보고한다.</p>
+<p>세분성의 차이는 하나가 더 &quot;완전하다&quot; 는 것을 의미하지 않는다.</p>
+<pre><code>higher token reporting granularity
+-&gt;/ more truthful reporting
+-&gt;/ better comparability</code></pre>
+<p>모두 금지된 추론이다.</p>
+<hr>
+<h2 id="dual-acquisition-surface-rule">Dual Acquisition Surface Rule</h2>
+<h3 id="">선언</h3>
+<p>Codex CLI 는 두 개의 acquisition surface 를 제공한다:</p>
+<ol>
+<li>JSONL session log (<code>~/.codex/sessions/.../*.jsonl</code>)</li>
+<li>SQLite state DB (<code>~/.codex/state<em>5.sqlite</code>, <code>threads.tokens</em>used</code>)</li>
+</ol>
+<p>이 두 surface 는 독립적이다.</p>
+<h3 id="">금지된 추론</h3>
+<pre><code>SQLite surface completeness
+-&gt;/ SQLite provenance superiority
+
+JSONL line/offset trackability
+-&gt;/ JSONL epistemic superiority
+
+surface A data + surface B data
+-&gt;/ more complete evidence</code></pre>
+<h3 id="">이유</h3>
+<p>두 surface 가 항상 동기화되어 있다는 보장이 없다.</p>
+<p>두 surface 에서 동일한 값이 추출된다면:</p>
+<ul>
+<li>두 개의 독립 증거가 아니라 동일한 소스의 두 표현이다</li>
+<li>이것은 CODEBURN<em>CLAUDE</em>REPLAY<em>PROVENANCE</em>CONTRACT.md 의 duplicate semantics 와 동일 구조다</li>
+</ul>
+<p>두 surface 에서 다른 값이 추출된다면:</p>
+<ul>
+<li>어느 것이 &quot;더 맞는가&quot; 는 CodeBurn acquisition 으로 결정할 수 없다</li>
+<li>이것은 <span class="class-c">Class C</span> 의 관찰 거리에 의해 이미 결정된다</li>
+</ul>
+<h3 id="codeburn">CodeBurn 의 선택</h3>
+<p>CodeBurn 은 JSONL surface 만을 사용한다.</p>
+<p>이유: line/offset provenance identity 를 유지하기 위해.</p>
+<p>SQLite 는 line/offset 추적이 불가능하다.</p>
+<p>이 선택은 JSONL 이 SQLite 보다 더 진실하거나 더 완전하다는 것을 의미하지 않는다.</p>
+<p>이 선택은 provenance identity 가 acquisition 설계의 core constraint 이기 때문이다.</p>
+<pre><code>JSONL selected
+!= JSONL is more truthful
+!= JSONL is more complete
+= JSONL supports provenance identity; SQLite does not</code></pre>
+<hr>
+<h2 id="epistemic-invariants">Epistemic Invariants</h2>
+<p class="box-frozen">다음 invariants 는 Claude Code 와 동일하게 Codex 에도 적용된다.</p>
+<p>이것들은 Claude 로부터 상속된 것이 아니라 독립적으로 결정된다.</p>
+<h3 id="i1-epistemic-class-class-c">I1: Epistemic Class = <span class="class-c">Class C</span> (독립적으로 결정됨)</h3>
+<p>Codex session log 에서 ingest 된 모든 evidence 는 <span class="class-c">Class C</span> 다.</p>
+<p>이유: CodeBurn 은 log artifact 를 읽는다 (observer-reconstructed).</p>
+<p>Claude 가 <span class="class-c">Class C</span> 이기 때문이 아니라, acquisition path 가 <span class="class-c">Class C</span> 를 결정하기 때문이다.</p>
+<h3 id="i2-real-time-observed-0">I2: real<em>time</em>observed = 0 (항상)</h3>
+<p>CodeBurn 은 Codex runtime 을 관찰하지 않는다. log artifact 를 읽는다.</p>
+<h3 id="i3-analysis-safe-for-decision-0">I3: analysis<em>safe</em>for_decision = 0 (항상)</h3>
+<p><span class="class-c">Class C</span> evidence 는 decision 에 사용하기에 충분하지 않다.</p>
+<h3 id="i4-provider-truthfulness-assumed-0">I4: provider<em>truthfulness</em>assumed = 0 (항상)</h3>
+<p>Codex log 에 기록된 값이 OpenAI provider 가 실제로 계산한 값임을 가정하지 않는다.</p>
+<h3 id="i5-token-null-0">I5: token 부재 = NULL (0 아님)</h3>
+<p>token 필드가 없거나 integer 가 아닌 경우 NULL 로 기록한다.</p>
+<h3 id="i6-last-token-usage-null-0">I6: last<em>token</em>usage 부재 = NULL (0 아님)</h3>
+<p><code>last<em>token</em>usage</code> 객체가 없는 경우:</p>
+<p>token 이 사용되지 않은 것 (0) 이 아니라 데이터가 없는 것 (NULL) 이다.</p>
+<hr>
+<h2 id="schema-extension-authorization">Schema Extension Authorization</h2>
+<p>이 contract 는 다음 schema element 를 Codex 지원을 위해 승인한다:</p>
+<p><strong><code>step<em>ingestion</em>provenance</code></strong>: 기존 schema 를 그대로 사용한다.</p>
+<li><code>provider</code> 값: <code>&amp;quot;codex&amp;quot;</code> (Claude 와 구분)</li>
+<li><code>epistemic_class</code>: <code>&amp;quot;<span class="class-c">Class C</span>&amp;quot;</code> (독립 결정)</li>
+<li><code>acquisition<em>mode</code>: <code>&amp;quot;session</em>log_ingestion&amp;quot;</code> (동일 방식)</li>
+<p><strong><code>quarantined_records</code></strong>: 기존 schema 를 그대로 사용한다.</p>
+<p><strong><code>steps</code></strong>:</p>
+<li><code>prompt<em>tokens</code>: <code>last</em>token<em>usage.input</em>tokens</code> (NULL if absent)</li>
+<li><code>completion<em>tokens</code>: <code>last</em>token<em>usage.output</em>tokens</code> (NULL if absent; Reasoning Separation 적용)</li>
+<li><code>total_tokens</code>: 항상 NULL (집계 계산 금지 -- Codex log 에 있더라도)</li>
+<li><code>token_source</code>: <code>&amp;quot;estimated&amp;quot;</code> (<span class="class-c">Class C</span>, 동일)</li>
+<p><strong>승인되지 않는 것:</strong></p>
+<ul>
+<li><code>reasoning<em>output</em>tokens</code> 를 위한 새 컬럼</li>
+<li><code>total<em>token</em>usage.*</code> 를 위한 새 컬럼</li>
+<li>SQLite surface 를 위한 새 테이블</li>
+</ul>
+<hr>
+<h2 id="contract">이 Contract 가 남긴 열린 질문</h2>
+<p>P5-admission.2 (AG-6 adversarial review) 에서 검토해야 할 항목:</p>
+<ol>
+<li><code>last<em>token</em>usage</code> 가 모든 <code>token_count</code> 레코드에 항상 존재하는가?</li>
+<li>session 내 <code>token_count</code> 레코드 수가 turn 수와 정확히 1:1 인가?</li>
+<li><code>output_tokens</code> 가 reasoning 을 포함하지 않음이 공식 문서로 확인 가능한가?</li>
+<li>Codex 의 JSONL 이 append-only 인지 (mid-session rewrite 가 없는지)?</li>
+</ol>
+<p>이 질문들에 대한 불확실성은 <span class="class-c">Class C</span> 분류를 강화한다.</p>
+<p>불확실성이 해소되지 않더라도 ingestion 은 허용된다 (<span class="class-c">Class C</span> 는 완전성을 요구하지 않는다).</p>
+<p>그러나 불확실성이 가정(assumption)으로 대체되어서는 안 된다.</p>
+<hr>
+<p><em>이 contract 는 Codex ingestion 을 허용하는 문서가 아니다.</em></p>
+<p><em>이 contract 는 Codex ingestion 이 발생할 때 지켜야 할 semantic boundary 를 선언한다.</em></p>
+<p><em>boundary 가 없는 ingestion 은 evidence 가 아니라 noise 다.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CODEX_ARTIFACT_CONTRACT.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeBurn -- Codex Log Ingestor Spec (P5.0)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 { font-size: 1.9rem; color: #0d1b2a; border-bottom: 3px solid #0066cc; padding-bottom: .5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.4rem; color: #0d1b2a; border-left: 4px solid #0066cc; padding-left: .75rem; margin: 2.5rem 0 .75rem; }
+h3 { font-size: 1.15rem; color: #1a3a5c; margin: 1.5rem 0 .5rem; }
+h4 { font-size: 1rem; color: #1a3a5c; margin: 1rem 0 .4rem; }
+p  { margin: .6rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; }
+li { margin: .25rem 0; }
+a  { color: #0066cc; }
+code {
+  background: #e8edf2;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .88em;
+  color: #b5290a;
+}
+pre {
+  background: #1e2836;
+  color: #d4e5f7;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: .87em;
+  line-height: 1.6;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+blockquote {
+  border-left: 4px solid #aac4e0;
+  background: #eef4fb;
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #2c4a6e;
+  font-style: italic;
+}
+hr { border: none; border-top: 2px solid #dde4ec; margin: 2rem 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+th { background: #0d1b2a; color: #fff; padding: .5rem .75rem; text-align: left; }
+td { padding: .45rem .75rem; border-bottom: 1px solid #d8e2ec; }
+tr:nth-child(even) td { background: #f0f5fa; }
+
+/* Epistemic class badges */
+.class-c  { display:inline-block; background:#e6a817; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-d  { display:inline-block; background:#c0392b; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+.class-frozen { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; font-weight:700; padding:.15em .55em; border-radius:12px; vertical-align:middle; }
+
+/* Warning boxes (FCP, FORBIDDEN) */
+.box-warn {
+  background: #fdf0ed;
+  border: 1.5px solid #c0392b;
+  border-left: 5px solid #c0392b;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #7b1a10;
+}
+.box-warn::before { content: "⛔ "; font-size: 1.1em; }
+
+/* Frozen / invariant boxes */
+.box-frozen {
+  background: #eef4fb;
+  border: 1.5px solid #1565c0;
+  border-left: 5px solid #1565c0;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #0d2d5e;
+}
+.box-frozen::before { content: "🔒 "; font-size: 1.1em; }
+
+/* Advisory / note boxes */
+.box-advisory {
+  background: #fffbea;
+  border: 1.5px solid #e6a817;
+  border-left: 5px solid #e6a817;
+  border-radius: 6px;
+  padding: .85rem 1rem;
+  margin: 1rem 0;
+  color: #5a3a00;
+}
+.box-advisory::before { content: "⚠️ "; font-size: 1.1em; }
+
+/* Status pills */
+.status-complete { display:inline-block; background:#1b7340; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-active   { display:inline-block; background:#1565c0; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+.status-frozen   { display:inline-block; background:#5a1e8a; color:#fff; font-size:.78em; padding:.1em .5em; border-radius:10px; }
+
+/* Nav */
+.doc-nav { background:#fff; border:1px solid #d8e2ec; border-radius:8px; padding:1rem 1.25rem; margin-bottom:2rem; }
+.doc-nav h4 { color:#555; font-size:.85em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.5rem; }
+.doc-nav a  { display:block; color:#0066cc; text-decoration:none; padding:.15rem 0; font-size:.92em; }
+.doc-nav a:hover { text-decoration:underline; }
+
+/* Header strip */
+.doc-header {
+  background: #0d1b2a;
+  color: #fff;
+  padding: 1.5rem 1.75rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+.doc-header .title { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+.doc-header .meta  { font-size: .85em; color: #8ab4d0; }
+
+/* Footer */
+.doc-footer { margin-top:3rem; padding-top:1rem; border-top:1px solid #d8e2ec; color:#888; font-size:.82em; }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="title">CodeBurn -- Codex Log Ingestor Spec (P5.0)</div>
+  <div class="meta">Source: CODEBURN_CODEX_INGESTOR_SPEC.md &nbsp;·&nbsp; Generated: 2026-05-22 09:45 &nbsp;·&nbsp; CodeBurn v1.1</div>
+</div>
+<div class="doc-nav"><h4>Contents</h4><a href="#codeburn-codex-log-ingestor-spec-p5-0">CodeBurn -- Codex Log Ingestor Spec (P5.0)</a><a href="#purpose">Purpose</a><a href="#non-goals-explicit">Non-Goals (Explicit)</a><a href="#admissible-record-selection">Admissible Record Selection</a><a href="#admissible-field-extraction">Admissible Field Extraction</a><a href="#iaf-enforcement-inadmissible-field-categories">IAF Enforcement (Inadmissible Field Categories)</a><a href="#iaf-1-total-token-usage-all-sub-fields">IAF-1: total_token_usage.* (ALL sub-fields)</a><a href="#iaf-2-reasoning-output-tokens-from-both-last-and-total">IAF-2: reasoning_output_tokens (from both last_ and total_)</a><a href="#iaf-3-total-tokens-from-both-last-and-total">IAF-3: total_tokens (from both last_ and total_)</a><a href="#iaf-4-cached-input-tokens-from-both-last-and-total">IAF-4: cached_input_tokens (from both last_ and total_)</a><a href="#iaf-5-model-context-window">IAF-5: model_context_window</a><a href="#iaf-6-rate-limits-all-sub-fields">IAF-6: rate_limits.* (ALL sub-fields)</a><a href="#iaf-7-session-meta-operational-fields">IAF-7: session_meta operational fields</a><a href="#iaf-8-sqlite-surface">IAF-8: SQLite surface</a><a href="#session-identity">Session Identity</a><a href="#malformed-record-handling">Malformed Record Handling</a><a href="#empty-session-handling">Empty session handling</a><a href="#schema">Schema</a><a href="#epistemic-invariants-hard-coded-not-configurable">Epistemic Invariants (Hard-coded, Not Configurable)</a><a href="#provenance-identity">Provenance Identity</a><a href="#what-this-ingestor-cannot-do">What This Ingestor Cannot Do</a><a href="#implementation-tranche-order">Implementation Tranche Order</a></div>
+<h1 id="codeburn-codex-log-ingestor-spec-p5-0">CodeBurn -- Codex Log Ingestor Spec (P5.0)</h1>
+<blockquote>
+<p>Written: 2026-05-21</p>
+<p>Status: P5.0 -- spec before implementation</p>
+<p>Scope: Codex CLI session JSONL ingestion</p>
+<p>Depends on:</p>
+<p>CODEBURN<em>CODEX</em>ARTIFACT_CONTRACT.md (field admissibility)</p>
+<p>CODEBURN<em>PROVIDER2</em>ADMISSION<em>SIGNOFF</em>CODEX.md (gate clearance)</p>
+<p>CODEBURN<em>ACQUISITION</em>SEMANTIC_FREEZE.md (semantic constraints + TNP)</p>
+<p>CODEBURN<em>CROSS</em>PROVIDER<em>COMPARABILITY</em>BOUNDARY.md (aggregation prohibition)</p>
+<p>Implementation: codeburn/phase2/codex<em>log</em>ingestor.py (P5.3)</p>
+<p>Tests: tests/test<em>codeburn</em>codex_negative.py (P5.1)</p>
+</blockquote>
+<hr>
+<h2 id="purpose">Purpose</h2>
+<p>Ingest Codex CLI session JSONL logs as <span class="class-c">Class C</span> (observer-reconstructed) evidence.</p>
+<p>The purpose is NOT to make Codex data comparable with Claude.</p>
+<p>The purpose IS to acquire Codex token observation records under the same epistemic</p>
+<p>constraints as Claude, independently labeled, into the same DB.</p>
+<hr>
+<h2 id="non-goals-explicit">Non-Goals (Explicit)</h2>
+<p>이 ingestor 가 절대 하지 않는 것:</p>
+<ol>
+<li><strong>cross-provider aggregation</strong>: Codex rows + Claude rows 합산 금지</li>
+<li><strong>billing computation</strong>: 어떤 형태의 비용 계산도 금지</li>
+<li><strong>reasoning token characterization</strong>: <code>reasoning<em>output</em>tokens</code> 저장, 계산, 분석 금지</li>
+<li><strong>provider efficiency ranking</strong>: &quot;Codex is cheaper than Claude&quot; 유형의 추론 생성 금지</li>
+<li><strong>comparability assertion</strong>: Codex <code>output<em>tokens</code> ≠ Claude <code>output</em>tokens</code> (NST-1)</li>
+<li><strong>total<em>tokens storage</strong>: Codex log 가 <code>total</em>tokens</code> 를 제공하더라도 NULL 유지</li>
+</ol>
+<hr>
+<h2 id="admissible-record-selection">Admissible Record Selection</h2>
+<p>Only records matching ALL of the following conditions:</p>
+<pre><code class="language-python">record[&quot;type&quot;] == &quot;event_msg&quot;
+record[&quot;payload&quot;][&quot;type&quot;] == &quot;token_count&quot;
+record[&quot;payload&quot;][&quot;info&quot;][&quot;last_token_usage&quot;] exists</code></pre>
+<p>All other records: <strong>skip</strong> (not quarantine -- they are structurally valid, just non-token).</p>
+<p>Exception: if <code>type == &amp;quot;event<em>msg&amp;quot;</code> AND <code>payload.type == &amp;quot;token</em>count&amp;quot;</code> BUT</p>
+<p><code>payload.info.last<em>token</em>usage</code> is absent → <strong>quarantine</strong> (malformed token_count record).</p>
+<hr>
+<h2 id="admissible-field-extraction">Admissible Field Extraction</h2>
+<p>From a selected record, extract ONLY:</p>
+<table>
+<tr><th>Source path</th><th>Stored as</th><th>Notes</th></tr>
+<tr><td><code>timestamp</code> (record top-level)</td><td><code>started_at</code> in steps</td><td>ISO8601</td></tr>
+<tr><td><code>payload.info.last<em>token</em>usage.input_tokens</code></td><td><code>prompt_tokens</code></td><td>NULL if absent</td></tr>
+<tr><td><code>payload.info.last<em>token</em>usage.output_tokens</code></td><td><code>completion_tokens</code></td><td>NULL if absent; reasoning EXCLUDED</td></tr>
+<tr><td>session UUID (from filename or session_meta)</td><td><code>session_id</code></td><td>see Session Identity below</td></tr>
+</table>
+
+<p>All other fields: <strong>not extracted, not stored, not passed to any downstream layer</strong>.</p>
+<hr>
+<h2 id="iaf-enforcement-inadmissible-field-categories">IAF Enforcement (Inadmissible Field Categories)</h2>
+<p>These MUST be enforced at code level, not just policy.</p>
+<h3 id="iaf-1-total-token-usage-all-sub-fields">IAF-1: total<em>token</em>usage.* (ALL sub-fields)</h3>
+<pre><code>total_token_usage.input_tokens    → NEVER stored as prompt_tokens
+total_token_usage.output_tokens   → NEVER stored as completion_tokens
+total_token_usage.cached_input_tokens → never stored
+total_token_usage.reasoning_output_tokens → never stored
+total_token_usage.total_tokens    → never stored</code></pre>
+<p>Reason: <code>total<em>token</em>usage</code> is a cumulative session total.</p>
+<p>On turn 1, <code>total<em>token</em>usage == last<em>token</em>usage</code> -- this is the camouflage window (AR-1b).</p>
+<p>Storing <code>total<em>token</em>usage</code> as per-turn data produces correct values on turn 1</p>
+<p>and silently wrong values on all subsequent turns.</p>
+<p>Implementation requirement: do NOT read from <code>payload.info.total<em>token</em>usage</code> at all.</p>
+<p>The key <code>total<em>token</em>usage</code> must be absent from any extraction code path.</p>
+<h3 id="iaf-2-reasoning-output-tokens-from-both-last-and-total">IAF-2: reasoning<em>output</em>tokens (from both last<em> and total</em>)</h3>
+<pre><code>last_token_usage.reasoning_output_tokens  → NEVER stored
+total_token_usage.reasoning_output_tokens → NEVER stored (see IAF-1)</code></pre>
+<p>Reason: Reasoning Separation Principle. No Claude equivalent.</p>
+<p><code>completion<em>tokens</code> = <code>last</em>token<em>usage.output</em>tokens</code> (which already excludes reasoning).</p>
+<p>No new column for reasoning tokens is authorized.</p>
+<h3 id="iaf-3-total-tokens-from-both-last-and-total">IAF-3: total<em>tokens (from both last</em> and total_)</h3>
+<pre><code>last_token_usage.total_tokens  → NEVER stored (total_tokens column = NULL always)
+total_token_usage.total_tokens → NEVER stored (see IAF-1)</code></pre>
+<p class="box-warn">Reason: billing computation forbidden. The <code>total_tokens = NULL</code> policy</p>
+<p>applies to Codex identically to Claude.</p>
+<p>The fact that Codex explicitly provides <code>total_tokens</code> in the log does NOT</p>
+<p>authorize storage or use. (AG-6 Output 3, item 5 of P5-admission.3)</p>
+<h3 id="iaf-4-cached-input-tokens-from-both-last-and-total">IAF-4: cached<em>input</em>tokens (from both last<em> and total</em>)</h3>
+<pre><code>last_token_usage.cached_input_tokens  → NEVER stored
+total_token_usage.cached_input_tokens → NEVER stored (see IAF-1)</code></pre>
+<p class="box-warn">Reason: billing computation forbidden. Same policy as Claude&#x27;s</p>
+<p><code>cache<em>read</em>input_tokens</code> exclusion.</p>
+<h3 id="iaf-5-model-context-window">IAF-5: model<em>context</em>window</h3>
+<pre><code>payload.info.model_context_window → NEVER stored</code></pre>
+<p>Reason: operational metadata.</p>
+<h3 id="iaf-6-rate-limits-all-sub-fields">IAF-6: rate_limits.* (ALL sub-fields)</h3>
+<pre><code>payload.rate_limits.* → NEVER stored</code></pre>
+<p>Reason: operational metadata (used<em>percent, resets</em>at, etc.).</p>
+<h3 id="iaf-7-session-meta-operational-fields">IAF-7: session_meta operational fields</h3>
+<pre><code>session_meta.payload.cwd          → NEVER stored
+session_meta.payload.cli_version  → NEVER stored
+session_meta.payload.source       → NEVER stored
+session_meta.payload.model_provider → NEVER stored
+session_meta.payload.originator   → NEVER stored</code></pre>
+<p>Reason: operational metadata.</p>
+<h3 id="iaf-8-sqlite-surface">IAF-8: SQLite surface</h3>
+<pre><code>state_5.sqlite (threads.tokens_used) → NEVER used as acquisition source
+logs_2.sqlite                        → NEVER used as acquisition source</code></pre>
+<p>Reason: Dual Acquisition Surface Rule. JSONL is the sole acquisition surface.</p>
+<p>SQLite is inadmissible not because it is unreliable, but because it is a</p>
+<p>different acquisition path. Using both paths for the same evidence would</p>
+<p>violate the provenance identity contract.</p>
+<p>Implementation requirement: <code>ingest<em>codex</em>session()</code> accepts a JSONL file path.</p>
+<p>No SQLite path parameter exists or is accepted.</p>
+<hr>
+<h2 id="session-identity">Session Identity</h2>
+<p>Codex JSONL filename: <code>rollout-{ISO8601<em>timestamp}-{UUID</em>v7}.jsonl</code></p>
+<p>Session UUID: extracted from the filename (UUID portion) or from the</p>
+<p><code>session_meta</code> record&#x27;s <code>payload.id</code> field (whichever is present first).</p>
+<p>The session_id written to the <code>sessions</code> table uses this UUID.</p>
+<p>If no UUID can be extracted: the session is quarantined entirely</p>
+<p>(session_id cannot be fabricated).</p>
+<hr>
+<h2 id="malformed-record-handling">Malformed Record Handling</h2>
+<p>A record is <strong>malformed</strong> if any of the following:</p>
+<ul>
+<li>JSON parse failure</li>
+<li><code>type == &amp;quot;event<em>msg&amp;quot;</code> AND <code>payload.type == &amp;quot;token</em>count&amp;quot;</code> BUT <code>payload.info</code> absent</li>
+<li><code>type == &amp;quot;event<em>msg&amp;quot;</code> AND <code>payload.type == &amp;quot;token</em>count&amp;quot;</code> AND <code>payload.info</code> present</li>
+</ul>
+<p>BUT <code>payload.info.last<em>token</em>usage</code> absent</p>
+<ul>
+<li>Partial record (truncated write -- detected by missing closing brace)</li>
+</ul>
+<p>Malformed records → <code>quarantined_records</code> table, NOT silently dropped.</p>
+<p>Records of other types (<code>response<em>item</code>, <code>turn</em>context</code>, <code>session_meta</code>)</p>
+<p>that are skipped are NOT quarantined -- they are valid records, just non-token.</p>
+<h3 id="empty-session-handling">Empty session handling</h3>
+<p>A session JSONL with NO <code>token_count</code> records produces:</p>
+<ul>
+<li>Zero rows in <code>steps</code> for this session</li>
+<li>The <code>sessions</code> row still written (to record the session&#x27;s existence)</li>
+<li>NOT a &quot;zero-token&quot; row in <code>steps</code></li>
+</ul>
+<pre><code>zero token_count records = no token observation for this session
+zero token_count records != input_tokens=0, completion_tokens=0</code></pre>
+<p class="box-warn">The absence is the observation. It must not be coerced into zero.</p>
+<hr>
+<h2 id="schema">Schema</h2>
+<p>Uses <strong>existing tables only</strong>. No new tables. No new columns.</p>
+<table>
+<tr><th>Table</th><th>Usage</th></tr>
+<tr><td><code>sessions</code></td><td>One row per Codex session (JSONL file)</td></tr>
+<tr><td><code>steps</code></td><td>One row per admissible <code>token_count</code> record</td></tr>
+<tr><td><code>step<em>ingestion</em>provenance</code></td><td>One row per <code>steps</code> row (provenance identity)</td></tr>
+<tr><td><code>quarantined_records</code></td><td>Malformed records</td></tr>
+</table>
+
+<p>Column mapping for <code>steps</code>:</p>
+<table>
+<tr><th>Column</th><th>Value</th><th>Note</th></tr>
+<tr><td><code>provider</code></td><td><code>&amp;#x27;codex&amp;#x27;</code></td><td>distinguishes from <code>&amp;#x27;claude&amp;#x27;</code></td></tr>
+<tr><td><code>prompt_tokens</code></td><td><code>last<em>token</em>usage.input_tokens</code></td><td>NULL if absent</td></tr>
+<tr><td><code>completion_tokens</code></td><td><code>last<em>token</em>usage.output_tokens</code></td><td>NULL if absent; reasoning excluded</td></tr>
+<tr><td><code>total_tokens</code></td><td><code>NULL</code></td><td>always NULL -- IAF-3</td></tr>
+<tr><td><code>token_source</code></td><td><code>&amp;#x27;estimated&amp;#x27;</code></td><td><span class="class-c">Class C</span> is always reconstructed</td></tr>
+<tr><td><code>step_kind</code></td><td><code>&amp;#x27;other&amp;#x27;</code></td><td>no semantic mapping to Claude step kinds</td></tr>
+</table>
+
+<p>No new columns added for:</p>
+<ul>
+<li><code>reasoning<em>output</em>tokens</code> (IAF-2)</li>
+<li><code>cached<em>input</em>tokens</code> (IAF-4)</li>
+<li>Any <code>total<em>token</em>usage.*</code> field (IAF-1)</li>
+</ul>
+<hr>
+<h2 id="epistemic-invariants-hard-coded-not-configurable">Epistemic Invariants (Hard-coded, Not Configurable)</h2>
+<pre><code class="language-python">_PROVIDER                    = &quot;codex&quot;
+_EPISTEMIC_CLASS             = &quot;Class C&quot;
+_ACQUISITION_MODE            = &quot;session_log_ingestion&quot;
+_REAL_TIME_OBSERVED          = 0  # schema CHECK enforces this
+_ANALYSIS_SAFE_FOR_DECISION  = 0  # schema CHECK enforces this
+_PROVIDER_TRUTHFULNESS_ASSUMED = 0  # schema CHECK enforces this</code></pre>
+<p>These values are identical to Claude&#x27;s epistemic constants.</p>
+<p>Identity of class does NOT imply comparability (FSP-3, AG-2).</p>
+<hr>
+<h2 id="provenance-identity">Provenance Identity</h2>
+<p>Every <code>steps</code> row written has a corresponding <code>step<em>ingestion</em>provenance</code> row:</p>
+<pre><code>source_artifact_path = absolute resolved path of the JSONL file
+source_record_line   = 1-indexed line number of the token_count record
+source_record_offset = byte offset of the token_count record</code></pre>
+<p>These follow the P4 provenance identity pattern</p>
+<p>(CODEBURN<em>CLAUDE</em>REPLAY<em>PROVENANCE</em>CONTRACT.md) applied to Codex.</p>
+<p>Replay stability: re-ingesting the same JSONL produces the same</p>
+<p>(source<em>artifact</em>path, source<em>record</em>line, source<em>record</em>offset) pairs.</p>
+<p class="box-frozen">Replay stability does NOT collapse observation distance (Anti-Collapse Axiom).</p>
+<p>Replay stability does NOT upgrade epistemic class (TNP).</p>
+<hr>
+<h2 id="what-this-ingestor-cannot-do">What This Ingestor Cannot Do</h2>
+<p>These are intentional constraints, not capability gaps:</p>
+<pre><code>Cannot: determine if Codex computed tokens correctly (FSP-4)
+Cannot: produce billing-safe totals (IAF-3, AC4)
+Cannot: compare output_tokens with Claude output_tokens (NST-1)
+Cannot: characterize reasoning behavior (IAF-2)
+Cannot: verify JSONL completeness against runtime (FSP-2)
+Cannot: combine Codex and Claude token counts (P1 prohibition)
+Cannot: upgrade evidence from Class C to Class A/B (CODEBURN_ACQUISITION_SEMANTIC_FREEZE.md)
+Cannot: use SQLite as a corroborating acquisition surface (IAF-8)
+Cannot: treat temporal consistency as epistemic upgrade (TNP)</code></pre>
+<hr>
+<h2 id="implementation-tranche-order">Implementation Tranche Order</h2>
+<pre><code>P5.0 (this document): spec
+P5.1: negative-path tests (written before implementation -- lock invariants first)
+P5.2: schema extension review (confirm no new columns needed)
+P5.3: parser + provenance writer
+P5.4: smoke command
+P5.5: replay/provenance verification</code></pre>
+<p>P5.3 may only begin after P5.1 tests are written and confirmed as XFAIL.</p>
+<p>P5.3 is complete when all P5.1 tests pass.</p>
+<hr>
+<p><em>This spec exists to ensure Codex enters the system without eroding P0--P4 boundaries.</em></p>
+<p><em>The ordering (spec → tests → implementation) is the boundary enforcement mechanism.</em></p>
+<div class="doc-footer">
+  Source: <code>CODEBURN_CODEX_INGESTOR_SPEC.md</code> — HTML is the presentation layer. The .md source is authoritative.
+  <br>CodeBurn v1.1 governed architecture baseline.
+</div>
+</body>
+</html>
