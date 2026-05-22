@@ -4,6 +4,14 @@ import XCTest
 @testable import ZoneTruthCore
 
 final class ZoneTruthAppTests: XCTestCase {
+    private struct GoalAlignmentLanguageFixtureRecord: Codable, Equatable {
+        let goal: String
+        let signal: String
+        let observationalLabel: String
+        let mismatchFactors: [String]
+        let ctaObservational: String
+        let ctaWeak: String
+    }
     private struct EvaluationFixtureRecord: Codable, Equatable {
         let id: String
         let evaluation: WorkoutEvaluation
@@ -1599,6 +1607,56 @@ final class ZoneTruthAppTests: XCTestCase {
         )
     }
 
+    func testGoalAlignmentSurfaceLanguageContainsNoForbiddenAuthorityTerms() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 5,
+            totalDurationMinutes: 280,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 1, .vo2Interval: 2, .strength: 1, .activityReview: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 2,
+            strengthDays: 1,
+            restDays: 1,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 4
+        )
+        let forbidden = ["目標達成", "將會", "必定", "保證", "治療", "處方", "診斷結果", "確定診斷"]
+        for goal in UserTrainingGoal.allCases {
+            for signal in [GoalAlignmentSignal.aligned, .partiallyAligned, .divergent, .insufficientEvidence] {
+                let text = [
+                    signal.observationalLabel(for: goal),
+                    signal.mismatchFactors(for: goal, summary: summary).joined(separator: " "),
+                    WeeklyCTAPresenter.render(base: "本週訓練節奏尚可，下週視體感微調強度。", for: .observational, goal: goal, goalSignal: signal),
+                    WeeklyCTAPresenter.render(base: "本週訓練節奏尚可，下週視體感微調強度。", for: .weakInference, goal: goal, goalSignal: signal),
+                ].joined(separator: " ")
+                for term in forbidden {
+                    XCTAssertFalse(text.contains(term), "goal alignment surface contains forbidden term: \(term)")
+                }
+            }
+        }
+    }
+
+    func testGoalAlignmentSurfaceLanguageSnapshotFixture() throws {
+        let fixtureURL = try goalAlignmentLanguageFixtureURL()
+        let records = buildGoalAlignmentLanguageFixtureRecords()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let rendered = try encoder.encode(records)
+        let shouldUpdate = ProcessInfo.processInfo.environment["UPDATE_GOAL_ALIGNMENT_LANG_FIXTURE"] == "1"
+        if shouldUpdate {
+            try rendered.write(to: fixtureURL)
+        }
+        let expected = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            rendered,
+            expected,
+            "Goal alignment language snapshot mismatch. Run with UPDATE_GOAL_ALIGNMENT_LANG_FIXTURE=1 only after intentional wording changes."
+        )
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -1668,6 +1726,58 @@ final class ZoneTruthAppTests: XCTestCase {
             throw XCTSkip("Fixture file not found at \(url.path)")
         }
         return url
+    }
+
+    private func goalAlignmentLanguageFixtureURL() throws -> URL {
+        let testFileDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let url = testFileDirectory
+            .appendingPathComponent("Fixtures", isDirectory: true)
+            .appendingPathComponent("goal_alignment_language_snapshot.json", isDirectory: false)
+        let shouldUpdate = ProcessInfo.processInfo.environment["UPDATE_GOAL_ALIGNMENT_LANG_FIXTURE"] == "1"
+        if !shouldUpdate && !FileManager.default.fileExists(atPath: url.path) {
+            throw XCTSkip("Goal alignment language fixture not found at \(url.path)")
+        }
+        return url
+    }
+
+    private func buildGoalAlignmentLanguageFixtureRecords() -> [GoalAlignmentLanguageFixtureRecord] {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 5,
+            totalDurationMinutes: 280,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 1, .vo2Interval: 2, .strength: 1, .activityReview: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 2,
+            strengthDays: 1,
+            restDays: 1,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 4
+        )
+        return UserTrainingGoal.allCases.flatMap { goal in
+            [GoalAlignmentSignal.aligned, .partiallyAligned, .divergent, .insufficientEvidence].map { signal in
+                GoalAlignmentLanguageFixtureRecord(
+                    goal: goal.rawValue,
+                    signal: signal.rawValue,
+                    observationalLabel: signal.observationalLabel(for: goal),
+                    mismatchFactors: signal.mismatchFactors(for: goal, summary: summary),
+                    ctaObservational: WeeklyCTAPresenter.render(
+                        base: "本週訓練節奏尚可，下週視體感微調強度。",
+                        for: .observational,
+                        goal: goal,
+                        goalSignal: signal
+                    ),
+                    ctaWeak: WeeklyCTAPresenter.render(
+                        base: "本週訓練節奏尚可，下週視體感微調強度。",
+                        for: .weakInference,
+                        goal: goal,
+                        goalSignal: signal
+                    )
+                )
+            }
+        }
     }
 
     private var samplePayload: String {

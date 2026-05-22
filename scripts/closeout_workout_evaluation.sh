@@ -135,6 +135,18 @@ if ! swift test --filter GoalAlignmentEngineTests; then
   exit 1
 fi
 
+if ! swift test --filter testGoalAlignmentSurfaceLanguageContainsNoForbiddenAuthorityTerms; then
+  goal_alignment_guard="failed"
+  echo "goal_alignment_guard: ${goal_alignment_guard}"
+  exit 1
+fi
+
+if ! swift test --filter testGoalAlignmentSurfaceLanguageSnapshotFixture; then
+  goal_alignment_guard="failed"
+  echo "goal_alignment_guard: ${goal_alignment_guard}"
+  exit 1
+fi
+
 if ! swift test --filter testMultiWeekAdaptation; then
   adaptation_28d_guard="failed"
   echo "adaptation_28d_guard: ${adaptation_28d_guard}"
