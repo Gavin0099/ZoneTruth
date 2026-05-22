@@ -614,7 +614,8 @@ struct WeeklyDashboardView: View {
                         summary: viewModel.weeklySummary,
                         policy: viewModel.weeklyPolicy,
                         freshness: freshness,
-                        bodyCompositionLedger: viewModel.bodyCompositionLedger
+                        bodyCompositionLedger: viewModel.bodyCompositionLedger,
+                        adaptationTrend28d: viewModel.adaptationTrend28d
                     )
                     WeeklyDistributionCard(summary: viewModel.weeklySummary)
                 }
@@ -921,6 +922,7 @@ struct WeeklyAdvancedCard: View {
     let policy: WeeklyLoadPolicy
     let freshness: WeeklyDataFreshness
     let bodyCompositionLedger: BodyCompositionLedger?
+    let adaptationTrend28d: AdaptationTrend28d?
     private var semanticConfidence: Double {
         WeeklyConfidenceSemantics.calibrated(
             baseConfidence: policy.confidence,
@@ -978,15 +980,24 @@ struct WeeklyAdvancedCard: View {
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
                 }
-                // Coverage layer: temporal scope chips (evidence window transparency)
+                // Coverage layer: 7d chip always present; 28d chip shows actual trend if available
                 HStack(spacing: 6) {
-                    ForEach(adaptation.temporalScopes.map(\.label), id: \.self) { label in
-                        EvidenceChip(label: label, color: .gray)
+                    EvidenceChip(label: "7d signal", color: .gray)
+                    if let trend = adaptationTrend28d {
+                        EvidenceChip(label: trend.chipLabel, color: trend.chipColor)
+                    } else {
+                        EvidenceChip(label: "28d unavailable", color: .gray)
                     }
                 }
                 Text(adaptation.rationale)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let trend = adaptationTrend28d {
+                    Text(trend.rationaleText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 if reminderLevel != .none {
                     Text(reminderLevel.message)
@@ -1214,6 +1225,36 @@ private struct StateProgressionBar: View {
             }
             .padding(.vertical, 2)
         }
+    }
+}
+
+// MARK: - 28d trend UI helpers
+
+extension WeeklyAdaptationDirection {
+    var shortLabel: String {
+        switch self {
+        case .enduranceBuild:  return "有氧建設"
+        case .maintenance:     return "維持期"
+        case .mixedAdaptation: return "混合適應"
+        case .recoveryBiased:  return "恢復優先"
+        case .noSignal:        return "無方向訊號"
+        }
+    }
+}
+
+extension AdaptationTrend28d {
+    var chipLabel: String {
+        isStrong ? "28d: \(dominantDirection.shortLabel)" : "28d ↗ \(dominantDirection.shortLabel)"
+    }
+
+    var chipColor: Color {
+        isStrong ? PremiumColor.skyBlue : PremiumColor.gold
+    }
+
+    var rationaleText: String {
+        let consistCount = max(1, Int((consistencyRatio * Double(qualifyingWeekCount)).rounded()))
+        let suffix = isStrong ? "，方向一致性偏強。" : "，方向尚不穩定。"
+        return "近 4 週有效資料 \(qualifyingWeekCount) 週，其中 \(consistCount) 週觀察到「\(dominantDirection.shortLabel)」型態\(suffix)"
     }
 }
 

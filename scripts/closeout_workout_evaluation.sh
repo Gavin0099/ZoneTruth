@@ -14,6 +14,7 @@ snapshot_fixture="matched"
 weekly_snapshot="matched"
 weekly_ui_guard="passed"
 goal_alignment_guard="passed"
+adaptation_28d_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -131,6 +132,12 @@ fi
 if ! swift test --filter GoalAlignmentEngineTests; then
   goal_alignment_guard="failed"
   echo "goal_alignment_guard: ${goal_alignment_guard}"
+  exit 1
+fi
+
+if ! swift test --filter testMultiWeekAdaptation; then
+  adaptation_28d_guard="failed"
+  echo "adaptation_28d_guard: ${adaptation_28d_guard}"
   exit 1
 fi
 
@@ -312,6 +319,7 @@ echo "snapshot_fixture: ${snapshot_fixture}"
 echo "weekly_snapshot: ${weekly_snapshot}"
 echo "weekly_ui_guard: ${weekly_ui_guard}"
 echo "goal_alignment_guard: ${goal_alignment_guard}"
+echo "adaptation_28d_guard: ${adaptation_28d_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"

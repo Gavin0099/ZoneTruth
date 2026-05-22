@@ -38,6 +38,7 @@ final class WorkoutListViewModel: ObservableObject {
     @Published private(set) var statusMessage: String?
     @Published private(set) var weeklySummary: WeeklyWorkoutSummary
     @Published private(set) var weeklyPolicy: WeeklyLoadPolicy
+    @Published private(set) var adaptationTrend28d: AdaptationTrend28d?
     let bodyCompositionLedger: BodyCompositionLedger?
 
     let stravaAuthorizationURL: URL?
@@ -62,6 +63,7 @@ final class WorkoutListViewModel: ObservableObject {
         let emptySummary = WeeklyObservationBuilder.build(workouts: [], weekStart: monday)
         self.weeklySummary = emptySummary
         self.weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: emptySummary)
+        self.adaptationTrend28d = nil
         apply(repository.loadResult())
     }
 
@@ -185,6 +187,14 @@ final class WorkoutListViewModel: ObservableObject {
         let summary = WeeklyObservationBuilder.build(workouts: workouts, weekStart: monday)
         weeklySummary = summary
         weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: summary)
+
+        // 28d trend: last 4 weeks including current week
+        let cal = Calendar.current
+        let last4 = (0..<4).map { offset -> WeeklyWorkoutSummary in
+            let weekMonday = cal.date(byAdding: .day, value: -7 * offset, to: monday) ?? monday
+            return WeeklyObservationBuilder.build(workouts: workouts, weekStart: weekMonday)
+        }
+        adaptationTrend28d = MultiWeekAdaptationAnalyzer.analyze(summaries: last4)
     }
 
     private static func currentWeekMonday() -> Date {
