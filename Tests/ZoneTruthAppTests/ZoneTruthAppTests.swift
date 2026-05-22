@@ -1555,6 +1555,50 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(rendered.contains("優先補低強度有氧時段"))
     }
 
+    func testGoalAlignmentMismatchFactorsExposeDeterministicReasons() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 5,
+            totalDurationMinutes: 280,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 1, .vo2Interval: 3, .activityReview: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 3,
+            strengthDays: 0,
+            restDays: 0,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 5
+        )
+        let factors = GoalAlignmentSignal.divergent.mismatchFactors(for: .aerobicBase, summary: summary)
+        XCTAssertFalse(factors.isEmpty)
+        XCTAssertTrue(factors.contains { $0.contains("高強度課次偏多") })
+        XCTAssertTrue(factors.count <= 3)
+    }
+
+    func testGoalAlignmentMismatchFactorsEmptyWhenAligned() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 4,
+            totalDurationMinutes: 220,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 3, .activityReview: 1],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 0,
+            strengthDays: 1,
+            restDays: 2,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 2
+        )
+        XCTAssertEqual(
+            GoalAlignmentSignal.aligned.mismatchFactors(for: .aerobicBase, summary: summary),
+            []
+        )
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let baseURL = FileManager.default.temporaryDirectory
         let directoryURL = baseURL.appendingPathComponent(UUID().uuidString, isDirectory: true)

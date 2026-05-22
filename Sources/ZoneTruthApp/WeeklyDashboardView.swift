@@ -778,6 +778,23 @@ struct WeeklyOverviewCard: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                        let factors = signal.mismatchFactors(for: goal, summary: summary)
+                        if !factors.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(factors, id: \.self) { factor in
+                                    HStack(alignment: .top, spacing: 6) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(PremiumColor.gold)
+                                            .padding(.top, 3)
+                                        Text(factor)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1375,5 +1392,44 @@ extension GoalAlignmentSignal {
         case (.divergent, .activeRecovery):  return "高強度或高頻率訓練，與主動恢復期型態不符"
         case (.insufficientEvidence, _):     return "本週訓練量不足，無法判定型態一致性"
         }
+    }
+
+    func mismatchFactors(for goal: UserTrainingGoal, summary: WeeklyWorkoutSummary) -> [String] {
+        guard self != .aligned else { return [] }
+        var factors: [String] = []
+        let workoutCount = summary.workoutCount
+        let highIntensityDays = summary.highIntensityDays
+        let strengthDays = summary.strengthDays
+        let restDays = summary.restDays
+        let z2Count = summary.intentDistribution[.zone2, default: 0]
+        let z2Ratio = workoutCount > 0 ? Double(z2Count) / Double(workoutCount) : 0
+
+        switch goal {
+        case .aerobicBase:
+            if highIntensityDays >= 2 { factors.append("高強度課次偏多（\(highIntensityDays) 天），壓縮低強度有氧比例。") }
+            if z2Ratio < 0.4 { factors.append("低強度有氧比例偏低（約 \(Int((z2Ratio * 100).rounded()))%）。") }
+            if restDays == 0 { factors.append("本週無休息日，恢復窗口偏窄。") }
+        case .strengthFocus:
+            if strengthDays == 0 { factors.append("本週未觀察到肌力課次。") }
+            if strengthDays == 1 { factors.append("肌力課次偏少，目前僅 \(strengthDays) 天。") }
+            if highIntensityDays >= 3 { factors.append("高強度有氧課次偏多，可能擠壓肌力安排。") }
+        case .fatLossRecomp:
+            if workoutCount < 3 { factors.append("本週訓練頻率偏低（\(workoutCount) 次），刺激累積不足。") }
+            if strengthDays == 0 { factors.append("缺少肌力刺激，重組方向訊號偏弱。") }
+            if highIntensityDays == 0 { factors.append("目前缺少中高強度刺激，代謝壓力偏低。") }
+        case .performancePeak:
+            if workoutCount < 4 { factors.append("本週訓練量偏低（\(workoutCount) 次），未達競技準備常見節奏。") }
+            if highIntensityDays == 0 { factors.append("本週未觀察到高強度課次。") }
+            if restDays >= 4 { factors.append("休息日偏多（\(restDays) 天），負荷累積不足。") }
+        case .activeRecovery:
+            if highIntensityDays >= 2 { factors.append("高強度課次偏多（\(highIntensityDays) 天），與恢復週型態不一致。") }
+            if workoutCount >= 5 { factors.append("訓練頻率偏高（\(workoutCount) 次），恢復窗口偏少。") }
+            if restDays <= 1 { factors.append("休息日不足（\(restDays) 天），恢復訊號偏弱。") }
+        }
+
+        if factors.isEmpty && self == .insufficientEvidence {
+            return ["本週有效訓練樣本不足，暫時無法定位主要偏差因子。"]
+        }
+        return Array(factors.prefix(3))
     }
 }
