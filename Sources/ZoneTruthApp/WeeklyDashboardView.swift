@@ -5,12 +5,28 @@ enum WeeklyDecisionAuthority: String {
     case observational = "Direct observation"
     case boundedInference = "Bounded inference"
     case weakInference = "Weak inference"
+
+    var localizedLabel: String {
+        switch self {
+        case .observational: return "直接觀測"
+        case .boundedInference: return "受限推論"
+        case .weakInference: return "弱推論"
+        }
+    }
 }
 
 enum WeeklyInferenceClass: String {
     case bounded = "Bounded inference"
     case weak = "Weak inference"
     case unsupported = "Unsupported speculation"
+
+    var localizedLabel: String {
+        switch self {
+        case .bounded: return "受限推論"
+        case .weak: return "弱推論"
+        case .unsupported: return "觀測不足"
+        }
+    }
 }
 
 enum WeeklyDataFreshness: String {
@@ -21,10 +37,10 @@ enum WeeklyDataFreshness: String {
 
     var label: String {
         switch self {
-        case .fresh: return "Data fresh"
-        case .partial: return "Data partial"
-        case .stale: return "Data stale"
-        case .missing: return "Data missing"
+        case .fresh: return "資料新鮮"
+        case .partial: return "資料部分"
+        case .stale: return "資料偏舊"
+        case .missing: return "資料缺失"
         }
     }
 }
@@ -153,10 +169,10 @@ enum WeeklyHRVCoverageSignal: Equatable {
 
     var label: String {
         switch self {
-        case .missing: return "HRV missing"
-        case .sparse: return "HRV sparse"
-        case .partial: return "HRV partial"
-        case .good: return "HRV good"
+        case .missing: return "HRV 缺失"
+        case .sparse: return "HRV 稀疏"
+        case .partial: return "HRV 部分"
+        case .good: return "HRV 充足"
         }
     }
 
@@ -293,6 +309,14 @@ enum TrainingState: String {
     case functionalFatigue = "Functional fatigue"
     case possibleUnderRecovery = "Possible under-recovery"
     case recoveryNormalizing = "Recovery normalizing"
+
+    static let progression: [TrainingState] = [
+        .recovered,
+        .accumulatingLoad,
+        .functionalFatigue,
+        .possibleUnderRecovery,
+        .recoveryNormalizing
+    ]
 
     var localizedLabel: String {
         switch self {
@@ -676,11 +700,12 @@ struct WeeklyOverviewCard: View {
                 Divider().background(PremiumColor.border)
 
                 HStack(spacing: 8) {
-                    EvidenceChip(label: inferenceClass.rawValue, color: inferenceChipColor)
+                    EvidenceChip(label: inferenceClass.localizedLabel, color: inferenceChipColor)
                     EvidenceChip(label: freshness.label, color: freshnessChipColor)
                     EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
+                    EvidenceChip(label: authority.localizedLabel, color: authorityChipColor)
                     if semanticConfidence < 0.6 || freshness == .stale || freshness == .missing {
-                        EvidenceChip(label: "Evidence gap", color: PremiumColor.gold)
+                        EvidenceChip(label: "證據缺口", color: PremiumColor.gold)
                     }
                 }
 
@@ -779,6 +804,14 @@ struct WeeklyOverviewCard: View {
         case .bounded: return PremiumColor.skyBlue
         case .weak: return PremiumColor.gold
         case .unsupported: return .gray
+        }
+    }
+
+    private var authorityChipColor: Color {
+        switch authority {
+        case .observational: return PremiumColor.emerald
+        case .boundedInference: return PremiumColor.skyBlue
+        case .weakInference: return PremiumColor.gold
         }
     }
 }
@@ -921,7 +954,8 @@ struct WeeklyAdvancedCard: View {
                     .foregroundStyle(.white.opacity(0.8))
                 // Claim layer: single inference-class chip + direction label
                 HStack(spacing: 8) {
-                    EvidenceChip(label: adaptation.inferenceClass.rawValue, color: adaptationInferenceChipColor)
+                    EvidenceChip(label: adaptation.inferenceClass.localizedLabel, color: adaptationInferenceChipColor)
+                    EvidenceChip(label: adaptation.authority.localizedLabel, color: authorityChipColor(for: adaptation.authority))
                     Text(adaptation.direction.admissibleLabel(for: adaptation.authority))
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
@@ -954,11 +988,13 @@ struct WeeklyAdvancedCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.white.opacity(0.8))
                 HStack(spacing: 8) {
-                    EvidenceChip(label: trainingState.inferenceClass.rawValue, color: stateInferenceChipColor)
+                    EvidenceChip(label: trainingState.inferenceClass.localizedLabel, color: stateInferenceChipColor)
+                    EvidenceChip(label: trainingState.authority.localizedLabel, color: authorityChipColor(for: trainingState.authority))
                     Text(trainingState.state.admissibleLabel(for: trainingState.authority))
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
                 }
+                StateProgressionBar(currentState: trainingState.state)
                 Text(trainingState.rationale)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -1121,6 +1157,14 @@ struct WeeklyAdvancedCard: View {
         }
     }
 
+    private func authorityChipColor(for authority: WeeklyDecisionAuthority) -> Color {
+        switch authority {
+        case .observational: return PremiumColor.emerald
+        case .boundedInference: return PremiumColor.skyBlue
+        case .weakInference: return PremiumColor.gold
+        }
+    }
+
     private func minimumAuthority(_ lhs: WeeklyDecisionAuthority, _ rhs: WeeklyDecisionAuthority) -> WeeklyDecisionAuthority {
         let rank: [WeeklyDecisionAuthority: Int] = [
             .weakInference: 0,
@@ -1128,5 +1172,29 @@ struct WeeklyAdvancedCard: View {
             .observational: 2
         ]
         return (rank[lhs, default: 0] <= rank[rhs, default: 0]) ? lhs : rhs
+    }
+}
+
+private struct StateProgressionBar: View {
+    let currentState: TrainingState
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(TrainingState.progression, id: \.rawValue) { state in
+                    Text(state.localizedLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(state == currentState ? .white : .secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background((state == currentState ? PremiumColor.skyBlue : Color.gray).opacity(state == currentState ? 0.2 : 0.1))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke((state == currentState ? PremiumColor.skyBlue : Color.gray).opacity(0.35), lineWidth: 1)
+                        )
+                }
+            }
+            .padding(.vertical, 2)
+        }
     }
 }
