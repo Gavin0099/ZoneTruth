@@ -446,9 +446,9 @@ struct WeeklyTrainingStateSignal {
                 authority: authority,
                 inferenceClass: inferenceClass,
                 rationale: "觀測不足，暫以恢復回穩中呈現，不做狀態升級判定。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["workout_count", "data_freshness", "hrv_coverage"],
+                    derivedFrom: [.workoutCount, .dataFreshness, .hrvCoverage],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -461,9 +461,9 @@ struct WeeklyTrainingStateSignal {
                 authority: authority,
                 inferenceClass: inferenceClass,
                 rationale: "資料新鮮度不足，狀態回到恢復回穩中並降低決策權重。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["data_freshness", "workout_count"],
+                    derivedFrom: [.dataFreshness, .workoutCount],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -476,9 +476,9 @@ struct WeeklyTrainingStateSignal {
                 authority: authority,
                 inferenceClass: inferenceClass,
                 rationale: "近期負荷偏低且休息比例較高，恢復訊號偏穩定。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["workout_count", "rest_days"],
+                    derivedFrom: [.workoutCount, .restDays],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -491,9 +491,9 @@ struct WeeklyTrainingStateSignal {
                 authority: authority,
                 inferenceClass: inferenceClass,
                 rationale: "高強度與連續負荷並存，恢復壓力上升，建議控管強度堆疊。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["high_intensity_days", "consecutive_training_days", "workout_count"],
+                    derivedFrom: [.highIntensityDays, .consecutiveTrainingDays, .workoutCount],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -506,9 +506,9 @@ struct WeeklyTrainingStateSignal {
                 authority: authority,
                 inferenceClass: inferenceClass,
                 rationale: "負荷連續性提升，較像適應期常見的功能性疲勞訊號。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["consecutive_training_days", "recovery_concern_level", "workout_count"],
+                    derivedFrom: [.consecutiveTrainingDays, .recoveryConcernLevel, .workoutCount],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -521,9 +521,9 @@ struct WeeklyTrainingStateSignal {
                 authority: authority,
                 inferenceClass: inferenceClass,
                 rationale: "本週訓練節奏連續，負荷正在累積，屬於正常訓練推進期。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["workout_count", "consecutive_training_days", "high_intensity_days"],
+                    derivedFrom: [.workoutCount, .consecutiveTrainingDays, .highIntensityDays],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -535,9 +535,9 @@ struct WeeklyTrainingStateSignal {
             authority: authority,
             inferenceClass: inferenceClass,
             rationale: "訊號偏中性，恢復與負荷正在重新平衡。",
-            provenance: InferenceProvenance.build(
+            provenance: weeklyProvenance(
                 inferenceClass: inferenceClass,
-                derivedFrom: ["workout_count", "zone_distribution", "rest_days"],
+                derivedFrom: [.workoutCount, .zoneDistribution, .restDays],
                 workoutCount: summary.workoutCount,
                 hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
             )
@@ -557,47 +557,19 @@ enum AdaptationTemporalScope {
     }
 }
 
-enum InferenceType: String {
-    case directObservation = "direct_observation"
-    case boundedSynthesis = "bounded_synthesis"
-    case sparseInference = "sparse_inference"
-}
-
-enum InferenceAuthorityCeiling: String {
-    case nonInterventional = "non_interventional"
-
-    var localizedLabel: String {
-        switch self {
-        case .nonInterventional:
-            return "非介入上限"
-        }
-    }
-}
-
-struct InferenceProvenance: Equatable {
-    let inferenceType: InferenceType
-    let derivedFrom: [String]
-    let missingEvidence: [String]
-    let authorityCeiling: InferenceAuthorityCeiling
-
-    static func build(
-        inferenceClass: WeeklyInferenceClass,
-        derivedFrom: [String],
-        workoutCount: Int,
-        hrvSampledWorkoutCount: Int
-    ) -> InferenceProvenance {
-        let type: InferenceType = (inferenceClass == .unsupported) ? .sparseInference : .boundedSynthesis
-        var missing = ["sleep"]
-        if workoutCount == 0 || hrvSampledWorkoutCount == 0 {
-            missing.append("hrv")
-        }
-        return InferenceProvenance(
-            inferenceType: type,
-            derivedFrom: derivedFrom,
-            missingEvidence: missing,
-            authorityCeiling: .nonInterventional
-        )
-    }
+private func weeklyProvenance(
+    inferenceClass: WeeklyInferenceClass,
+    derivedFrom: [DerivedFromSignal],
+    workoutCount: Int,
+    hrvSampledWorkoutCount: Int
+) -> InferenceProvenance {
+    let strength: InferenceStrength = (inferenceClass == .bounded) ? .bounded : .sparse
+    return InferenceProvenanceFactory.weekly(
+        strength: strength,
+        derivedFrom: derivedFrom,
+        workoutCount: workoutCount,
+        hrvSampledWorkoutCount: hrvSampledWorkoutCount
+    )
 }
 
 struct WeeklyAdaptationSignal {
@@ -635,9 +607,9 @@ struct WeeklyAdaptationSignal {
                 inferenceClass: inferenceClass,
                 temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "目前觀測不足，無法形成可靠的適應方向推論。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["workout_count", "data_freshness", "hrv_coverage"],
+                    derivedFrom: [.workoutCount, .dataFreshness, .hrvCoverage],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -651,9 +623,9 @@ struct WeeklyAdaptationSignal {
                 inferenceClass: inferenceClass,
                 temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "本週尚無有效訓練觀測，方向訊號偏向恢復優先。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["workout_count", "rest_days"],
+                    derivedFrom: [.workoutCount, .restDays],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -666,9 +638,9 @@ struct WeeklyAdaptationSignal {
                 inferenceClass: inferenceClass,
                 temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "休息日比例偏高，整體負荷偏向恢復導向。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["rest_days", "workout_count"],
+                    derivedFrom: [.restDays, .workoutCount],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -681,9 +653,9 @@ struct WeeklyAdaptationSignal {
                 inferenceClass: inferenceClass,
                 temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "低中強度佔比較高，與有氧建設期型態一致。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["intent_distribution", "high_intensity_days", "workout_count"],
+                    derivedFrom: [.intentDistribution, .highIntensityDays, .workoutCount],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -696,9 +668,9 @@ struct WeeklyAdaptationSignal {
                 inferenceClass: inferenceClass,
                 temporalScopes: [.short7d, .medium28dUnavailable],
                 rationale: "高強度與連續負荷並存，訊號偏向混合適應。",
-                provenance: InferenceProvenance.build(
+                provenance: weeklyProvenance(
                     inferenceClass: inferenceClass,
-                    derivedFrom: ["high_intensity_days", "consecutive_training_days", "workout_count"],
+                    derivedFrom: [.highIntensityDays, .consecutiveTrainingDays, .workoutCount],
                     workoutCount: summary.workoutCount,
                     hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
                 )
@@ -710,9 +682,9 @@ struct WeeklyAdaptationSignal {
             inferenceClass: inferenceClass,
             temporalScopes: [.short7d, .medium28dUnavailable],
             rationale: "目前訓練型態無法對應到特定適應方向，僅能觀察負荷分布。",
-            provenance: InferenceProvenance.build(
+            provenance: weeklyProvenance(
                 inferenceClass: inferenceClass,
-                derivedFrom: ["intent_distribution", "zone_distribution", "workout_count"],
+                derivedFrom: [.intentDistribution, .zoneDistribution, .workoutCount],
                 workoutCount: summary.workoutCount,
                 hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
             )
@@ -1179,14 +1151,23 @@ private struct InferenceProvenanceSection: View {
                 EvidenceChip(label: provenance.inferenceType.rawValue, color: PremiumColor.skyBlue)
                 EvidenceChip(label: provenance.authorityCeiling.localizedLabel, color: PremiumColor.gold)
             }
-            Text("Observed: " + provenance.derivedFrom.joined(separator: ", "))
+            Text("Observed: " + provenance.derivedFrom.map(\.rawValue).joined(separator: ", "))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Unavailable: " + provenance.missingEvidence.joined(separator: ", "))
+            Text("Unavailable: " + provenance.missingEvidence.map(\.rawValue).joined(separator: ", "))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private extension InferenceAuthorityCeiling {
+    var localizedLabel: String {
+        switch self {
+        case .nonInterventional:
+            return "非介入上限"
         }
     }
 }

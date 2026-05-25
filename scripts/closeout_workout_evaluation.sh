@@ -17,6 +17,7 @@ goal_alignment_guard="passed"
 adaptation_28d_guard="passed"
 interaction_structural_guard="passed"
 inference_authority_guard="passed"
+inference_core_contract_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -234,6 +235,47 @@ if grep -R -E -q 'strongly suggests reduced intensity|you should rest today|Reco
   exit 1
 fi
 
+# Core contract guard: provenance is an inference contract in ZoneTruthCore,
+# not a UI-only disclosure artifact.
+if ! grep -q 'public struct InferenceProvenance' "Sources/ZoneTruthCore/Models.swift"; then
+  inference_core_contract_guard="missing_core_inference_provenance_struct"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
+if ! grep -q 'public enum InferenceType' "Sources/ZoneTruthCore/Models.swift"; then
+  inference_core_contract_guard="missing_core_inference_type"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
+if ! grep -q 'public enum InferenceAuthorityCeiling' "Sources/ZoneTruthCore/Models.swift"; then
+  inference_core_contract_guard="missing_core_authority_ceiling"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
+if ! grep -q 'public enum MissingEvidence' "Sources/ZoneTruthCore/Models.swift"; then
+  inference_core_contract_guard="missing_core_missing_evidence"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
+if ! grep -q 'public enum DerivedFromSignal' "Sources/ZoneTruthCore/Models.swift"; then
+  inference_core_contract_guard="missing_core_derived_from_signal"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
+if ! grep -q 'inferenceType' "Sources/ZoneTruthCore/Models.swift" || \
+   ! grep -q 'derivedFrom' "Sources/ZoneTruthCore/Models.swift" || \
+   ! grep -q 'missingEvidence' "Sources/ZoneTruthCore/Models.swift" || \
+   ! grep -q 'authorityCeiling' "Sources/ZoneTruthCore/Models.swift"; then
+  inference_core_contract_guard="core_inference_provenance_fields_missing"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
 # Required structural order in root composition:
 # Overview (bounded interpretation context) -> override coverage insight -> advanced evidence surface
 overview_call_line="$(grep -n 'WeeklyOverviewCard(' "$WEEKLY_UI_PATH" | head -n 1 | cut -d: -f1 || true)"
@@ -404,6 +446,7 @@ echo "goal_alignment_guard: ${goal_alignment_guard}"
 echo "adaptation_28d_guard: ${adaptation_28d_guard}"
 echo "interaction_structural_guard: ${interaction_structural_guard}"
 echo "inference_authority_guard: ${inference_authority_guard}"
+echo "inference_core_contract_guard: ${inference_core_contract_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"

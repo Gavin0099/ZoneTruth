@@ -563,3 +563,97 @@ public struct WeeklyLoadPolicy: Equatable, Sendable {
         self.confidence = confidence
     }
 }
+
+public enum InferenceType: String, Codable, Equatable, Sendable {
+    case directObservation = "direct_observation"
+    case boundedSynthesis = "bounded_synthesis"
+    case sparseInference = "sparse_inference"
+}
+
+public enum InferenceAuthorityCeiling: String, Codable, Equatable, Sendable {
+    case nonInterventional = "non_interventional"
+}
+
+public enum MissingEvidence: String, Codable, Equatable, Sendable, CaseIterable {
+    case sleep
+    case hrv
+    case nutrition
+    case illness
+    case stress
+    case deviceQuality = "device_quality"
+    case other
+}
+
+public enum DerivedFromSignal: String, Codable, Equatable, Sendable, CaseIterable {
+    case workoutCount = "workout_count"
+    case dataFreshness = "data_freshness"
+    case hrvCoverage = "hrv_coverage"
+    case restDays = "rest_days"
+    case intentDistribution = "intent_distribution"
+    case highIntensityDays = "high_intensity_days"
+    case consecutiveTrainingDays = "consecutive_training_days"
+    case recoveryConcernLevel = "recovery_concern_level"
+    case zoneDistribution = "zone_distribution"
+}
+
+public enum InferenceStrength: String, Codable, Equatable, Sendable {
+    case direct
+    case bounded
+    case sparse
+}
+
+public struct InferenceProvenance: Equatable, Sendable, Codable {
+    public let inferenceType: InferenceType
+    public let derivedFrom: [DerivedFromSignal]
+    public let missingEvidence: [MissingEvidence]
+    public let authorityCeiling: InferenceAuthorityCeiling
+
+    public init(
+        inferenceType: InferenceType,
+        derivedFrom: [DerivedFromSignal],
+        missingEvidence: [MissingEvidence],
+        authorityCeiling: InferenceAuthorityCeiling
+    ) {
+        self.inferenceType = inferenceType
+        self.derivedFrom = Array(Set(derivedFrom)).sorted { $0.rawValue < $1.rawValue }
+        self.missingEvidence = Array(Set(missingEvidence)).sorted { $0.rawValue < $1.rawValue }
+        self.authorityCeiling = authorityCeiling
+    }
+
+    public func isValidFailClosed(strength: InferenceStrength) -> Bool {
+        guard authorityCeiling == .nonInterventional else { return false }
+        guard !derivedFrom.isEmpty else { return false }
+        if strength == .bounded && missingEvidence.isEmpty {
+            return false
+        }
+        return true
+    }
+}
+
+public enum InferenceProvenanceFactory {
+    public static func weekly(
+        strength: InferenceStrength,
+        derivedFrom: [DerivedFromSignal],
+        workoutCount: Int,
+        hrvSampledWorkoutCount: Int
+    ) -> InferenceProvenance {
+        let type: InferenceType
+        switch strength {
+        case .direct: type = .directObservation
+        case .bounded: type = .boundedSynthesis
+        case .sparse: type = .sparseInference
+        }
+
+        var missing: [MissingEvidence] = [.sleep]
+        if workoutCount == 0 || hrvSampledWorkoutCount == 0 {
+            missing.append(.hrv)
+        }
+
+        return InferenceProvenance(
+            inferenceType: type,
+            derivedFrom: derivedFrom,
+            missingEvidence: missing,
+            authorityCeiling: .nonInterventional
+        )
+    }
+}

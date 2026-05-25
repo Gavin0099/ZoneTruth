@@ -1233,6 +1233,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(signal.inferenceClass, .bounded)
         XCTAssertEqual(signal.temporalScopes.map(\.label), ["7d signal", "28d unavailable"])
         XCTAssertEqual(signal.provenance.authorityCeiling, .nonInterventional)
+        XCTAssertTrue(signal.provenance.isValidFailClosed(strength: .bounded))
     }
 
     func testWeeklyInferenceProvenanceRevealsMissingEvidenceUnderSparseCoverage() {
@@ -1266,12 +1267,14 @@ final class ZoneTruthAppTests: XCTestCase {
         let state = WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: .fresh)
 
         XCTAssertEqual(adaptation.provenance.authorityCeiling, .nonInterventional)
-        XCTAssertTrue(adaptation.provenance.missingEvidence.contains("sleep"))
-        XCTAssertTrue(adaptation.provenance.missingEvidence.contains("hrv"))
+        XCTAssertTrue(adaptation.provenance.missingEvidence.contains(.sleep))
+        XCTAssertTrue(adaptation.provenance.missingEvidence.contains(.hrv))
+        XCTAssertTrue(adaptation.provenance.isValidFailClosed(strength: .sparse))
 
         XCTAssertEqual(state.provenance.authorityCeiling, .nonInterventional)
-        XCTAssertTrue(state.provenance.missingEvidence.contains("sleep"))
-        XCTAssertTrue(state.provenance.missingEvidence.contains("hrv"))
+        XCTAssertTrue(state.provenance.missingEvidence.contains(.sleep))
+        XCTAssertTrue(state.provenance.missingEvidence.contains(.hrv))
+        XCTAssertTrue(state.provenance.isValidFailClosed(strength: .sparse))
     }
 
     func testWeeklyFreshnessSignalClassifiesFreshPartialStaleMissing() {

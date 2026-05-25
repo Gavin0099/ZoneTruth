@@ -775,6 +775,31 @@ final class ZoneTruthCoreTests: XCTestCase {
         ]
     }
 
+    func testInferenceProvenanceFactoryProducesFailClosedWeeklyContract() {
+        let provenance = InferenceProvenanceFactory.weekly(
+            strength: .bounded,
+            derivedFrom: [.workoutCount, .highIntensityDays],
+            workoutCount: 4,
+            hrvSampledWorkoutCount: 0
+        )
+
+        XCTAssertEqual(provenance.authorityCeiling, .nonInterventional)
+        XCTAssertEqual(provenance.inferenceType, .boundedSynthesis)
+        XCTAssertTrue(provenance.missingEvidence.contains(.sleep))
+        XCTAssertTrue(provenance.missingEvidence.contains(.hrv))
+        XCTAssertTrue(provenance.isValidFailClosed(strength: .bounded))
+    }
+
+    func testBoundedInferenceProvenanceFailsWithoutMissingEvidence() {
+        let invalid = InferenceProvenance(
+            inferenceType: .boundedSynthesis,
+            derivedFrom: [.workoutCount],
+            missingEvidence: [],
+            authorityCeiling: .nonInterventional
+        )
+        XCTAssertFalse(invalid.isValidFailClosed(strength: .bounded))
+    }
+
     private func extractSourceBlock(source: String, marker: String) -> String {
         guard let markerRange = source.range(of: marker) else { return "" }
         let tail = source[markerRange.lowerBound...]
