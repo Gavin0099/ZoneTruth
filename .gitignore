@@ -16,3 +16,4 @@ memory/candidates/
 .DS_Store
 *.xcuserstate
 *.xcworkspace/xcuserdata/
+**/xcuserdata/
