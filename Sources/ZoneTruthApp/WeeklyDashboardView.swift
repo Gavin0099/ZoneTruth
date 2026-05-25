@@ -1,77 +1,7 @@
 import SwiftUI
 import ZoneTruthCore
 
-enum WeeklyDecisionAuthority: String {
-    case observational = "Direct observation"
-    case boundedInference = "Bounded inference"
-    case weakInference = "Weak inference"
-
-    var localizedLabel: String {
-        switch self {
-        case .observational: return "直接觀測"
-        case .boundedInference: return "受限推論"
-        case .weakInference: return "弱推論"
-        }
-    }
-}
-
-enum WeeklyInferenceClass: String {
-    case bounded = "Bounded inference"
-    case weak = "Weak inference"
-    case unsupported = "Unsupported speculation"
-
-    var localizedLabel: String {
-        switch self {
-        case .bounded: return "受限推論"
-        case .weak: return "弱推論"
-        case .unsupported: return "觀測不足"
-        }
-    }
-}
-
-enum WeeklyDataFreshness: String {
-    case fresh = "fresh"
-    case partial = "partial"
-    case stale = "stale"
-    case missing = "missing"
-
-    var label: String {
-        switch self {
-        case .fresh: return "資料新鮮"
-        case .partial: return "資料部分"
-        case .stale: return "資料偏舊"
-        case .missing: return "資料缺失"
-        }
-    }
-}
-
-enum WeeklyFreshnessSignal {
-    static func classify(
-        workouts: [WorkoutInput],
-        weekStart: Date,
-        now: Date = Date()
-    ) -> WeeklyDataFreshness {
-        let weekWorkouts = workouts.filter { $0.startDate >= weekStart }
-        guard let latest = weekWorkouts.map(\.startDate).max() else {
-            return .missing
-        }
-        let hours = now.timeIntervalSince(latest) / 3600
-        if hours <= 30 { return .fresh }
-        if hours <= 72 { return .partial }
-        return .stale
-    }
-}
-
-enum WeeklyAuthorityRendering {
-    static func authority(for confidence: Double, freshness: WeeklyDataFreshness) -> WeeklyDecisionAuthority {
-        if freshness == .stale || freshness == .missing {
-            return .weakInference
-        }
-        if confidence < 0.6 { return .weakInference }
-        if confidence < 0.75 { return .boundedInference }
-        return .observational
-    }
-
+extension WeeklyAuthorityRendering {
     static func recommendationEmphasisOpacity(for authority: WeeklyDecisionAuthority) -> Double {
         switch authority {
         case .observational: return 0.08
@@ -97,59 +27,34 @@ enum WeeklyAuthorityRendering {
     }
 }
 
-enum WeeklyConfidenceSemantics {
-    static func calibrated(
-        baseConfidence: Double,
-        freshness: WeeklyDataFreshness,
-        workoutCount: Int,
-        hrvSampledWorkoutCount: Int,
-        hrvCoverageRatio: Double
-    ) -> Double {
-        var value = baseConfidence
-
-        switch freshness {
-        case .missing, .stale:
-            value = min(value, 0.55)
-        case .partial:
-            value = min(value, 0.70)
-        case .fresh:
-            break
+extension WeeklyDecisionAuthority {
+    var localizedLabel: String {
+        switch self {
+        case .observational: return "直接觀測"
+        case .boundedInference: return "受限推論"
+        case .weakInference: return "弱推論"
         }
-
-        if workoutCount >= 3 {
-            if hrvSampledWorkoutCount == 0 {
-                value = min(value, 0.58)
-            } else if hrvCoverageRatio < 0.34 {
-                value = min(value, 0.60)
-            } else if hrvCoverageRatio < 0.67 {
-                value = min(value, 0.72)
-            }
-        }
-
-        return max(0.1, min(0.95, value))
     }
 }
 
-enum WeeklyInferenceClassifier {
-    static func classify(
-        confidence: Double,
-        freshness: WeeklyDataFreshness,
-        workoutCount: Int,
-        elapsedDays: Int,
-        hrvSampledWorkoutCount: Int = 0,
-        hrvCoverageRatio: Double = 0
-    ) -> WeeklyInferenceClass {
-        if freshness == .missing || workoutCount == 0 || elapsedDays == 0 {
-            return .unsupported
+extension WeeklyInferenceClass {
+    var localizedLabel: String {
+        switch self {
+        case .bounded: return "受限推論"
+        case .weak: return "弱推論"
+        case .unsupported: return "觀測不足"
         }
-        if workoutCount >= 3 {
-            if hrvSampledWorkoutCount == 0 { return .weak }
-            if hrvCoverageRatio < 0.34 { return .weak }
+    }
+}
+
+extension WeeklyDataFreshness {
+    var label: String {
+        switch self {
+        case .fresh: return "資料新鮮"
+        case .partial: return "資料部分"
+        case .stale: return "資料偏舊"
+        case .missing: return "資料缺失"
         }
-        if freshness == .stale || confidence < 0.6 {
-            return .weak
-        }
-        return .bounded
     }
 }
 
@@ -305,13 +210,7 @@ enum NonAuthorityReminderPolicy {
     }
 }
 
-enum WeeklyAdaptationDirection: String {
-    case enduranceBuild = "Endurance build"
-    case maintenance = "Maintenance"
-    case mixedAdaptation = "Mixed adaptation"
-    case recoveryBiased = "Recovery-biased"
-    case noSignal = "No clear direction"
-
+extension WeeklyAdaptationDirection {
     var localizedLabel: String {
         switch self {
         case .enduranceBuild: return "有氧建設期"
@@ -358,20 +257,16 @@ enum WeeklyAdaptationDirection: String {
     }
 }
 
-enum TrainingState: String {
-    case recovered = "Recovered"
-    case accumulatingLoad = "Accumulating load"
-    case functionalFatigue = "Functional fatigue"
-    case possibleUnderRecovery = "Possible under-recovery"
-    case recoveryNormalizing = "Recovery normalizing"
-
-    static let progression: [TrainingState] = [
+extension TrainingState {
+    static var progression: [TrainingState] {
+        [
         .recovered,
         .accumulatingLoad,
         .functionalFatigue,
         .possibleUnderRecovery,
         .recoveryNormalizing
-    ]
+        ]
+    }
 
     var localizedLabel: String {
         switch self {
@@ -415,280 +310,12 @@ enum TrainingState: String {
         }
     }
 }
-
-struct WeeklyTrainingStateSignal {
-    let state: TrainingState
-    let authority: WeeklyDecisionAuthority
-    let inferenceClass: WeeklyInferenceClass
-    let rationale: String
-    let provenance: InferenceProvenance
-
-    static func from(
-        summary: WeeklyWorkoutSummary,
-        policy: WeeklyLoadPolicy,
-        freshness: WeeklyDataFreshness,
-        confidenceOverride: Double? = nil
-    ) -> WeeklyTrainingStateSignal {
-        let confidence = confidenceOverride ?? policy.confidence
-        let authority = WeeklyAuthorityRendering.authority(for: confidence, freshness: freshness)
-        let inferenceClass = WeeklyInferenceClassifier.classify(
-            confidence: confidence,
-            freshness: freshness,
-            workoutCount: summary.workoutCount,
-            elapsedDays: summary.elapsedDays,
-            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
-            hrvCoverageRatio: summary.hrvCoverageRatio
-        )
-
-        if inferenceClass == .unsupported {
-            return WeeklyTrainingStateSignal(
-                state: .recoveryNormalizing,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                rationale: "觀測不足，暫以恢復回穩中呈現，不做狀態升級判定。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.workoutCount, .dataFreshness, .hrvCoverage],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        if freshness == .stale || freshness == .missing {
-            return WeeklyTrainingStateSignal(
-                state: .recoveryNormalizing,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                rationale: "資料新鮮度不足，狀態回到恢復回穩中並降低決策權重。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.dataFreshness, .workoutCount],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        if summary.workoutCount == 0 || summary.restDays >= 4 {
-            return WeeklyTrainingStateSignal(
-                state: .recovered,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                rationale: "近期負荷偏低且休息比例較高，恢復訊號偏穩定。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.workoutCount, .restDays],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        if summary.highIntensityDays >= 2 && summary.consecutiveTrainingDays >= 4 {
-            return WeeklyTrainingStateSignal(
-                state: .possibleUnderRecovery,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                rationale: "高強度與連續負荷並存，恢復壓力上升，建議控管強度堆疊。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.highIntensityDays, .consecutiveTrainingDays, .workoutCount],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        if summary.consecutiveTrainingDays >= 3 || policy.recoveryConcernLevel == .elevated || policy.recoveryConcernLevel == .high {
-            return WeeklyTrainingStateSignal(
-                state: .functionalFatigue,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                rationale: "負荷連續性提升，較像適應期常見的功能性疲勞訊號。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.consecutiveTrainingDays, .recoveryConcernLevel, .workoutCount],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        if summary.workoutCount >= 3 {
-            return WeeklyTrainingStateSignal(
-                state: .accumulatingLoad,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                rationale: "本週訓練節奏連續，負荷正在累積，屬於正常訓練推進期。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.workoutCount, .consecutiveTrainingDays, .highIntensityDays],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        return WeeklyTrainingStateSignal(
-            state: .recoveryNormalizing,
-            authority: authority,
-            inferenceClass: inferenceClass,
-            rationale: "訊號偏中性，恢復與負荷正在重新平衡。",
-            provenance: weeklyProvenance(
-                inferenceClass: inferenceClass,
-                derivedFrom: [.workoutCount, .zoneDistribution, .restDays],
-                workoutCount: summary.workoutCount,
-                hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-            )
-        )
-    }
-}
-
-enum AdaptationTemporalScope {
-    case short7d
-    case medium28dUnavailable
-
+extension AdaptationTemporalScope {
     var label: String {
         switch self {
         case .short7d: return "7d signal"
         case .medium28dUnavailable: return "28d unavailable"
         }
-    }
-}
-
-private func weeklyProvenance(
-    inferenceClass: WeeklyInferenceClass,
-    derivedFrom: [DerivedFromSignal],
-    workoutCount: Int,
-    hrvSampledWorkoutCount: Int
-) -> InferenceProvenance {
-    let strength: InferenceStrength = (inferenceClass == .bounded) ? .bounded : .sparse
-    return InferenceProvenanceFactory.weekly(
-        strength: strength,
-        derivedFrom: derivedFrom,
-        workoutCount: workoutCount,
-        hrvSampledWorkoutCount: hrvSampledWorkoutCount
-    )
-}
-
-struct WeeklyAdaptationSignal {
-    let direction: WeeklyAdaptationDirection
-    let authority: WeeklyDecisionAuthority
-    let inferenceClass: WeeklyInferenceClass
-    let temporalScopes: [AdaptationTemporalScope]
-    let rationale: String
-    let provenance: InferenceProvenance
-
-    static func from(
-        summary: WeeklyWorkoutSummary,
-        policy: WeeklyLoadPolicy,
-        freshness: WeeklyDataFreshness,
-        confidenceOverride: Double? = nil
-    ) -> WeeklyAdaptationSignal {
-        let confidence = confidenceOverride ?? policy.confidence
-        let authority = WeeklyAuthorityRendering.authority(for: confidence, freshness: freshness)
-        let inferenceClass = WeeklyInferenceClassifier.classify(
-            confidence: confidence,
-            freshness: freshness,
-            workoutCount: summary.workoutCount,
-            elapsedDays: summary.elapsedDays,
-            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
-            hrvCoverageRatio: summary.hrvCoverageRatio
-        )
-        let total = summary.workoutCount
-        let z2Count = summary.intentDistribution[.zone2, default: 0]
-        let z2Ratio = total > 0 ? Double(z2Count) / Double(total) : 0
-
-        if inferenceClass == .unsupported {
-            return WeeklyAdaptationSignal(
-                direction: .recoveryBiased,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                temporalScopes: [.short7d, .medium28dUnavailable],
-                rationale: "目前觀測不足，無法形成可靠的適應方向推論。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.workoutCount, .dataFreshness, .hrvCoverage],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-
-        if total == 0 {
-            return WeeklyAdaptationSignal(
-                direction: .recoveryBiased,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                temporalScopes: [.short7d, .medium28dUnavailable],
-                rationale: "本週尚無有效訓練觀測，方向訊號偏向恢復優先。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.workoutCount, .restDays],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-        if summary.restDays >= 3 && total <= 3 {
-            return WeeklyAdaptationSignal(
-                direction: .recoveryBiased,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                temporalScopes: [.short7d, .medium28dUnavailable],
-                rationale: "休息日比例偏高，整體負荷偏向恢復導向。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.restDays, .workoutCount],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-        if z2Ratio >= 0.6 && summary.highIntensityDays <= 1 {
-            return WeeklyAdaptationSignal(
-                direction: .enduranceBuild,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                temporalScopes: [.short7d, .medium28dUnavailable],
-                rationale: "低中強度佔比較高，與有氧建設期型態一致。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.intentDistribution, .highIntensityDays, .workoutCount],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-        if summary.highIntensityDays >= 2 && summary.consecutiveTrainingDays >= 4 {
-            return WeeklyAdaptationSignal(
-                direction: .mixedAdaptation,
-                authority: authority,
-                inferenceClass: inferenceClass,
-                temporalScopes: [.short7d, .medium28dUnavailable],
-                rationale: "高強度與連續負荷並存，訊號偏向混合適應。",
-                provenance: weeklyProvenance(
-                    inferenceClass: inferenceClass,
-                    derivedFrom: [.highIntensityDays, .consecutiveTrainingDays, .workoutCount],
-                    workoutCount: summary.workoutCount,
-                    hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-                )
-            )
-        }
-        return WeeklyAdaptationSignal(
-            direction: .noSignal,
-            authority: authority,
-            inferenceClass: inferenceClass,
-            temporalScopes: [.short7d, .medium28dUnavailable],
-            rationale: "目前訓練型態無法對應到特定適應方向，僅能觀察負荷分布。",
-            provenance: weeklyProvenance(
-                inferenceClass: inferenceClass,
-                derivedFrom: [.intentDistribution, .zoneDistribution, .workoutCount],
-                workoutCount: summary.workoutCount,
-                hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount
-            )
-        )
     }
 }
 
@@ -1149,7 +776,7 @@ private struct InferenceProvenanceSection: View {
                 .foregroundStyle(.secondary)
             HStack(spacing: 6) {
                 EvidenceChip(label: provenance.inferenceType.rawValue, color: PremiumColor.skyBlue)
-                EvidenceChip(label: provenance.authorityCeiling.localizedLabel, color: PremiumColor.gold)
+                EvidenceChip(label: authorityCeilingLabel(provenance.authorityCeiling.rawValue), color: PremiumColor.gold)
             }
             Text("Observed: " + provenance.derivedFrom.map(\.rawValue).joined(separator: ", "))
                 .font(.caption2)
@@ -1162,14 +789,11 @@ private struct InferenceProvenanceSection: View {
         }
     }
 }
-
-private extension InferenceAuthorityCeiling {
-    var localizedLabel: String {
-        switch self {
-        case .nonInterventional:
-            return "非介入上限"
-        }
+private func authorityCeilingLabel(_ raw: String) -> String {
+    if raw == "non_interventional" {
+        return "非介入上限"
     }
+    return raw
 }
 
 // MARK: - Section 3: Advanced

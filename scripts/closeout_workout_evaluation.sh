@@ -235,6 +235,13 @@ if grep -R -E -q 'strongly suggests reduced intensity|you should rest today|Reco
   exit 1
 fi
 
+# App boundary guard: WeeklyDashboardView must render Core-provided provenance only.
+if grep -E -q 'InferenceProvenanceFactory\.weekly|InferenceAuthorityCeiling|MissingEvidence\.sleep|MissingEvidence\.hrv' "$WEEKLY_UI_PATH"; then
+  inference_core_contract_guard="ui_reintroduced_inference_contract_logic"
+  echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+  exit 1
+fi
+
 # Core contract guard: provenance is an inference contract in ZoneTruthCore,
 # not a UI-only disclosure artifact.
 if ! grep -q 'public struct InferenceProvenance' "Sources/ZoneTruthCore/Models.swift"; then
