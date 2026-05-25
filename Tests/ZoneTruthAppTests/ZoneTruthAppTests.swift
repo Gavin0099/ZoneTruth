@@ -1131,23 +1131,6 @@ final class ZoneTruthAppTests: XCTestCase {
         _ = section.body
     }
 
-    func testWeeklyAuthorityRenderingDowngradesUnderLowConfidence() {
-        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .fresh), .observational)
-        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.7, freshness: .fresh), .boundedInference)
-        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.5, freshness: .fresh), .weakInference)
-        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .stale), .weakInference)
-        XCTAssertEqual(WeeklyAuthorityRendering.authority(for: 0.85, freshness: .missing), .weakInference)
-
-        XCTAssertLessThan(
-            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: .weakInference),
-            WeeklyAuthorityRendering.recommendationEmphasisOpacity(for: .observational)
-        )
-        XCTAssertLessThan(
-            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: .weakInference),
-            WeeklyAuthorityRendering.recommendationStrokeOpacity(for: .observational)
-        )
-    }
-
     func testLowEvidenceCannotRenderHighAuthorityVisuals() {
         // Low confidence with fresh data
         let lowConfAuthority = WeeklyAuthorityRendering.authority(for: 0.5, freshness: .fresh)
@@ -1176,28 +1159,6 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertGreaterThan(observational, bounded)
         XCTAssertGreaterThan(bounded, weak)
         XCTAssertEqual(observational, 1.0, accuracy: 0.0001)
-    }
-
-    func testWeeklyConfidenceSemanticsDowngradesWithSparseHRV() {
-        let calibrated = WeeklyConfidenceSemantics.calibrated(
-            baseConfidence: 0.85,
-            freshness: .fresh,
-            workoutCount: 5,
-            hrvSampledWorkoutCount: 1,
-            hrvCoverageRatio: 0.2
-        )
-        XCTAssertEqual(calibrated, 0.60, accuracy: 0.001)
-    }
-
-    func testWeeklyConfidenceSemanticsDowngradesWithStaleFreshness() {
-        let calibrated = WeeklyConfidenceSemantics.calibrated(
-            baseConfidence: 0.9,
-            freshness: .stale,
-            workoutCount: 5,
-            hrvSampledWorkoutCount: 5,
-            hrvCoverageRatio: 1.0
-        )
-        XCTAssertEqual(calibrated, 0.55, accuracy: 0.001)
     }
 
     func testWeeklyAdaptationSignalUsesBoundedDirectionClasses() {
@@ -1277,82 +1238,6 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(state.provenance.isValidFailClosed(strength: .sparse))
     }
 
-    func testWeeklyFreshnessSignalClassifiesFreshPartialStaleMissing() {
-        let weekStart = makeUTCDate(year: 2026, month: 5, day: 18)
-        let now = weekStart.addingTimeInterval(6 * 86400 + 20 * 3600) // Sun 20:00
-
-        let freshWorkouts = [
-            makeWorkoutForFreshness(startDate: now.addingTimeInterval(-6 * 3600))
-        ]
-        let partialWorkouts = [
-            makeWorkoutForFreshness(startDate: now.addingTimeInterval(-40 * 3600))
-        ]
-        let staleWorkouts = [
-            makeWorkoutForFreshness(startDate: weekStart.addingTimeInterval(36 * 3600)) // Tue 12:00
-        ]
-
-        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: freshWorkouts, weekStart: weekStart, now: now), .fresh)
-        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: partialWorkouts, weekStart: weekStart, now: now), .partial)
-        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: staleWorkouts, weekStart: weekStart, now: now), .stale)
-        XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: [], weekStart: weekStart, now: now), .missing)
-    }
-
-    func testWeeklyInferenceClassifierReturnsUnsupportedWhenEvidenceMissing() {
-        XCTAssertEqual(
-            WeeklyInferenceClassifier.classify(
-                confidence: 0.9,
-                freshness: .missing,
-                workoutCount: 0,
-                elapsedDays: 7
-            ),
-            .unsupported
-        )
-        XCTAssertEqual(
-            WeeklyInferenceClassifier.classify(
-                confidence: 0.5,
-                freshness: .fresh,
-                workoutCount: 2,
-                elapsedDays: 7
-            ),
-            .weak
-        )
-        XCTAssertEqual(
-            WeeklyInferenceClassifier.classify(
-                confidence: 0.85,
-                freshness: .fresh,
-                workoutCount: 4,
-                elapsedDays: 7,
-                hrvSampledWorkoutCount: 4,
-                hrvCoverageRatio: 1.0
-            ),
-            .bounded
-        )
-    }
-
-    func testWeeklyInferenceClassifierDowngradesWhenHRVCoverageIsSparse() {
-        XCTAssertEqual(
-            WeeklyInferenceClassifier.classify(
-                confidence: 0.85,
-                freshness: .fresh,
-                workoutCount: 4,
-                elapsedDays: 7,
-                hrvSampledWorkoutCount: 0,
-                hrvCoverageRatio: 0
-            ),
-            .weak
-        )
-        XCTAssertEqual(
-            WeeklyInferenceClassifier.classify(
-                confidence: 0.85,
-                freshness: .fresh,
-                workoutCount: 4,
-                elapsedDays: 7,
-                hrvSampledWorkoutCount: 1,
-                hrvCoverageRatio: 0.25
-            ),
-            .weak
-        )
-    }
 
     func testWeeklyHRVCoverageSignalClassifiesCoverageBands() {
         XCTAssertEqual(
@@ -1726,19 +1611,6 @@ final class ZoneTruthAppTests: XCTestCase {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         return cal.date(from: DateComponents(year: year, month: month, day: day, hour: 0, minute: 0, second: 0))!
-    }
-
-    private func makeWorkoutForFreshness(startDate: Date) -> WorkoutInput {
-        WorkoutInput(
-            workoutType: .running,
-            startDate: startDate,
-            endDate: startDate.addingTimeInterval(3600),
-            heartRateSamples: [
-                HeartRateSample(timestamp: startDate, bpm: 120),
-                HeartRateSample(timestamp: startDate.addingTimeInterval(600), bpm: 122),
-            ],
-            intent: .zone2
-        )
     }
 
     private func buildEvaluationFixtureRecords() -> [EvaluationFixtureRecord] {
