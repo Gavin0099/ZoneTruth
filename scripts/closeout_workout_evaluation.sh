@@ -259,9 +259,17 @@ if ! grep -q 'Core tests verify inference truth' "docs/TEST_RESPONSIBILITY_BOUND
   exit 1
 fi
 
-if grep -E -q 'WeeklyInferenceClassifier\.classify|WeeklyConfidenceSemantics\.calibrated|WeeklyFreshnessSignal\.classify' "Tests/ZoneTruthAppTests/ZoneTruthAppTests.swift"; then
+# Expand to entire app-test directory and report concrete hits.
+# Basic false-positive reduction: ignore comment-only lines.
+app_test_boundary_hits="$(
+  grep -RIn --include="*.swift" -E 'WeeklyInferenceClassifier\.classify|WeeklyConfidenceSemantics\.calibrated|WeeklyFreshnessSignal\.classify' Tests/ZoneTruthAppTests \
+  | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+)"
+if [[ -n "$app_test_boundary_hits" ]]; then
   test_boundary_guard="app_tests_retesting_core_inference_semantics"
   echo "test_boundary_guard: ${test_boundary_guard}"
+  echo "test_boundary_hits:"
+  echo "$app_test_boundary_hits"
   exit 1
 fi
 
