@@ -16,6 +16,7 @@ weekly_ui_guard="passed"
 goal_alignment_guard="passed"
 adaptation_28d_guard="passed"
 interaction_structural_guard="passed"
+inference_authority_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -195,6 +196,44 @@ if grep -E -q 'readiness|Readiness|Recovery score|恢復分數|today recommendat
   exit 1
 fi
 
+# Inference authority guard:
+# ensure inference governance artifacts exist and upstream language does not inflate authority.
+if [[ ! -f "docs/INFERENCE_POLICY.md" ]]; then
+  inference_authority_guard="missing_inference_policy"
+  echo "inference_authority_guard: ${inference_authority_guard}"
+  exit 1
+fi
+
+if [[ ! -f "schemas/inference_provenance.schema.json" ]]; then
+  inference_authority_guard="missing_inference_provenance_schema"
+  echo "inference_authority_guard: ${inference_authority_guard}"
+  exit 1
+fi
+
+if ! grep -q 'non_interventional' "docs/INFERENCE_POLICY.md"; then
+  inference_authority_guard="missing_non_interventional_authority_ceiling"
+  echo "inference_authority_guard: ${inference_authority_guard}"
+  exit 1
+fi
+
+if ! grep -q '"authority_ceiling"' "schemas/inference_provenance.schema.json"; then
+  inference_authority_guard="schema_missing_authority_ceiling"
+  echo "inference_authority_guard: ${inference_authority_guard}"
+  exit 1
+fi
+
+if ! grep -q '"missing_evidence"' "schemas/inference_provenance.schema.json"; then
+  inference_authority_guard="schema_missing_missing_evidence"
+  echo "inference_authority_guard: ${inference_authority_guard}"
+  exit 1
+fi
+
+if grep -R -E -q 'strongly suggests reduced intensity|you should rest today|Recommended workout today|today recommendation|must rest|不適合高強度|必須休息|建議休息' Sources; then
+  inference_authority_guard="forbidden_inference_escalation_phrase_detected"
+  echo "inference_authority_guard: ${inference_authority_guard}"
+  exit 1
+fi
+
 # Required structural order in root composition:
 # Overview (bounded interpretation context) -> override coverage insight -> advanced evidence surface
 overview_call_line="$(grep -n 'WeeklyOverviewCard(' "$WEEKLY_UI_PATH" | head -n 1 | cut -d: -f1 || true)"
@@ -364,6 +403,7 @@ echo "weekly_ui_guard: ${weekly_ui_guard}"
 echo "goal_alignment_guard: ${goal_alignment_guard}"
 echo "adaptation_28d_guard: ${adaptation_28d_guard}"
 echo "interaction_structural_guard: ${interaction_structural_guard}"
+echo "inference_authority_guard: ${inference_authority_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"
