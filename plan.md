@@ -1,633 +1,321 @@
-# ZoneTruth - iOS Workout Intent Analyzer Plan
-> **最後更新**: 2026-05-21
-> **Owner**: Gavin
-> **Freshness**: Sprint (7d)
+---
+audience: agent-runtime
+authority: canonical
+can_override: false
+overridden_by: ~
+default_load: always
+---
 
-## 0. 實作現況對齊（2026-05-20）
+# PLAN.md 模板與治理說明
 
-本節用於對齊「計畫」與「目前 repo 真實狀態」，避免後續決策依賴過時假設。
-
-### 已完成（MVP 基礎能力）
-
-- 已有核心 Intent 分析流程：Zone 2 / VO2-Interval / Strength / Activity。
-- 已有 Explainable output（理由 + 建議），並開始導入語意層 `WorkoutEvaluation`（tendency / goal fit / split confidence）。
-- 已完成資料來源骨幹：HealthKit、Strava、JSON import（含 fallback 流程）。
-- 已有 edge-case 測試擴充（Zone3 leakage、drift、sparse HR）與 semantic consistency guard。
-
-### 未完成（仍在 roadmap）
-
-- 尚未把 active calories、distance、swim/cycle distance、avg/max HR 納入核心判斷。
-- 尚未完成「單一官方輸出語意」收斂（legacy pass/fail 與新語意層仍共存）。
-- 尚未完成全場景真機驗證閉環（特別是 sparse/missing HR 與多運動型態資料品質差異）。
-- 尚未將 plan 內舊架構描述全面更新為目前 Adapter + Host 實作形態。
-
-### Deferred（暫緩）
-
-- Garmin 尚未導入，目前不在本期交付範圍。
-
-## 1. 專案定位
-
-ZoneTruth 是一個 iOS 運動分析工具。
-
-核心目的不是排課，也不是一般健身紀錄，而是：
-
-> 匯入 Apple Health 運動資料，推定「這堂運動較偏向的訓練刺激」是否符合使用者設定的訓練目的。
+> **這是 repo 的規劃單一真相來源範本。**
+> 真正提供 AI 與 reviewer 使用的專案規劃檔，應放在 repo root 的 [`PLAN.md`](../PLAN.md)。
+> 本文件的角色是說明 PLAN 應該長什麼樣，以及為什麼需要它。
 
 ---
 
-## 2. 核心問題
+## 1. PLAN.md 的角色
 
-目前常見問題：
+`PLAN.md` 不是 README，也不是任意備忘錄。它是專案目前規劃狀態的 canonical source，負責：
+- 當前 focus 是什麼
+- 目前在第幾個 phase
+- 這個 phase 明確要做什麼
+- 哪些事情刻意不做
+- AI 在這個 phase 中怎麼判斷 scope 與 next step
 
-- 以為在做 Zone 2，實際落在 Zone 3
-- 以為在做 HIIT，實際只是中強度有氧
-- 重訓變成代謝型訓練，影響力量輸出
-- 羽球、游泳、腳踏車被誤當成同一種有氧刺激
-
-ZoneTruth 要解決的是：
-
-> 運動後提供「刺激是否對齊目標」的判斷。
-
----
-
-## 3. MVP 目標
-
-第一版只回答一個問題：
-
-> 這堂運動是否符合預期訓練目的？
-
-支援四種目的：
-
-1. Zone 2
-2. VO2 / Interval
-3. Strength
-4. Activity / Skill
+如果沒有 `PLAN.md`，AI 很容易：
+- 看見 backlog 就一路往外擴
+- 把相鄰工程工作與 feature expansion 混在一起
+- 在沒有 anti-goal 的情況下誤解使用者意圖
 
 ---
 
-## 4. 資料來源
+## 2. PLAN 的基本原則
 
-### Apple Health / HealthKit
+### 2.1 Single Source of Truth
 
-需讀取：
-
-- Workout type
-- Start / end time
-- Duration
-- Heart rate samples
-- Active calories
-- Distance
-- Swimming distance
-- Cycling distance
-- Average heart rate
-- Max heart rate
-
-第一版不處理：
-
-- 飲食
-- 睡眠
-- 體重趨勢
-- 社群功能
-- 自動排課
-
-### Garmin（目前狀態）
-
-- 目前 **未導入 Garmin Connect API**，也沒有 Garmin adapter 實作。
-- 現階段資料來源以 Apple Health、Strava、JSON 匯入為主。
-- Garmin 先列為後續擴充項目，不放在第一版關鍵路徑。
-
-未在本期導入 Garmin 的主要原因：
-
-1. 第一版優先驗證「分析語意與判定可解釋性」，避免同時擴大資料來源與規則複雜度。
-2. 既有 HealthKit + Strava 已可覆蓋多數目標使用情境，先完成品質穩定與語意一致性。
-3. Garmin 串接需要額外 OAuth / API 契約與資料映射維護，會拉長 MVP 交付時間。
-
----
-
-## 5. 使用流程
-
-1. 使用者授權 HealthKit
-2. App 匯入近期 workout
-3. 使用者選擇某堂運動
-4. 使用者指定該堂目標：
-   - Zone 2
-   - VO2 / Interval
-   - Strength
-   - Activity / Skill
-5. App 分析實際心率與時間分布
-6. 輸出：
-   - Pass
-   - Warning
-   - Fail
-7. 顯示原因與下次修正建議
-
----
-
-## 6. 個人化 Zone 設定
-
-### 初版預設
-
-根據使用者手動設定：
-
-- Resting HR
-- Zone 2 lower bound
-- Zone 2 upper bound
-- Zone 4 threshold
-- Zone 5 threshold
-
-### 你的初始設定
-
-- Zone 1: <110 bpm
-- Zone 2: 110–125 bpm
-- Zone 3: 126–140 bpm
-- Zone 4: 141–155 bpm
-- Zone 5: >155 bpm
-
-注意：
-
-> 這些只是初始值，之後要透過 drift test 校正。
-
----
-
-## 7. 核心分析模組
-
-### 7.1 Zone Distribution
-
-計算每堂運動在各 Zone 的時間比例。
-
-輸出範例：
+對 planned work、phase status、anti-goals 而言：
 
 ```text
-Zone 1: 34 min
-Zone 2: 23 min
-Zone 3: 7 min
-Zone 4: 1 min
-Zone 5: 0 min
-7.2 Zone 3 Leakage Detector
-
-目的：
-
-判斷運動是否不小心落入 Zone 3。
-
-規則初版：
-
-Zone 3 時間 > 10%：Warning
-Zone 3 時間 > 20%：Fail
-Zone 3 + Zone 4 時間過高：Fail
-7.3 Zone 2 Quality Check
-
-適用：
-
-腳踏車
-游泳
-快走
-
-判斷：
-
-平均心率是否在 Zone 2
-是否長時間超過 Zone 2 上限
-後半段心率是否明顯上升
-是否有 drift
-
-初版規則：
-
-平均 HR 在 Zone 2：加分
-Zone 3 leakage <10%：通過
-Drift <5%：通過
-Drift 5–7%：Warning
-Drift >7%：Fail
-7.4 Fake HIIT Detector
-
-適用：
-
-HIIT
-間歇訓練
-游泳 interval
-腳踏車 interval
-
-判斷：
-
-是否有明顯高強度區段
-是否進入 Zone 4 / Zone 5
-高強度區段是否集中
-是否只是長時間 Zone 3
-
-初版規則：
-
-Zone 4+ 時間 <5%：Fail
-Zone 4+ 時間 5–10%：Warning
-Zone 4+ 有明顯區段：Pass
-7.5 Strength Session Check
-
-適用：
-
-傳統肌力訓練
-
-判斷：
-
-是否長時間維持高心率
-是否變成代謝型訓練
-組間是否有恢復跡象
-
-初版規則：
-
-平均 HR 90–115：正常
-平均 HR 116–130：Warning
-平均 HR >130：可能變成代謝型重訓
-
-注意：
-
-重訓單組心率衝到 140–150 是正常的，重點是組間是否下降。
-
-7.6 Activity / Skill Classifier
-
-適用：
-
-羽球
-球類
-技術課
-
-判斷原則：
-
-不拿來當 Zone 2
-不拿來當 VO2 主訓
-標記為 Activity / Skill
-
-輸出重點：
-
-這堂課有活動與協調價值，但不應作為主要 Zone 2 或 VO2 訓練判斷。
-
-8. 結果輸出格式（語意層）
-Summary Card
-Workout: Swimming
-Primary Intent Baseline: Zone 2
-Training Tendency: Mixed aerobic session
-Goal Fit: 42%
-
-Primary Findings:
-- Zone 3 leakage elevated
-- HR drift remained stable
-
-Next Action:
-- Reduce swim pace to remain below Zone 2 upper bound
-9. App 架構
-ZoneTruth
-├── App
-│   └── ZoneTruthApp.swift
-│
-├── HealthKit
-│   ├── HealthKitManager.swift
-│   ├── WorkoutFetcher.swift
-│   └── HeartRateFetcher.swift
-│
-├── Models
-│   ├── WorkoutSummary.swift
-│   ├── HeartRateSample.swift
-│   ├── TrainingZone.swift
-│   ├── WorkoutIntent.swift
-│   └── AnalysisResult.swift
-│
-├── Analyzer
-│   ├── ZoneDistributionAnalyzer.swift
-│   ├── Zone2QualityAnalyzer.swift
-│   ├── Zone3LeakageAnalyzer.swift
-│   ├── FakeHIITAnalyzer.swift
-│   └── StrengthAnalyzer.swift
-│
-├── Recommendation
-│   └── RecommendationEngine.swift
-│
-├── UI
-│   ├── WorkoutListView.swift
-│   ├── WorkoutDetailView.swift
-│   ├── IntentPickerView.swift
-│   ├── AnalysisResultView.swift
-│   └── SettingsView.swift
-│
-└── Tests
-    ├── ZoneDistributionAnalyzerTests.swift
-    ├── Zone2QualityAnalyzerTests.swift
-    └── FakeHIITAnalyzerTests.swift
-
-註：
-以上為初版概念架構。實際 repo 已演進為 `ZoneTruthCore` + `ZoneTruthApp` + `ZoneTruthHost`（adapter 邊界 + host app capability wrapper）模式，後續需以實作結構回寫本節。
-10. 近期開發順序（Next Sprint）
-
-Phase A：語意層穩定化（最高優先）
-
-目標：
-
-- 穩定 `WorkoutEvaluationAdapter` 輸出語意，避免前後矛盾。
-- 固化 semantic guard 與 fixture snapshot，讓 UI 與語意層解耦。
-
-完成標準：
-
-- 關鍵案例 fixture 全通過（Zone2 偏離、VO2 達標、Strength 代謝循環、Activity、Sparse HR）。
-- `keyFindings`、`nextAction`、confidence 雙軸輸出行為穩定且可回歸驗證。
-
-Phase B：資料品質與裝置驗證閉環
-
-目標：
-
-- 在真機驗證 HealthKit/Strava 匯入流程與 sparse/missing HR 處理。
-- 針對不同 workout type 進行資料品質分層檢查。
-
-完成標準：
-
-- 可穩定讀取近期運動與 HR 樣本。
-- 資料不足時有一致的 fail-closed 與可解釋輸出。
-
-Phase C：分析訊號擴充（從 HR-only 走向多訊號）
-
-目標：
-
-- 將 active calories、distance、swim/cycle distance、avg/max HR 導入判斷輔助層。
-- 維持 `ZoneTruthCore` 與平台 adapter 邊界清晰。
-
-完成標準：
-
-- 新增訊號不破壞既有判定回歸。
-- 新訊號在理由/建議中可被解釋，不只是內部分數加權。
-
-Phase D：UI 首屏重排（語意層穩後才做）
-
-目標：
-
-- 以「主結論 + 目標符合度 + 下一步動作」取代 metrics-first 讀取路徑。
-- 將技術細節下沉到可收合區塊。
-
-完成標準：
-
-- 第一屏可在 3 秒內回答「這次像什麼」「我下次怎麼做」。
-- 進階指標保留但不干擾主決策流程。
-11. 第一版不做的事
-不做 AI 教練
-不自動排課
-不做飲食追蹤
-不做社群
-不做排行榜
-不做複雜週期化
-不預測死亡率
-
-原因：
-
-第一版只做「運動目的與實際刺激是否一致」。
-
-12. Phase 5：Semantic Consistency & Evaluation Layer（進行中）
-
-目標：
-
-- 將 legacy analyzer 輸出穩定映射到語意層（`PrimaryIntent baseline`、`trainingTendency`、`goalFitScore`）。
-- 將 `classificationConfidence` 與 `evaluationConfidence` 分離，避免語意誤導。
-- 建立 fixture snapshot + semantic guard，防止輸出語意漂移。
-
-完成標準：
-
-- `WorkoutEvaluationAdapter` 輸出欄位穩定，且有 snapshot fixture 保護。
-- 關鍵案例（Zone2 偏離、VO2 達標、Strength 代謝循環、Activity、Sparse HR）可重現且可比對。
-
-13. P1i：Observation-to-Policy Migration Gate（下一步）
-
-定位：
-
-- Observation layer 已具備 coverage discipline，但尚未成為 production authority。
-- 本階段不直接切換執行路徑，先定義「何時允許有意圖地改變」。
-
-Migration Gate（需同時滿足）：
-
-1. Primitive snapshots 穩定（無非預期 diff）。
-2. 四種 observation snapshots 穩定（Zone2 / VO2 / Strength / Activity）。
-3. Evaluation snapshot 無 drift（`workout_evaluation_snapshot.json` 無非預期 diff）。
-4. Policy 可直接 consume observation（不再依賴 legacy `AnalysisResult`）。
-5. Fallback path 明確保留，且可在一次變更內回退。
-
-治理附加條件：
-
-6. 所有 snapshot 更新需帶 `change-intent annotation`（說明預期變更與影響面）。
-7. 採用 migration mode 三段切換：
-   - `observe_only`
-   - `dual_run`
-   - `policy_primary`
-
-完成標準：
-
-- 形成可執行 migration checklist（可用於 PR gate / closeout gate）。
-- 在不破壞現有語意穩定性的前提下，允許有意圖的 policy 切換。
-
-14. P1n：Migration Gate Full Condition Verification（完成）
-
-定位：
-
-- 把「能不能討論 policy_primary」變成可執行 checklist，不靠人工印象。
-- 五個條件 + fallback path sub-checks，全部機器可驗。
-
-9 個 check ID：
-
-1. `primitive_snapshots_stable` — swift test PrimitiveBuilder
-2. `observation_snapshots_stable` — swift test Zone2/VO2/Strength/Activity Observation
-3. `evaluation_snapshot_stable_or_annotated` — swift test snapshot fixture 或有 SEM-*.json
-4. `shadow_policy_consumes_observation` — shadow/legacy tendency 一致（in-process）
-5. `policy_primary_disabled_by_default` — SettingsManager 預設 observeOnly
-6. `policy_primary_requires_explicit_allow` — updateMigrationMode(.policyPrimary) 被攔截
-7. `dual_run_revertible_to_observe_only` — dual_run → observe_only 可回退
-8. `observe_only_never_writes_dual_run_artifact` — structural guard in ViewModels
-9. `ui_path_forces_legacy_evaluation` — evaluationResult 永遠走 legacy
-
-輸出：`artifacts/migration/migration_gate_report.json`
-
-關鍵約定：
-
-- `policy_primary_admissible`: 永遠 `false`（v1 硬碼）
-- `policy_primary_admissible_for_discussion`: 全通過才 `true`
-
-腳本：`scripts/run_migration_gate.sh`
-
-15. P1m：Semantic Change Annotation Gate（完成）
-
-定位：
-
-- 解決「合理 drift」與「偷改產品語意」混在一起的治理風險。
-- 任何 evaluation snapshot 更新都必須伴隨結構化 `SemanticChangeAnnotation`。
-
-Annotation schema：
-
-```json
-{
-  "change_id": "SEM-YYYY-MM-DD-NNN",
-  "reason": "...",
-  "affected_fixtures": ["..."],
-  "expected_behavior_change": ["..."],
-  "reviewed_by": "manual",
-  "admissibility": "intentional_semantic_change | observation_refinement | bug_fix"
-}
+PLAN.md = 單一真相來源
 ```
 
-Admissibility 規則：
+其他文件可以補充，但不應各自維護另一份長期規劃，並讓它和 `PLAN.md` 漂移。
 
-- snapshot changed + 無 annotation → `requiresAnnotation`（closeout fail）
-- `blocking_drift` + admissibility ≠ `intentional_semantic_change` → `blockedByAdmissibility`（closeout fail）
-- `review_required` 或 `minor_drift` + 任意有效 annotation → `admissible`
+### 2.2 AI 會怎麼用它
 
-完成標準：
+AI 讀 `PLAN.md` 主要是為了回答：
+- 當前 phase 是什麼
+- 哪些 backlog 還沒輪到
+- 哪些工作雖然看似合理，但被 anti-goals 明確排除
+- 使用者新要求屬於：當前 phase、相鄰工程、還是 feature expansion
 
-- `AnnotationGate.validate()` 覆蓋所有 admissibility 分支，guard tests 全通過。
-- Closeout script 在 `snapshot_fixture=changed` 時自動觸發 annotation gate。
-- `artifacts/semantic_changes/SEM-TEMPLATE.json` 為規範格式。
+### 2.3 它不是萬能阻擋器
 
-15. P1l：ObservationBridge + Shadow Evaluator Rewiring（完成）
+`PLAN.md` 管的是 feature priority，不是用來阻止所有相鄰工程活動。
 
-定位：
+預設仍屬於可直接處理的相鄰工程包括：
+- build
+- test
+- debugging
+- review
+- commit preparation
+- documentation synchronization
+- bounded governance analysis
 
-- `ObservationPolicyShadowEvaluator` 原本手寫 inline scoring，與 `WorkoutEvaluationPolicyFactory` 邏輯重複且略有差異。
-- P1l 新增 `ObservationBridge`，統一橋接 `WorkoutObservationPrimitives` → `WorkoutObservation`，並讓 shadow path 走相同 policy factory。
+只有當這些工作跨到 hard boundary、risk gate、或 feature expansion，才需要 escalate。
 
-完成標準：
-- `ObservationBridge.observation(from:intent:)` 為唯一 primitives → observation 橋接路徑。
-- `ObservationPolicyShadowEvaluator` 移除 hand-coded scoring，改呼叫 `WorkoutEvaluationPolicyFactory`。
-- Shadow 與 legacy 在相同 Zone 2 穩定案例上 tendency 必須一致（guard test）。
-- 乾淨 Zone 2 案例的 dual-run diff 為 `minor_drift`。
+---
 
-15. P1j：Dual-run Admissibility Guard（完成）
+## 3. Mandatory Structure
 
-定位：
+每個 repo 的 root `PLAN.md` 至少應包含以下區塊：
 
-- `dual_run` 只允許作為觀察差異的 admissible path。
-- 不允許成為 product behavior authority。
+```markdown
+# PLAN.md - [Project Name]
 
-規則：
+> **Project Type**: [type]
+> **Primary Language**: [language]
+> **Task Level**: L1 / L2 / L3
+> **Planning Window**: [start] ~ [end]
+> **Last Updated**: YYYY-MM-DD
+> **Owner**: [name]
+> **Freshness**: Sprint (7d) | Phase (30d) | Custom (Nd)
 
-1. `observe_only` 不產生 dual-run shadow artifact。
-2. `dual_run` 可產生 artifact，但 UI `evaluationResult` 仍使用 legacy path。
-3. `policy_primary` 需明確 gate，禁止 accidental enable。
-4. artifact 必須包含 `migrationMode`、`generatedAt`、`totalWorkouts`。
-5. artifact 不得帶入 user-facing override（例如 recommendation override）。
+---
 
-Dual-run 差異解讀契約（P1k）：
+## 專案目標
 
-- `goalFitDelta <= 5`：`minor_drift`
-- `goalFitDelta 6–15`：`review_required`
-- `goalFitDelta > 15`：`blocking_drift`
-- `tendencyChanged == true`：`review_required`
-- `userFacingOverrideApplied == true`：`invalid_report`
+## 當前階段與 phase 狀態
 
-Closeout Gate：
+## 當前 Sprint / 當前工作
 
-- `blocking_drift` 或 `invalid_report` 時，closeout fail。
-- 不可自動宣稱 shadow 比 legacy 更正確，只能聲明差異已記錄與分級。
+## Backlog
 
+## Anti-Goals
 
-Project name：**ZoneTruth**  
-副標可以用：**Train with intent. Verify with data.**
+## AI 執行規則
 
-16. P2：Weekly Dashboard（完成）與 P3 HRV（Deferred）
+## Gate / 完成條件
 
-P2 已完成交付：
+## 已知問題或技術債（選填）
 
-- 產品從單次分析擴展到週期觀察（Weekly Dashboard 三區塊）。
-- `WorkoutListViewModel` 已提供 `weeklySummary` / `weeklyPolicy` 並在每次 `apply()` 後更新。
-- App 主入口已採 `TabView`，保留訓練紀錄並新增本週視圖。
+## 里程碑
 
-P2f（closeout guard）已納入：
+## 更新紀錄
+```
 
-1. closeout script 納入 `WeeklyLoadPolicy` snapshot 驗證。
-2. closeout script 檢查 Weekly UI 禁用詞（`過度訓練` / `overtraining` / `休息不足`）。
-3. 新增 WeeklyDashboard smoke compile guard（`testWeeklyDashboardViewSmokeCompiles`）。
-4. Weekly fixture 變更沿用 semantic annotation gate（`SEM-*.json`）。
+缺少這些基本區塊，AI 就比較難穩定判斷目前「該做什麼」與「不該做什麼」。
 
-P3 規劃：
+---
 
-- P3a：HRV observation import（完成）
-- P3b：HRV uncertainty signal（完成）
-- P3c：Weekly policy confidence adjustment（完成）
+## 4. Header 欄位
 
-備註：P3 HRV 目前 deferred，先以 P2 guard 穩定性為優先。
+`Last Updated`、`Owner`、`Freshness` 必須在 header 中明示。
 
-17. P3 Doctrine：Evidence-Bound Training Observatory（啟動）
+```markdown
+> **Last Updated**: YYYY-MM-DD
+> **Owner**: <owner>
+> **Freshness**: Sprint (7d)
+```
 
-定位：
+Freshness policy：
 
-- P3 不以「更多分析卡片」為目標，而是以 `training epistemology` 為目標。
-- 產品由「資料解釋型 UI」轉為「決策支援型 UI」。
+| Policy | 說明 | 判定 |
+|---|---|---|
+| `Sprint (7d)` | 以 sprint 為單位 | 超過 7 天可視為 stale |
+| `Phase (30d)` | 以 phase 為單位 | 超過 30 天可視為 stale |
+| `Custom (Nd)` | 自定義天數 | 超過 N 天可視為 stale |
 
-Doctrine（正式規格）：
+`governance_tools/plan_freshness.py` 會使用這些欄位做 freshness 檢查。
 
-- 規格檔：`docs/TRAINING_PRODUCT_DOCTRINE.md`
-- 核心原則：
-  - Action-guiding, not action-authoritative
-  - State-transition, not binary verdict
-  - Evidence-typed output
-  - No-overclaim by Claim Authority Matrix
+---
 
-P3b（下一步）：
+## 5. 內容區塊說明
 
-1. 導入 HRV uncertainty signal（coverage / sparsity）到 weekly decision surface。
-2. Weekly decision cards 顯示 evidence type（direct / derived / weak inference）。
-3. 低證據情境自動降語氣（避免 imperative wording）。
+### 5.1 專案目標
 
-P3c（其後）：
+這裡要簡短說清楚：
+- 專案在解什麼問題
+- bounded context 是什麼
+- 明確不負責什麼
 
-1. 將 confidence semantics 改為 evidence-completeness 驅動。
-2. Weekly policy wording 受 uncertainty rendering rules 約束。
-3. 所有 claim 受 Claim Authority Matrix 與 coaching language contract 約束。
+至少應回答：
+- responsible for X
+- NOT responsible for Y
 
-Guard 要求：
+### 5.2 當前階段與 phase 狀態
 
-- 禁用語句與 overclaim 詞彙檢查
-- evidence layer mapping tests
-- uncertainty rendering 行為測試
-- snapshot drift + semantic annotation gate
+應清楚標出：
+- phase 序列
+- 當前 phase
+- 已完成 / 進行中 / 尚未開始
 
-18. P3d-P3i：Authority & Epistemic Rendering（進行中）
+範例：
 
-定位：
+```markdown
+## 當前階段與 phase 狀態
 
-- 將 wording governance 升級為 rendering governance。
-- 防止「語氣保守但視覺權威過強」造成心理層 overclaim。
+- [x] Phase A: 基礎建置
+- [>] Phase B: 核心功能整合
+- [ ] Phase C: 驗證與收斂
+- [ ] Phase D: 發版準備
 
-P3d：Authority Rendering System
+**Current Phase**: Phase B - 核心功能整合
+```
 
-1. UI 元件綁定 authority layer（observation / interpretation / uncertainty）。
-2. 低證據時降低色彩強度與 CTA prominence。
-3. 禁止低證據卡片使用 hero-style 強權威視覺。
+### 5.3 當前 Sprint / 當前工作
 
-P3e：Training State Machine
+這裡要回答：
+- 這個 sprint / 這個 phase 現在真正要做什麼
+- 哪些任務是當前 focus
+- 哪些工作雖存在，但不屬於 current sprint
 
-1. 引入狀態機：
-   - recovered
-   - accumulating_load
-   - functional_fatigue
-   - possible_under_recovery
-   - recovery_normalizing
-2. 禁止 binary verdict 回退（fatigue != bad）。
+### 5.4 Backlog
 
-P3f：Data Freshness Authority
+Backlog 應至少分成：
+- P0
+- P1
+- P2
 
-1. freshness 分級：fresh / partial / stale / missing。
-2. stale/missing 必須自動降級 decision authority。
-3. 不可用 stale evidence 輸出高權威建議。
+避免把所有想法平鋪成一個巨大清單，讓 AI 誤以為都可以立刻開始做。
 
-P3g：Inference Stratification
+### 5.5 Anti-Goals
 
-1. inference 分級：
-   - bounded_inference
-   - weak_inference
-   - unsupported_speculation
-2. 指標到 inference class 的 mapping 需有明確規則。
+這是最重要的區塊之一。它明確說明：
+- 這個 phase / sprint 刻意不做什麼
+- 哪些看似合理的延伸其實不屬於目前 scope
 
-P3h：Adaptation Direction Surface
+如果沒有 anti-goals，AI 很容易把「可以做」誤解成「現在就該做」。
 
-1. 首頁加入 adaptation direction（如 endurance build / maintenance / mixed / recovery-biased）。
-2. adaptation direction 僅能使用 7d/28d 趨勢，不得由單次活動直接推斷。
+### 5.6 AI 執行規則
 
-P3i：Non-Authority Reminder
+這裡應清楚告訴 AI：
+- 遇到不在 current phase 的工作時怎麼判斷
+- 什麼時候可以視為 adjacent engineering work
+- 什麼時候要 escalate
 
-1. 高解釋卡片顯示固定提醒：
-   - "Based on available HR-derived observations. Not a physiological diagnosis."
-2. partial/stale 情境下提高提醒可見性。
+### 5.7 Gate / 完成條件
 
-Closeout Guards（新增）：
+對 L2+ repo，建議列出：
+- phase gate
+- build / test / validation 最低要求
+- release 或 reviewer-facing completion condition
 
-- freshness downgrade tests
-- state-machine transition validity tests
-- authority-rendering tests（low evidence cannot render high-emphasis coach surface）
-- forbidden semantics + snapshot annotation gate 維持 fail-closed
+### 5.8 里程碑與更新紀錄
+
+至少應留下：
+- milestone 名稱
+- 預計日期
+- 當前狀態
+- update log
+
+這能讓 reviewer 與未來 session 看得出規劃是活的，不是一次性文件。
+
+---
+
+## 6. AI 使用規則
+
+AI 在讀 `PLAN.md` 時，至少要做這些事：
+- 對照當前請求是否落在 current phase
+- 對照 anti-goals，避免默默擴 scope
+- 對照 backlog priority，避免跳過明顯更重要的項目
+- 在不確定時，提出選項而不是自行重排 roadmap
+
+若 `PLAN.md` 結構明顯不完整、欄位缺失、或 freshness 過舊，應明說這個風險，而不是假裝規劃仍然可靠。
+
+---
+
+## 7. L1 / L2 / L3 適用建議
+
+### L1
+
+可用較輕量的 phase / sprint 結構，但仍應具備：
+- 專案目標
+- 當前工作
+- backlog
+- anti-goals
+- AI 執行規則
+
+### L2
+
+應完整具備本文件列出的 mandatory structure。
+
+### L3
+
+除了完整結構，還建議補：
+- ADR 對應
+- 明確 phase gate
+- 更清楚的 reviewer / release criteria
+
+---
+
+## 8. 最小範例
+
+```markdown
+# PLAN.md - Example Project
+
+> **Project Type**: tooling
+> **Primary Language**: Python
+> **Task Level**: L1
+> **Planning Window**: 2026-04-01 ~ 2026-04-30
+> **Last Updated**: 2026-04-08
+> **Owner**: example-owner
+> **Freshness**: Sprint (7d)
+
+## 專案目標
+
+這個 repo 負責生成與驗證治理 artifact。
+
+**Bounded Context**:
+- governance toolchain
+- status generation
+- repo-local validation
+
+**Not Responsible For**:
+- 外部部署系統
+- 非 repo-local production orchestration
+
+## 當前階段與 phase 狀態
+
+- [x] Phase A: baseline 建立
+- [>] Phase B: runtime hardening
+- [ ] Phase C: adoption cleanup
+
+**Current Phase**: Phase B - runtime hardening
+
+## 當前 Sprint / 當前工作
+
+- closeout audit status surface
+- adoption source audit
+- docs 中文主敘事清理
+
+## Backlog
+
+### P0
+- consuming repo readiness gaps
+
+### P1
+- additional release surface cleanup
+
+### P2
+- optional comparative docs refinement
+
+## Anti-Goals
+
+- 不在這一輪做 full multi-agent orchestration
+- 不把 advisory 直接升格成 verdict authority
+
+## AI 執行規則
+
+- 當前 phase 外的 feature expansion 先 escalate
+- bounded docs / test / status cleanup 可直接做
+```
+
+---
+
+## 9. Final Principle
+
+`PLAN.md` 的目的不是把 repo 寫得很完整，而是讓 AI 與 reviewer 對「現在該做什麼、刻意不做什麼」有同一張圖。
+
+如果這張圖不存在，擴張幾乎一定會發生。
