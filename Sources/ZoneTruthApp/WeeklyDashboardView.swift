@@ -477,27 +477,21 @@ struct WeeklyOverviewCard: View {
     let policy: WeeklyLoadPolicy
     let freshness: WeeklyDataFreshness
     let trainingGoal: UserTrainingGoal?
-    private var semanticConfidence: Double {
-        WeeklyConfidenceSemantics.calibrated(
-            baseConfidence: policy.confidence,
-            freshness: freshness,
-            workoutCount: summary.workoutCount,
-            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
-            hrvCoverageRatio: summary.hrvCoverageRatio
+    private var overviewSignal: WeeklyOverviewSignal {
+        WeeklyOverviewSignal.from(
+            summary: summary,
+            policy: policy,
+            freshness: freshness
         )
+    }
+    private var semanticConfidence: Double {
+        overviewSignal.semanticConfidence
     }
     private var authority: WeeklyDecisionAuthority {
-        WeeklyAuthorityRendering.authority(for: semanticConfidence, freshness: freshness)
+        overviewSignal.authority
     }
     private var inferenceClass: WeeklyInferenceClass {
-        WeeklyInferenceClassifier.classify(
-            confidence: semanticConfidence,
-            freshness: freshness,
-            workoutCount: summary.workoutCount,
-            elapsedDays: summary.elapsedDays,
-            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
-            hrvCoverageRatio: summary.hrvCoverageRatio
-        )
+        overviewSignal.inferenceClass
     }
     private var hrvCoverageSignal: WeeklyHRVCoverageSignal {
         WeeklyHRVCoverageSignal.classify(

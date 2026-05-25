@@ -19,6 +19,7 @@ interaction_structural_guard="passed"
 inference_authority_guard="passed"
 inference_core_contract_guard="passed"
 test_boundary_guard="passed"
+app_source_boundary_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -273,6 +274,22 @@ if [[ -n "$app_test_boundary_hits" ]]; then
   exit 1
 fi
 
+# App source boundary guard:
+# App layer must not create or classify inference authority.
+app_source_boundary_hits="$(
+  grep -RIn --include="*.swift" -E \
+  'WeeklyInferenceClassifier\.classify|WeeklyAuthorityRendering\.authority|InferenceProvenanceFactory\.weekly|InferenceAuthorityCeiling|MissingEvidence\.(sleep|hrv)' \
+  Sources/ZoneTruthApp \
+  | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+)"
+if [[ -n "$app_source_boundary_hits" ]]; then
+  app_source_boundary_guard="app_source_reintroduced_inference_authority_logic"
+  echo "app_source_boundary_guard: ${app_source_boundary_guard}"
+  echo "app_source_boundary_hits:"
+  echo "$app_source_boundary_hits"
+  exit 1
+fi
+
 # Core contract guard: provenance is an inference contract in ZoneTruthCore,
 # not a UI-only disclosure artifact.
 if ! grep -q 'public struct InferenceProvenance' "Sources/ZoneTruthCore/Models.swift"; then
@@ -486,6 +503,7 @@ echo "interaction_structural_guard: ${interaction_structural_guard}"
 echo "inference_authority_guard: ${inference_authority_guard}"
 echo "inference_core_contract_guard: ${inference_core_contract_guard}"
 echo "test_boundary_guard: ${test_boundary_guard}"
+echo "app_source_boundary_guard: ${app_source_boundary_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"

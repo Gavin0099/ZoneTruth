@@ -308,6 +308,40 @@ public struct WeeklyAdaptationSignal: Equatable, Sendable {
     }
 }
 
+public struct WeeklyOverviewSignal: Equatable, Sendable {
+    public let semanticConfidence: Double
+    public let authority: WeeklyDecisionAuthority
+    public let inferenceClass: WeeklyInferenceClass
+
+    public static func from(
+        summary: WeeklyWorkoutSummary,
+        policy: WeeklyLoadPolicy,
+        freshness: WeeklyDataFreshness
+    ) -> WeeklyOverviewSignal {
+        let semanticConfidence = WeeklyConfidenceSemantics.calibrated(
+            baseConfidence: policy.confidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
+        )
+        let authority = WeeklyAuthorityRendering.authority(for: semanticConfidence, freshness: freshness)
+        let inferenceClass = WeeklyInferenceClassifier.classify(
+            confidence: semanticConfidence,
+            freshness: freshness,
+            workoutCount: summary.workoutCount,
+            elapsedDays: summary.elapsedDays,
+            hrvSampledWorkoutCount: summary.hrvSampledWorkoutCount,
+            hrvCoverageRatio: summary.hrvCoverageRatio
+        )
+        return WeeklyOverviewSignal(
+            semanticConfidence: semanticConfidence,
+            authority: authority,
+            inferenceClass: inferenceClass
+        )
+    }
+}
+
 private func buildWeeklyProvenance(
     inferenceClass: WeeklyInferenceClass,
     derivedFrom: [DerivedFromSignal],
