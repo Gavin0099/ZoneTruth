@@ -18,6 +18,7 @@ adaptation_28d_guard="passed"
 interaction_structural_guard="passed"
 inference_authority_guard="passed"
 inference_core_contract_guard="passed"
+test_boundary_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -242,6 +243,28 @@ if grep -E -q 'InferenceProvenanceFactory\.weekly|InferenceAuthorityCeiling|Miss
   exit 1
 fi
 
+# Test responsibility boundary guard:
+# App tests must not re-test core inference semantics.
+if [[ ! -f "docs/TEST_RESPONSIBILITY_BOUNDARY.md" ]]; then
+  test_boundary_guard="missing_test_responsibility_boundary_doc"
+  echo "test_boundary_guard: ${test_boundary_guard}"
+  exit 1
+fi
+
+if ! grep -q 'Core tests verify inference truth' "docs/TEST_RESPONSIBILITY_BOUNDARY.md" || \
+   ! grep -q 'App tests verify rendering safety' "docs/TEST_RESPONSIBILITY_BOUNDARY.md" || \
+   ! grep -q 'Closeout guards verify boundary drift' "docs/TEST_RESPONSIBILITY_BOUNDARY.md"; then
+  test_boundary_guard="incomplete_test_responsibility_boundary_doc"
+  echo "test_boundary_guard: ${test_boundary_guard}"
+  exit 1
+fi
+
+if grep -E -q 'WeeklyInferenceClassifier\.classify|WeeklyConfidenceSemantics\.calibrated|WeeklyFreshnessSignal\.classify' "Tests/ZoneTruthAppTests/ZoneTruthAppTests.swift"; then
+  test_boundary_guard="app_tests_retesting_core_inference_semantics"
+  echo "test_boundary_guard: ${test_boundary_guard}"
+  exit 1
+fi
+
 # Core contract guard: provenance is an inference contract in ZoneTruthCore,
 # not a UI-only disclosure artifact.
 if ! grep -q 'public struct InferenceProvenance' "Sources/ZoneTruthCore/Models.swift"; then
@@ -454,6 +477,7 @@ echo "adaptation_28d_guard: ${adaptation_28d_guard}"
 echo "interaction_structural_guard: ${interaction_structural_guard}"
 echo "inference_authority_guard: ${inference_authority_guard}"
 echo "inference_core_contract_guard: ${inference_core_contract_guard}"
+echo "test_boundary_guard: ${test_boundary_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"
