@@ -1232,6 +1232,46 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(signal.authority, .observational)
         XCTAssertEqual(signal.inferenceClass, .bounded)
         XCTAssertEqual(signal.temporalScopes.map(\.label), ["7d signal", "28d unavailable"])
+        XCTAssertEqual(signal.provenance.authorityCeiling, .nonInterventional)
+    }
+
+    func testWeeklyInferenceProvenanceRevealsMissingEvidenceUnderSparseCoverage() {
+        let monday = makeUTCDate(year: 2026, month: 5, day: 18)
+        let summary = WeeklyWorkoutSummary(
+            weekStart: monday,
+            weekEnd: monday.addingTimeInterval(7 * 86400 - 1),
+            workoutCount: 4,
+            totalDurationMinutes: 210,
+            totalActiveCalories: nil,
+            intentDistribution: [.zone2: 2, .vo2Interval: 2],
+            zoneDistribution: ZoneDistribution(counts: [.zone1: 0, .zone2: 0, .zone3: 0, .zone4: 0, .zone5: 0], ratios: [:]),
+            highIntensityDays: 2,
+            strengthDays: 0,
+            restDays: 2,
+            elapsedDays: 7,
+            consecutiveTrainingDays: 4,
+            hrvSampledWorkoutCount: 0,
+            hrvCoverageRatio: 0.0,
+            averageHRVSDNNMilliseconds: nil
+        )
+        let policy = WeeklyLoadPolicy(
+            recoveryConcernLevel: .elevated,
+            loadTendency: .highIntensityFocused,
+            keyFindings: [],
+            nextAction: "",
+            confidence: 0.8
+        )
+
+        let adaptation = WeeklyAdaptationSignal.from(summary: summary, policy: policy, freshness: .fresh)
+        let state = WeeklyTrainingStateSignal.from(summary: summary, policy: policy, freshness: .fresh)
+
+        XCTAssertEqual(adaptation.provenance.authorityCeiling, .nonInterventional)
+        XCTAssertTrue(adaptation.provenance.missingEvidence.contains("sleep"))
+        XCTAssertTrue(adaptation.provenance.missingEvidence.contains("hrv"))
+
+        XCTAssertEqual(state.provenance.authorityCeiling, .nonInterventional)
+        XCTAssertTrue(state.provenance.missingEvidence.contains("sleep"))
+        XCTAssertTrue(state.provenance.missingEvidence.contains("hrv"))
     }
 
     func testWeeklyFreshnessSignalClassifiesFreshPartialStaleMissing() {
