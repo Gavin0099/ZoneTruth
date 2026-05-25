@@ -665,6 +665,7 @@ struct WeeklyDashboardView: View {
                         freshness: freshness,
                         trainingGoal: settingsManager.trainingGoal
                     )
+                    WeeklyOverrideInsightCard(insight: viewModel.weeklyOverrideInsight)
                     WeeklyAdvancedCard(
                         summary: viewModel.weeklySummary,
                         policy: viewModel.weeklyPolicy,
@@ -695,6 +696,54 @@ struct WeeklyDashboardView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
+        }
+    }
+}
+
+struct WeeklyOverrideInsightCard: View {
+    let insight: WeeklyIntentOverrideInsight
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("目標覆寫洞察", systemImage: "arrow.triangle.branch")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(Int((insight.overrideRate * 100).rounded()))%")
+                    .font(.title3.bold())
+                    .foregroundStyle(overrideRateColor)
+            }
+
+            if insight.workoutCount == 0 {
+                Text("本週尚無訓練紀錄，暫無覆寫統計。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("本週共 \(insight.workoutCount) 筆，手動覆寫 \(insight.overrideCount) 筆。")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+                if let topType = insight.topOverriddenType, insight.topOverriddenTypeCount > 0 {
+                    Text("最常覆寫類型：\(topType.localizedName)（\(insight.topOverriddenTypeCount) 筆）")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(14)
+        .background(PremiumColor.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(PremiumColor.border, lineWidth: 1)
+        )
+    }
+
+    private var overrideRateColor: Color {
+        switch insight.overrideRate {
+        case ..<0.2: return PremiumColor.emerald
+        case ..<0.5: return PremiumColor.gold
+        default: return PremiumColor.redOrange
         }
     }
 }
@@ -1135,6 +1184,21 @@ struct WeeklyAdvancedCard: View {
                             Text("\(summary.intentDistribution[intent, default: 0]) 次")
                                 .font(.subheadline.bold())
                                 .foregroundStyle(.white)
+                        }
+                    }
+
+                    let autoCount = summary.intentSourceDistribution[.auto, default: 0]
+                    let overrideCount = summary.intentSourceDistribution[.userOverride, default: 0]
+                    if autoCount + overrideCount > 0 {
+                        Divider().background(PremiumColor.border)
+                        HStack {
+                            Text("來源")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("自動 \(autoCount) / 手動 \(overrideCount)")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white.opacity(0.85))
                         }
                     }
                 }

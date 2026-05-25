@@ -7,11 +7,13 @@ final class SettingsManager: ObservableObject {
     @Published var pendingSuggestion: CalibrationSuggestion?
     @Published var migrationMode: MigrationMode
     @Published var trainingGoal: UserTrainingGoal?
+    @Published var defaultIntentOverrides: [WorkoutType: TrainingIntent]
 
     private let userDefaults: UserDefaults
     private let policyKey = "com.zonetruth.analysisPolicy"
     private let migrationModeKey = "com.zonetruth.migrationMode"
     private let trainingGoalKey = "com.zonetruth.trainingGoal"
+    private let defaultIntentOverridesKey = "com.zonetruth.defaultIntentOverrides"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -35,6 +37,19 @@ final class SettingsManager: ObservableObject {
             self.trainingGoal = decoded
         } else {
             self.trainingGoal = nil
+        }
+
+        if let data = userDefaults.data(forKey: defaultIntentOverridesKey),
+           let rawMap = try? JSONDecoder().decode([String: TrainingIntent].self, from: data) {
+            var resolved: [WorkoutType: TrainingIntent] = [:]
+            for (key, value) in rawMap {
+                if let type = WorkoutType(rawValue: key) {
+                    resolved[type] = value
+                }
+            }
+            self.defaultIntentOverrides = resolved
+        } else {
+            self.defaultIntentOverrides = [:]
         }
     }
 
@@ -106,5 +121,32 @@ final class SettingsManager: ObservableObject {
         let effectiveMode: MigrationMode = (mode == .policyPrimary) ? .observeOnly : mode
         migrationMode = effectiveMode
         userDefaults.set(effectiveMode.rawValue, forKey: migrationModeKey)
+    }
+
+    func defaultIntent(for workoutType: WorkoutType) -> TrainingIntent {
+        defaultIntentOverrides[workoutType] ?? WorkoutInput.defaultIntent(for: workoutType)
+    }
+
+    func setDefaultIntent(_ intent: TrainingIntent, for workoutType: WorkoutType) {
+        if intent == WorkoutInput.defaultIntent(for: workoutType) {
+            defaultIntentOverrides.removeValue(forKey: workoutType)
+        } else {
+            defaultIntentOverrides[workoutType] = intent
+        }
+        saveDefaultIntentOverrides()
+    }
+
+    var defaultIntentOverrideSignature: String {
+        defaultIntentOverrides
+            .map { "\($0.key.rawValue)=\($0.value.rawValue)" }
+            .sorted()
+            .joined(separator: "|")
+    }
+
+    private func saveDefaultIntentOverrides() {
+        let rawMap = Dictionary(uniqueKeysWithValues: defaultIntentOverrides.map { ($0.key.rawValue, $0.value) })
+        if let encoded = try? JSONEncoder().encode(rawMap) {
+            userDefaults.set(encoded, forKey: defaultIntentOverridesKey)
+        }
     }
 }

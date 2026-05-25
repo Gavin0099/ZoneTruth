@@ -12,6 +12,7 @@ public struct ZoneTruthMainView: View {
         let handler = environment.stravaCallbackHandler
         _viewModel = StateObject(wrappedValue: WorkoutListViewModel(
             repository: environment.repository,
+            intentOverrideStore: environment.intentOverrideStore,
             settingsManager: settings,
             stravaAuthorizationURL: environment.stravaAuthorizationURL,
             callbackHandler: handler,

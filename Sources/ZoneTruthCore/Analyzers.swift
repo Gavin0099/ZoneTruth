@@ -564,8 +564,10 @@ public enum WeeklyObservationBuilder {
         let totalDurationMinutes = weekWorkouts.reduce(0.0) { $0 + $1.durationSeconds } / 60.0
 
         var intentDistribution: [TrainingIntent: Int] = [:]
+        var intentSourceDistribution: [IntentSource: Int] = [:]
         for workout in weekWorkouts {
             intentDistribution[workout.intent, default: 0] += 1
+            intentSourceDistribution[workout.intentSource, default: 0] += 1
         }
 
         let distributions = weekWorkouts.map { workout in
@@ -625,6 +627,7 @@ public enum WeeklyObservationBuilder {
             totalDurationMinutes: totalDurationMinutes,
             totalActiveCalories: totalActiveCalories,
             intentDistribution: intentDistribution,
+            intentSourceDistribution: intentSourceDistribution,
             zoneDistribution: zoneDistribution,
             highIntensityDays: highIntensityDays,
             strengthDays: strengthDays,

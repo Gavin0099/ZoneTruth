@@ -7,6 +7,11 @@ public enum TrainingIntent: String, Codable, CaseIterable, Sendable {
     case strength = "Strength"
 }
 
+public enum IntentSource: String, Codable, CaseIterable, Sendable {
+    case auto
+    case userOverride
+}
+
 public enum WorkoutType: String, Codable, Sendable {
     case running
     case cycling
@@ -124,6 +129,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let heartRateSamples: [HeartRateSample]
     public let hrvSDNNMilliseconds: Double?
     public let intent: TrainingIntent
+    public let intentSource: IntentSource
     public let dataSource: String?
     public let activeCaloriesKcal: Double?
     public let totalDistanceMeters: Double?
@@ -136,11 +142,14 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         durationSeconds: TimeInterval? = nil,
         heartRateSamples: [HeartRateSample],
         hrvSDNNMilliseconds: Double? = nil,
-        intent: TrainingIntent,
+        intent: TrainingIntent? = nil,
+        intentSource: IntentSource? = nil,
         dataSource: String? = nil,
         activeCaloriesKcal: Double? = nil,
         totalDistanceMeters: Double? = nil
     ) {
+        let resolvedIntent = intent ?? Self.defaultIntent(for: workoutType)
+        let resolvedIntentSource = intentSource ?? (intent == nil ? .auto : .userOverride)
         self.id = id
         self.workoutType = workoutType
         self.startDate = startDate
@@ -148,10 +157,84 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         self.durationSeconds = durationSeconds ?? endDate.timeIntervalSince(startDate)
         self.heartRateSamples = heartRateSamples.sorted { $0.timestamp < $1.timestamp }
         self.hrvSDNNMilliseconds = hrvSDNNMilliseconds
-        self.intent = intent
+        self.intent = resolvedIntent
+        self.intentSource = resolvedIntentSource
         self.dataSource = dataSource
         self.activeCaloriesKcal = activeCaloriesKcal
         self.totalDistanceMeters = totalDistanceMeters
+    }
+
+    public static func defaultIntent(for workoutType: WorkoutType) -> TrainingIntent {
+        switch workoutType {
+        case .strengthTraining:
+            return .strength
+        case .running, .cycling, .swimming, .walking:
+            return .zone2
+        case .mixed, .other:
+            return .activityReview
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case workoutType
+        case startDate
+        case endDate
+        case durationSeconds
+        case heartRateSamples
+        case hrvSDNNMilliseconds
+        case intent
+        case intentSource
+        case dataSource
+        case activeCaloriesKcal
+        case totalDistanceMeters
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        let workoutType = try container.decode(WorkoutType.self, forKey: .workoutType)
+        let startDate = try container.decode(Date.self, forKey: .startDate)
+        let endDate = try container.decode(Date.self, forKey: .endDate)
+        let durationSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .durationSeconds)
+        let heartRateSamples = try container.decodeIfPresent([HeartRateSample].self, forKey: .heartRateSamples) ?? []
+        let hrvSDNNMilliseconds = try container.decodeIfPresent(Double.self, forKey: .hrvSDNNMilliseconds)
+        let intent = try container.decodeIfPresent(TrainingIntent.self, forKey: .intent)
+        let intentSource = try container.decodeIfPresent(IntentSource.self, forKey: .intentSource)
+        let dataSource = try container.decodeIfPresent(String.self, forKey: .dataSource)
+        let activeCaloriesKcal = try container.decodeIfPresent(Double.self, forKey: .activeCaloriesKcal)
+        let totalDistanceMeters = try container.decodeIfPresent(Double.self, forKey: .totalDistanceMeters)
+
+        self.init(
+            id: id,
+            workoutType: workoutType,
+            startDate: startDate,
+            endDate: endDate,
+            durationSeconds: durationSeconds,
+            heartRateSamples: heartRateSamples,
+            hrvSDNNMilliseconds: hrvSDNNMilliseconds,
+            intent: intent,
+            intentSource: intentSource,
+            dataSource: dataSource,
+            activeCaloriesKcal: activeCaloriesKcal,
+            totalDistanceMeters: totalDistanceMeters
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(workoutType, forKey: .workoutType)
+        try container.encode(startDate, forKey: .startDate)
+        try container.encode(endDate, forKey: .endDate)
+        try container.encode(durationSeconds, forKey: .durationSeconds)
+        try container.encode(heartRateSamples, forKey: .heartRateSamples)
+        try container.encodeIfPresent(hrvSDNNMilliseconds, forKey: .hrvSDNNMilliseconds)
+        try container.encode(intent, forKey: .intent)
+        try container.encode(intentSource, forKey: .intentSource)
+        try container.encodeIfPresent(dataSource, forKey: .dataSource)
+        try container.encodeIfPresent(activeCaloriesKcal, forKey: .activeCaloriesKcal)
+        try container.encodeIfPresent(totalDistanceMeters, forKey: .totalDistanceMeters)
     }
 }
 
@@ -396,6 +479,7 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
     public let totalDurationMinutes: Double
     public let totalActiveCalories: Double?
     public let intentDistribution: [TrainingIntent: Int]
+    public let intentSourceDistribution: [IntentSource: Int]
     public let zoneDistribution: ZoneDistribution
     public let highIntensityDays: Int
     public let strengthDays: Int
@@ -413,6 +497,7 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
         totalDurationMinutes: Double,
         totalActiveCalories: Double?,
         intentDistribution: [TrainingIntent: Int],
+        intentSourceDistribution: [IntentSource: Int] = [:],
         zoneDistribution: ZoneDistribution,
         highIntensityDays: Int,
         strengthDays: Int,
@@ -429,6 +514,7 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
         self.totalDurationMinutes = totalDurationMinutes
         self.totalActiveCalories = totalActiveCalories
         self.intentDistribution = intentDistribution
+        self.intentSourceDistribution = intentSourceDistribution
         self.zoneDistribution = zoneDistribution
         self.highIntensityDays = highIntensityDays
         self.strengthDays = strengthDays

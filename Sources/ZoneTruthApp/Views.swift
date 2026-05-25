@@ -172,9 +172,12 @@ struct WorkoutListView: View {
                     WorkoutDetailView(
                         workout: workout,
                         selectedIntent: viewModel.selectedIntent,
+                        selectedIntentSource: viewModel.effectiveIntentSource(for: workout),
                         result: viewModel.analysisResult(for: workout),
                         evaluation: viewModel.evaluationResult(for: workout),
                         onIntentChanged: viewModel.updateIntent,
+                        onApplyToSameWorkoutType: viewModel.applySelectedIntentToSameWorkoutType(scope:),
+                        impactedCountForScope: viewModel.impactedCountForSelectedIntent(scope:),
                         settingsManager: settingsManager
                     )
                 } else {
@@ -196,6 +199,9 @@ struct WorkoutListView: View {
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active, !viewModel.isRequestingAuthorization else { return }
             Task { await viewModel.refreshWorkouts() }
+        }
+        .onChange(of: settingsManager.defaultIntentOverrideSignature) { _, _ in
+            viewModel.applyDefaultIntentOverridesToCurrentWorkouts()
         }
     }
 }
@@ -332,6 +338,14 @@ struct WorkoutRowView: View {
                         .font(.system(.body, design: .rounded).bold())
                         .foregroundStyle(.white)
 
+                    Text(workout.intentSource == .auto ? "Auto" : "Manual")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(intentSourceColor.opacity(0.18))
+                        .foregroundStyle(intentSourceColor)
+                        .clipShape(Capsule())
+
                     if let badge = sourceBadge {
                         Text(badge.label)
                             .font(.system(size: 9, weight: .bold))
@@ -400,14 +414,21 @@ struct WorkoutRowView: View {
         case .fail: return PremiumColor.redOrange
         }
     }
+
+    private var intentSourceColor: Color {
+        workout.intentSource == .auto ? PremiumColor.skyBlue : PremiumColor.gold
+    }
 }
 
 struct WorkoutDetailView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
+    let selectedIntentSource: IntentSource
     let result: AnalysisResult
     let evaluation: WorkoutEvaluation
     let onIntentChanged: (TrainingIntent) -> Void
+    let onApplyToSameWorkoutType: (IntentApplyScope) -> Void
+    let impactedCountForScope: (IntentApplyScope) -> Int
     @ObservedObject var settingsManager: SettingsManager
     @State private var showDetailedData = false
 
@@ -416,7 +437,13 @@ struct WorkoutDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
 
-                IntentPickerView(selectedIntent: selectedIntent, onIntentChanged: onIntentChanged)
+                IntentPickerView(
+                    selectedIntent: selectedIntent,
+                    selectedIntentSource: selectedIntentSource,
+                    onIntentChanged: onIntentChanged,
+                    onApplyToSameWorkoutType: onApplyToSameWorkoutType,
+                    impactedCountForScope: impactedCountForScope
+                )
 
                 KeyFindingsSectionView(evaluation: evaluation)
 
@@ -826,13 +853,29 @@ struct MetricGridCell: View {
 
 struct IntentPickerView: View {
     let selectedIntent: TrainingIntent
+    let selectedIntentSource: IntentSource
     let onIntentChanged: (TrainingIntent) -> Void
+    let onApplyToSameWorkoutType: (IntentApplyScope) -> Void
+    let impactedCountForScope: (IntentApplyScope) -> Int
+    @State private var showApplyScopeDialog = false
+    @State private var pendingScope: IntentApplyScope?
+    @State private var showApplyConfirmDialog = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("設定訓練目標")
-                .font(.subheadline.bold())
-                .foregroundStyle(.white)
+            HStack {
+                Text("設定訓練目標")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Text(selectedIntentSource == .auto ? "自動判定" : "手動設定")
+                    .font(.caption.bold())
+                    .foregroundStyle(selectedIntentSource == .auto ? PremiumColor.skyBlue : PremiumColor.gold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background((selectedIntentSource == .auto ? PremiumColor.skyBlue : PremiumColor.gold).opacity(0.15))
+                    .clipShape(Capsule())
+            }
             
             Picker(
                 "目標",
@@ -847,6 +890,49 @@ struct IntentPickerView: View {
             }
             .pickerStyle(.segmented)
             .colorMultiply(PremiumColor.skyBlue)
+
+            Button {
+                showApplyScopeDialog = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.branch")
+                    Text("套用到同類型運動")
+                }
+                .font(.caption.bold())
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(PremiumColor.skyBlue.opacity(0.15))
+                .foregroundStyle(PremiumColor.skyBlue)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(PremiumColor.skyBlue.opacity(0.35), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .confirmationDialog("選擇套用範圍", isPresented: $showApplyScopeDialog, titleVisibility: .visible) {
+                ForEach(IntentApplyScope.allCases) { scope in
+                    let count = impactedCountForScope(scope)
+                    Button(scopeLabel(scope, count: count)) {
+                        pendingScope = scope
+                        showApplyConfirmDialog = true
+                    }
+                }
+                Button("取消", role: .cancel) {}
+            }
+            .confirmationDialog("確認套用目標", isPresented: $showApplyConfirmDialog, titleVisibility: .visible) {
+                if let scope = pendingScope {
+                    let count = impactedCountForScope(scope)
+                    Button("套用（\(count) 筆）") {
+                        onApplyToSameWorkoutType(scope)
+                        pendingScope = nil
+                    }
+                }
+                Button("取消", role: .cancel) {
+                    pendingScope = nil
+                }
+            } message: {
+                if let scope = pendingScope {
+                    Text("將目前目標套用到\(scopeReadable(scope))，預計影響 \(impactedCountForScope(scope)) 筆。")
+                }
+            }
         }
         .padding(12)
         .background(PremiumColor.cardBg)
@@ -855,6 +941,18 @@ struct IntentPickerView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(PremiumColor.border, lineWidth: 1)
         )
+    }
+
+    private func scopeLabel(_ scope: IntentApplyScope, count: Int) -> String {
+        "\(scopeReadable(scope))（\(count) 筆）"
+    }
+
+    private func scopeReadable(_ scope: IntentApplyScope) -> String {
+        switch scope {
+        case .allLoaded: return "同類型（目前已載入）"
+        case .last4Weeks: return "同類型（最近 4 週）"
+        case .sameSource: return "同類型（同資料來源）"
+        }
     }
 }
 
@@ -1112,6 +1210,9 @@ struct CalibrationSuggestionView: View {
 
 struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
+    private let configurableWorkoutTypes: [WorkoutType] = [
+        .running, .cycling, .swimming, .walking, .strengthTraining, .mixed, .other
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -1178,6 +1279,40 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label("運動類型預設目標", systemImage: "scope")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                ForEach(configurableWorkoutTypes, id: \.self) { type in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(type.localizedName)
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                        Picker(
+                            type.localizedName,
+                            selection: Binding(
+                                get: { settingsManager.defaultIntent(for: type) },
+                                set: { settingsManager.setDefaultIntent($0, for: type) }
+                            )
+                        ) {
+                            ForEach(TrainingIntent.allCases, id: \.self) { intent in
+                                Text(intent.localizedName).tag(intent)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .colorMultiply(PremiumColor.skyBlue)
+                    }
+                }
+            }
+            .padding(12)
+            .background(PremiumColor.cardBg)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(PremiumColor.border, lineWidth: 1)
+            )
             .padding(14)
             .background(Color.white.opacity(0.02))
             .clipShape(RoundedRectangle(cornerRadius: 14))

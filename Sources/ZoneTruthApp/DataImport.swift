@@ -3,6 +3,7 @@ import ZoneTruthCore
 
 struct AppEnvironment {
     let repository: WorkoutRepository
+    let intentOverrideStore: WorkoutIntentOverrideStore
     let stravaCallbackHandler: StravaCallbackHandler?
     let stravaAuthorizationURL: URL?
     let bodyCompositionLedger: BodyCompositionLedger?
@@ -44,6 +45,11 @@ struct AppEnvironment {
                     importedRepository,
                     MockWorkoutRepository(),
                 ]
+            ),
+            intentOverrideStore: FileWorkoutIntentOverrideStore(
+                fileURL: documentsDirectory(fileManager: fileManager)
+                    .appendingPathComponent("intent-overrides.json"),
+                fileManager: fileManager
             ),
             stravaCallbackHandler: callbackHandler,
             stravaAuthorizationURL: stravaConfig?.mobileAuthorizationURL,
@@ -197,7 +203,8 @@ private struct ImportedWorkoutRecord: Decodable {
     let workoutType: WorkoutType
     let startDate: Date
     let endDate: Date
-    let intent: TrainingIntent
+    let intent: TrainingIntent?
+    let intentSource: IntentSource?
     let heartRateSamples: [ImportedHeartRateSample]
 
     var toDomainWorkout: WorkoutInput {
@@ -206,7 +213,8 @@ private struct ImportedWorkoutRecord: Decodable {
             startDate: startDate,
             endDate: endDate,
             heartRateSamples: heartRateSamples.map(\.toDomainSample),
-            intent: intent
+            intent: intent,
+            intentSource: intentSource
         )
     }
 }

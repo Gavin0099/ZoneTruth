@@ -209,6 +209,7 @@ struct StravaActivitySnapshot: Equatable, Sendable {
             endDate: endDate,
             heartRateSamples: heartRateSamples,
             intent: defaultIntent,
+            intentSource: .auto,
             dataSource: "strava"
         )
     }

@@ -56,6 +56,7 @@ struct HealthKitWorkoutSnapshot: Equatable, Sendable {
             heartRateSamples: heartRateSamples,
             hrvSDNNMilliseconds: hrvSDNNMilliseconds,
             intent: defaultIntent,
+            intentSource: .auto,
             dataSource: "healthkit",
             activeCaloriesKcal: activeCaloriesKcal,
             totalDistanceMeters: totalDistanceMeters

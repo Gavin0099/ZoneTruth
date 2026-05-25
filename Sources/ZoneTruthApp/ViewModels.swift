@@ -2,6 +2,14 @@ import Foundation
 import AuthenticationServices
 import ZoneTruthCore
 
+enum IntentApplyScope: String, CaseIterable, Identifiable, Sendable {
+    case allLoaded
+    case last4Weeks
+    case sameSource
+
+    var id: String { rawValue }
+}
+
 enum WorkoutDataSource: String, Equatable, Sendable {
     case healthKit = "Apple Health"
     case strava = "Strava"
@@ -27,6 +35,53 @@ struct WorkoutLoadResult: Equatable, Sendable {
     }
 }
 
+struct WeeklyIntentOverrideInsight: Equatable, Sendable {
+    let overrideCount: Int
+    let workoutCount: Int
+    let topOverriddenType: WorkoutType?
+    let topOverriddenTypeCount: Int
+
+    var overrideRate: Double {
+        guard workoutCount > 0 else { return 0 }
+        return Double(overrideCount) / Double(workoutCount)
+    }
+
+    static let empty = WeeklyIntentOverrideInsight(
+        overrideCount: 0,
+        workoutCount: 0,
+        topOverriddenType: nil,
+        topOverriddenTypeCount: 0
+    )
+}
+
+protocol WorkoutIntentOverrideStore {
+    func load() -> [UUID: TrainingIntent]
+    func save(_ overrides: [UUID: TrainingIntent]) throws
+}
+
+struct FileWorkoutIntentOverrideStore: WorkoutIntentOverrideStore {
+    let fileURL: URL
+    let fileManager: FileManager
+
+    init(fileURL: URL, fileManager: FileManager = .default) {
+        self.fileURL = fileURL
+        self.fileManager = fileManager
+    }
+
+    func load() -> [UUID: TrainingIntent] {
+        guard fileManager.fileExists(atPath: fileURL.path) else { return [:] }
+        guard let data = try? Data(contentsOf: fileURL) else { return [:] }
+        return (try? JSONDecoder().decode([UUID: TrainingIntent].self, from: data)) ?? [:]
+    }
+
+    func save(_ overrides: [UUID: TrainingIntent]) throws {
+        let data = try JSONEncoder().encode(overrides)
+        let dir = fileURL.deletingLastPathComponent()
+        try fileManager.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
+        try data.write(to: fileURL, options: .atomic)
+    }
+}
+
 @MainActor
 final class WorkoutListViewModel: ObservableObject {
     @Published var workouts: [WorkoutInput] = []
@@ -38,23 +93,28 @@ final class WorkoutListViewModel: ObservableObject {
     @Published private(set) var statusMessage: String?
     @Published private(set) var weeklySummary: WeeklyWorkoutSummary
     @Published private(set) var weeklyPolicy: WeeklyLoadPolicy
+    @Published private(set) var weeklyOverrideInsight: WeeklyIntentOverrideInsight
     @Published private(set) var adaptationTrend28d: AdaptationTrend28d?
     let bodyCompositionLedger: BodyCompositionLedger?
 
     let stravaAuthorizationURL: URL?
     private let repository: WorkoutRepository
+    private let intentOverrideStore: WorkoutIntentOverrideStore
     private let settingsManager: SettingsManager
     private let callbackHandler: StravaCallbackHandler?
     private var oauthCoordinator: StravaOAuthCoordinator?
+    private var intentOverrides: [UUID: TrainingIntent]
 
     init(
         repository: WorkoutRepository,
+        intentOverrideStore: WorkoutIntentOverrideStore = InMemoryWorkoutIntentOverrideStore(),
         settingsManager: SettingsManager,
         stravaAuthorizationURL: URL? = nil,
         callbackHandler: StravaCallbackHandler? = nil,
         bodyCompositionLedger: BodyCompositionLedger? = nil
     ) {
         self.repository = repository
+        self.intentOverrideStore = intentOverrideStore
         self.settingsManager = settingsManager
         self.stravaAuthorizationURL = stravaAuthorizationURL
         self.callbackHandler = callbackHandler
@@ -63,7 +123,9 @@ final class WorkoutListViewModel: ObservableObject {
         let emptySummary = WeeklyObservationBuilder.build(workouts: [], weekStart: monday)
         self.weeklySummary = emptySummary
         self.weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: emptySummary)
+        self.weeklyOverrideInsight = .empty
         self.adaptationTrend28d = nil
+        self.intentOverrides = intentOverrideStore.load()
         apply(repository.loadResult())
     }
 
@@ -114,6 +176,96 @@ final class WorkoutListViewModel: ObservableObject {
 
     func updateIntent(_ intent: TrainingIntent) {
         selectedIntent = intent
+        guard let workout = selectedWorkout else { return }
+        if intent == settingsManager.defaultIntent(for: workout.workoutType) {
+            intentOverrides.removeValue(forKey: workout.id)
+        } else {
+            intentOverrides[workout.id] = intent
+        }
+        try? intentOverrideStore.save(intentOverrides)
+        let refreshed = workouts.map { current -> WorkoutInput in
+            guard current.id == workout.id else { return current }
+            return WorkoutInput(
+                id: current.id,
+                workoutType: current.workoutType,
+                startDate: current.startDate,
+                endDate: current.endDate,
+                durationSeconds: current.durationSeconds,
+                heartRateSamples: current.heartRateSamples,
+                hrvSDNNMilliseconds: current.hrvSDNNMilliseconds,
+                intent: intent,
+                intentSource: intent == settingsManager.defaultIntent(for: current.workoutType) ? .auto : .userOverride,
+                dataSource: current.dataSource,
+                activeCaloriesKcal: current.activeCaloriesKcal,
+                totalDistanceMeters: current.totalDistanceMeters
+            )
+        }
+        apply(
+            WorkoutLoadResult(
+                workouts: refreshed,
+                source: currentSource,
+                statusMessage: statusMessage
+            )
+        )
+    }
+
+    func applySelectedIntentToSameWorkoutType() {
+        applySelectedIntentToSameWorkoutType(scope: .allLoaded)
+    }
+
+    func impactedCountForSelectedIntent(scope: IntentApplyScope) -> Int {
+        guard let workout = selectedWorkout else { return 0 }
+        return workouts.filter { matchesScope($0, selected: workout, scope: scope) }.count
+    }
+
+    func applySelectedIntentToSameWorkoutType(scope: IntentApplyScope) {
+        guard let workout = selectedWorkout else { return }
+        let targetType = workout.workoutType
+        let targetIntent = selectedIntent
+
+        for candidate in workouts where matchesScope(candidate, selected: workout, scope: scope) && candidate.workoutType == targetType {
+            if targetIntent == settingsManager.defaultIntent(for: candidate.workoutType) {
+                intentOverrides.removeValue(forKey: candidate.id)
+            } else {
+                intentOverrides[candidate.id] = targetIntent
+            }
+        }
+        try? intentOverrideStore.save(intentOverrides)
+        apply(
+            WorkoutLoadResult(
+                workouts: workouts,
+                source: currentSource,
+                statusMessage: statusMessage
+            )
+        )
+    }
+
+    private func matchesScope(_ candidate: WorkoutInput, selected: WorkoutInput, scope: IntentApplyScope) -> Bool {
+        guard candidate.workoutType == selected.workoutType else { return false }
+        switch scope {
+        case .allLoaded:
+            return true
+        case .last4Weeks:
+            let windowStart = selected.startDate.addingTimeInterval(-28 * 24 * 60 * 60)
+            return candidate.startDate >= windowStart && candidate.startDate <= selected.startDate
+        case .sameSource:
+            return candidate.dataSource == selected.dataSource
+        }
+    }
+
+    func applyDefaultIntentOverridesToCurrentWorkouts() {
+        apply(
+            WorkoutLoadResult(
+                workouts: workouts,
+                source: currentSource,
+                statusMessage: statusMessage
+            )
+        )
+    }
+
+    func effectiveIntentSource(for workout: WorkoutInput) -> IntentSource {
+        guard selectedWorkout?.id == workout.id else { return workout.intentSource }
+        return selectedIntent == workout.intent ? workout.intentSource : .userOverride
     }
 
     func refreshWorkouts() async {
@@ -143,6 +295,7 @@ final class WorkoutListViewModel: ObservableObject {
             heartRateSamples: workout.heartRateSamples,
             hrvSDNNMilliseconds: workout.hrvSDNNMilliseconds,
             intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
+            intentSource: effectiveIntentSource(for: workout),
             dataSource: workout.dataSource
         )
         return WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
@@ -158,6 +311,7 @@ final class WorkoutListViewModel: ObservableObject {
             heartRateSamples: workout.heartRateSamples,
             hrvSDNNMilliseconds: workout.hrvSDNNMilliseconds,
             intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
+            intentSource: effectiveIntentSource(for: workout),
             dataSource: workout.dataSource
         )
         let legacy = WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
@@ -168,7 +322,40 @@ final class WorkoutListViewModel: ObservableObject {
     }
 
     private func apply(_ result: WorkoutLoadResult) {
-        workouts = result.workouts
+        workouts = result.workouts.map { base in
+            guard let overriddenIntent = intentOverrides[base.id] else { return base }
+            return WorkoutInput(
+                id: base.id,
+                workoutType: base.workoutType,
+                startDate: base.startDate,
+                endDate: base.endDate,
+                durationSeconds: base.durationSeconds,
+                heartRateSamples: base.heartRateSamples,
+                hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+                intent: overriddenIntent,
+                intentSource: .userOverride,
+                dataSource: base.dataSource,
+                activeCaloriesKcal: base.activeCaloriesKcal,
+                totalDistanceMeters: base.totalDistanceMeters
+            )
+        }.map { base in
+            guard base.intentSource == .auto else { return base }
+            let defaultIntent = settingsManager.defaultIntent(for: base.workoutType)
+            return WorkoutInput(
+                id: base.id,
+                workoutType: base.workoutType,
+                startDate: base.startDate,
+                endDate: base.endDate,
+                durationSeconds: base.durationSeconds,
+                heartRateSamples: base.heartRateSamples,
+                hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+                intent: defaultIntent,
+                intentSource: .auto,
+                dataSource: base.dataSource,
+                activeCaloriesKcal: base.activeCaloriesKcal,
+                totalDistanceMeters: base.totalDistanceMeters
+            )
+        }
         currentSource = result.source
         statusMessage = result.statusMessage
         // If current selection is no longer in the new list, clear it (don't auto-pick first).
@@ -187,6 +374,7 @@ final class WorkoutListViewModel: ObservableObject {
         let summary = WeeklyObservationBuilder.build(workouts: workouts, weekStart: monday)
         weeklySummary = summary
         weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: summary)
+        weeklyOverrideInsight = buildWeeklyOverrideInsight(workouts: workouts, weekStart: monday)
 
         // 28d trend: last 4 weeks including current week
         let cal = Calendar.current
@@ -195,6 +383,27 @@ final class WorkoutListViewModel: ObservableObject {
             return WeeklyObservationBuilder.build(workouts: workouts, weekStart: weekMonday)
         }
         adaptationTrend28d = MultiWeekAdaptationAnalyzer.analyze(summaries: last4)
+    }
+
+    private func buildWeeklyOverrideInsight(workouts: [WorkoutInput], weekStart: Date) -> WeeklyIntentOverrideInsight {
+        let cal = Calendar.current
+        let nextWeekStart = cal.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart
+        let effectiveEnd = min(nextWeekStart, Date())
+        let weekWorkouts = workouts.filter { $0.startDate >= weekStart && $0.startDate < effectiveEnd }
+        let overrideCount = weekWorkouts.filter { $0.intentSource == .userOverride }.count
+
+        var overriddenTypeCounts: [WorkoutType: Int] = [:]
+        for workout in weekWorkouts where workout.intentSource == .userOverride {
+            overriddenTypeCounts[workout.workoutType, default: 0] += 1
+        }
+        let top = overriddenTypeCounts.max(by: { $0.value < $1.value })
+
+        return WeeklyIntentOverrideInsight(
+            overrideCount: overrideCount,
+            workoutCount: weekWorkouts.count,
+            topOverriddenType: top?.key,
+            topOverriddenTypeCount: top?.value ?? 0
+        )
     }
 
     private static func currentWeekMonday() -> Date {
@@ -223,6 +432,7 @@ final class WorkoutListViewModel: ObservableObject {
                     heartRateSamples: workout.heartRateSamples,
                     hrvSDNNMilliseconds: workout.hrvSDNNMilliseconds,
                     intent: selectedWorkout?.id == workout.id ? selectedIntent : workout.intent,
+                    intentSource: effectiveIntentSource(for: workout),
                     dataSource: workout.dataSource
                 )
             },
@@ -238,6 +448,11 @@ final class WorkoutListViewModel: ObservableObject {
     var canRequestHealthAccess: Bool {
         repository.supportsHealthAuthorization && currentSource != .healthKit && currentSource != .combined
     }
+}
+
+private struct InMemoryWorkoutIntentOverrideStore: WorkoutIntentOverrideStore {
+    func load() -> [UUID: TrainingIntent] { [:] }
+    func save(_ overrides: [UUID: TrainingIntent]) throws {}
 }
 
 protocol WorkoutRepository {
