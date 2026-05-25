@@ -15,6 +15,7 @@ weekly_snapshot="matched"
 weekly_ui_guard="passed"
 goal_alignment_guard="passed"
 adaptation_28d_guard="passed"
+interaction_structural_guard="passed"
 working_tree_clean="yes"
 ui_smoke="pending"
 dual_run_review="not-found"
@@ -186,6 +187,35 @@ if grep -E -q '過度訓練|overtraining|休息不足' "$WEEKLY_UI_PATH"; then
   exit 1
 fi
 
+# Interaction authority guard:
+# forbid authority-compressing interaction patterns, not just forbidden words.
+if grep -E -q 'readiness|Readiness|Recovery score|恢復分數|today recommendation|Recommended workout today|你應該休息|你今天不適合高強度' "$WEEKLY_UI_PATH"; then
+  interaction_structural_guard="forbidden_interaction_authority_pattern"
+  echo "interaction_structural_guard: ${interaction_structural_guard}"
+  exit 1
+fi
+
+# Required structural order in root composition:
+# Overview (bounded interpretation context) -> override coverage insight -> advanced evidence surface
+overview_call_line="$(grep -n 'WeeklyOverviewCard(' "$WEEKLY_UI_PATH" | head -n 1 | cut -d: -f1 || true)"
+coverage_call_line="$(grep -n 'WeeklyOverrideInsightCard(' "$WEEKLY_UI_PATH" | head -n 1 | cut -d: -f1 || true)"
+advanced_call_line="$(grep -n 'WeeklyAdvancedCard(' "$WEEKLY_UI_PATH" | head -n 1 | cut -d: -f1 || true)"
+
+if [[ -z "$overview_call_line" || -z "$coverage_call_line" || -z "$advanced_call_line" ]]; then
+  interaction_structural_guard="missing_required_interaction_surface"
+  echo "interaction_structural_guard: ${interaction_structural_guard}"
+  exit 1
+fi
+
+if ! [[ "$overview_call_line" -lt "$coverage_call_line" && "$coverage_call_line" -lt "$advanced_call_line" ]]; then
+  interaction_structural_guard="invalid_interaction_order"
+  echo "interaction_structural_guard: ${interaction_structural_guard}"
+  echo "overview_call_line: ${overview_call_line}"
+  echo "coverage_call_line: ${coverage_call_line}"
+  echo "advanced_call_line: ${advanced_call_line}"
+  exit 1
+fi
+
 if ! grep -q 'Text("恢復觀察")' "$WEEKLY_UI_PATH"; then
   weekly_ui_guard="missing_recovery_observation_label"
   echo "semantic_guard: ${semantic_guard}"
@@ -333,6 +363,7 @@ echo "weekly_snapshot: ${weekly_snapshot}"
 echo "weekly_ui_guard: ${weekly_ui_guard}"
 echo "goal_alignment_guard: ${goal_alignment_guard}"
 echo "adaptation_28d_guard: ${adaptation_28d_guard}"
+echo "interaction_structural_guard: ${interaction_structural_guard}"
 echo "annotation_gate: ${annotation_gate}"
 echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"
