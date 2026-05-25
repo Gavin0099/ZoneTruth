@@ -8,6 +8,10 @@ default_load: always
 
 # PLAN.md 模板與治理說明
 
+> **最後更新**: 2026-05-25
+> **Owner**: Gavin Wu
+> **Freshness**: Sprint (7d)
+>
 > **這是 repo 的規劃單一真相來源範本。**
 > 真正提供 AI 與 reviewer 使用的專案規劃檔，應放在 repo root 的 [`PLAN.md`](../PLAN.md)。
 > 本文件的角色是說明 PLAN 應該長什麼樣，以及為什麼需要它。

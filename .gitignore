@@ -4,3 +4,15 @@ governance_backup_*
 .vscode/
 DerivedData/
 ZoneTruthHost/DerivedData/
+
+# Runtime/generated noise
+__pycache__/
+**/__pycache__/
+*.pyc
+artifacts/runtime/
+memory/candidates/
+
+# Local IDE state
+.DS_Store
+*.xcuserstate
+*.xcworkspace/xcuserdata/
