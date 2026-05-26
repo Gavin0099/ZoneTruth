@@ -65,6 +65,17 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         XCTAssertTrue(script.contains("boundary_telemetry_file:"))
     }
 
+    func testBoundaryTelemetryRollupScriptContractPresent() throws {
+        let scriptURL = boundaryRoot()
+            .appendingPathComponent("scripts", isDirectory: true)
+            .appendingPathComponent("summarize_boundary_telemetry.py", isDirectory: false)
+        let script = try String(contentsOf: scriptURL, encoding: .utf8)
+
+        XCTAssertTrue(script.contains("boundary_telemetry_*.json"))
+        XCTAssertTrue(script.contains("ruleHitTrend"))
+        XCTAssertTrue(script.contains("statusCounts"))
+    }
+
     func testAppTestBoundaryScanReturnsFileLineHitFormat() throws {
         let config = try loadBoundaryConfig()
         let tempRoot = FileManager.default.temporaryDirectory

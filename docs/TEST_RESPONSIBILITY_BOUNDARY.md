@@ -18,3 +18,4 @@ Prevent test architecture from reverse-contaminating product architecture bounda
 - Boundary policy config source: `scripts/closeout_boundary_patterns.json` (`app_test_boundary_rules[*]` + `app_source_boundary_rules[*]`)
 - Boundary config schema: `schemas/closeout_boundary_patterns.schema.json`
 - Boundary telemetry artifact: `artifacts/runtime/boundary-telemetry/boundary_telemetry_*.json`
+- Boundary trend rollup command: `python3 scripts/summarize_boundary_telemetry.py --limit 20 --output artifacts/runtime/boundary-telemetry/summary_latest.json`
