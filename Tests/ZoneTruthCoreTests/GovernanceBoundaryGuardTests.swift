@@ -2,7 +2,14 @@ import Foundation
 import XCTest
 
 final class GovernanceBoundaryGuardTests: XCTestCase {
+    private struct BoundaryConfig: Decodable {
+        let commentFilterRegex: String
+        let appTestBoundaryRegex: String
+        let appSourceBoundaryRegex: String
+    }
+
     func testAppTestBoundaryScanReturnsFileLineHitFormat() throws {
+        let config = try loadBoundaryConfig()
         let tempRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
         let appTestsDir = tempRoot
@@ -25,7 +32,7 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
 
         let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
         let cmd = """
-        grep -RIn --include="*.swift" -E 'WeeklyInferenceClassifier\\.classify|WeeklyConfidenceSemantics\\.calibrated|WeeklyFreshnessSignal\\.classify' "\(escapedRoot)/Tests/ZoneTruthAppTests" | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+        grep -RIn --include="*.swift" -E '\(config.appTestBoundaryRegex)' "\(escapedRoot)/Tests/ZoneTruthAppTests" | grep -Ev '\(config.commentFilterRegex)' || true
         """
         let output = try runBash(cmd)
 
@@ -35,6 +42,7 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
     }
 
     func testAppSourceBoundaryScanReturnsFileLineHitFormat() throws {
+        let config = try loadBoundaryConfig()
         let tempRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
         let appSourceDir = tempRoot
@@ -56,7 +64,7 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
 
         let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
         let cmd = """
-        grep -RIn --include="*.swift" -E 'WeeklyInferenceClassifier\\.classify|WeeklyAuthorityRendering\\.authority|InferenceProvenanceFactory\\.weekly|InferenceAuthorityCeiling|MissingEvidence\\.(sleep|hrv)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+        grep -RIn --include="*.swift" -E '\(config.appSourceBoundaryRegex)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '\(config.commentFilterRegex)' || true
         """
         let output = try runBash(cmd)
 
@@ -79,5 +87,19 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
 
         let data = stdout.fileHandleForReading.readDataToEndOfFile()
         return String(decoding: data, as: UTF8.self)
+    }
+
+    private func loadBoundaryConfig() throws -> BoundaryConfig {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let configURL = root
+            .appendingPathComponent("scripts", isDirectory: true)
+            .appendingPathComponent("closeout_boundary_patterns.json", isDirectory: false)
+        let data = try Data(contentsOf: configURL)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(BoundaryConfig.self, from: data)
     }
 }

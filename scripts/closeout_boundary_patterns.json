@@ -1,0 +1,5 @@
+{
+  "comment_filter_regex": "^[^:]+:[0-9]+:[[:space:]]*//",
+  "app_test_boundary_regex": "WeeklyInferenceClassifier\\.classify|WeeklyConfidenceSemantics\\.calibrated|WeeklyFreshnessSignal\\.classify",
+  "app_source_boundary_regex": "WeeklyInferenceClassifier\\.classify|WeeklyAuthorityRendering\\.authority|InferenceProvenanceFactory\\.weekly|InferenceAuthorityCeiling|MissingEvidence\\.(sleep|hrv)"
+}

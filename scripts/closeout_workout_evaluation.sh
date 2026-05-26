@@ -4,11 +4,34 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-if [[ ! -f "scripts/closeout_boundary_patterns.sh" ]]; then
+BOUNDARY_PATTERN_JSON="scripts/closeout_boundary_patterns.json"
+if [[ ! -f "$BOUNDARY_PATTERN_JSON" ]]; then
   echo "test_boundary_guard: missing_boundary_pattern_config"
   exit 1
 fi
-source "scripts/closeout_boundary_patterns.sh"
+
+readarray -t boundary_patterns < <(python - "$BOUNDARY_PATTERN_JSON" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+for key in ("comment_filter_regex", "app_test_boundary_regex", "app_source_boundary_regex"):
+    value = payload.get(key)
+    if not isinstance(value, str) or not value:
+        print("")
+    else:
+        print(value)
+PY
+)
+
+BOUNDARY_COMMENT_FILTER_REGEX="${boundary_patterns[0]:-}"
+APP_TEST_BOUNDARY_REGEX="${boundary_patterns[1]:-}"
+APP_SOURCE_BOUNDARY_REGEX="${boundary_patterns[2]:-}"
+
+if [[ -z "$BOUNDARY_COMMENT_FILTER_REGEX" || -z "$APP_TEST_BOUNDARY_REGEX" || -z "$APP_SOURCE_BOUNDARY_REGEX" ]]; then
+  echo "test_boundary_guard: invalid_boundary_pattern_config"
+  exit 1
+fi
 
 FIXTURE_PATH="Tests/ZoneTruthAppTests/Fixtures/workout_evaluation_snapshot.json"
 WEEKLY_FIXTURE_PATH="Tests/ZoneTruthCoreTests/Fixtures/weekly_load_policy_snapshot.json"
