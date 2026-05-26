@@ -8,6 +8,42 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         let appSourceBoundaryRegex: String
     }
 
+    private struct BoundarySchema: Decodable {
+        let type: String
+        let required: [String]
+        let properties: [String: BoundaryProperty]
+        let additionalProperties: Bool?
+    }
+
+    private struct BoundaryProperty: Decodable {
+        let type: String?
+        let minLength: Int?
+    }
+
+    func testBoundaryPatternConfigSatisfiesSchemaContract() throws {
+        let configURL = try boundaryConfigURL()
+        let schemaURL = try boundarySchemaURL()
+        let cfgData = try Data(contentsOf: configURL)
+        let schemaData = try Data(contentsOf: schemaURL)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let config = try decoder.decode(BoundaryConfig.self, from: cfgData)
+        let schema = try decoder.decode(BoundarySchema.self, from: schemaData)
+
+        XCTAssertEqual(schema.type, "object")
+        XCTAssertFalse(schema.required.isEmpty)
+        XCTAssertEqual(schema.additionalProperties, false)
+
+        for key in schema.required {
+            XCTAssertNotNil(schema.properties[key], "Schema required key missing property descriptor: \(key)")
+        }
+
+        XCTAssertFalse(config.commentFilterRegex.isEmpty)
+        XCTAssertFalse(config.appTestBoundaryRegex.isEmpty)
+        XCTAssertFalse(config.appSourceBoundaryRegex.isEmpty)
+    }
+
     func testAppTestBoundaryScanReturnsFileLineHitFormat() throws {
         let config = try loadBoundaryConfig()
         let tempRoot = FileManager.default.temporaryDirectory
@@ -89,17 +125,31 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         return String(decoding: data, as: UTF8.self)
     }
 
-    private func loadBoundaryConfig() throws -> BoundaryConfig {
-        let root = URL(fileURLWithPath: #filePath)
+    private func boundaryRoot() -> URL {
+        URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let configURL = root
+    }
+
+    private func boundaryConfigURL() throws -> URL {
+        boundaryRoot()
             .appendingPathComponent("scripts", isDirectory: true)
             .appendingPathComponent("closeout_boundary_patterns.json", isDirectory: false)
+    }
+
+    private func boundarySchemaURL() throws -> URL {
+        boundaryRoot()
+            .appendingPathComponent("schemas", isDirectory: true)
+            .appendingPathComponent("closeout_boundary_patterns.schema.json", isDirectory: false)
+    }
+
+    private func loadBoundaryConfig() throws -> BoundaryConfig {
+        let configURL = try boundaryConfigURL()
         let data = try Data(contentsOf: configURL)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(BoundaryConfig.self, from: data)
     }
+
 }

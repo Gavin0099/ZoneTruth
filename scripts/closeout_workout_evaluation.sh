@@ -5,8 +5,64 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 BOUNDARY_PATTERN_JSON="scripts/closeout_boundary_patterns.json"
+BOUNDARY_PATTERN_SCHEMA="schemas/closeout_boundary_patterns.schema.json"
 if [[ ! -f "$BOUNDARY_PATTERN_JSON" ]]; then
   echo "test_boundary_guard: missing_boundary_pattern_config"
+  exit 1
+fi
+if [[ ! -f "$BOUNDARY_PATTERN_SCHEMA" ]]; then
+  echo "test_boundary_guard: missing_boundary_pattern_schema"
+  exit 1
+fi
+
+if ! python - "$BOUNDARY_PATTERN_JSON" "$BOUNDARY_PATTERN_SCHEMA" <<'PY'
+import json, sys
+
+config_path, schema_path = sys.argv[1], sys.argv[2]
+try:
+    with open(config_path, "r", encoding="utf-8") as fh:
+        cfg = json.load(fh)
+    with open(schema_path, "r", encoding="utf-8") as fh:
+        schema = json.load(fh)
+except Exception as exc:
+    print(f"boundary_schema_validation_error: {exc}")
+    sys.exit(1)
+
+if schema.get("type") != "object":
+    print("boundary_schema_validation_error: unsupported_schema_type")
+    sys.exit(1)
+
+required = schema.get("required", [])
+props = schema.get("properties", {})
+allow_extra = not (schema.get("additionalProperties") is False)
+
+for key in required:
+    if key not in cfg:
+        print(f"boundary_schema_validation_error: missing_required_key:{key}")
+        sys.exit(1)
+
+if not allow_extra:
+    extra = [k for k in cfg.keys() if k not in props]
+    if extra:
+        print(f"boundary_schema_validation_error: unexpected_keys:{','.join(sorted(extra))}")
+        sys.exit(1)
+
+for key, rule in props.items():
+    if key not in cfg:
+        continue
+    val = cfg[key]
+    if rule.get("type") == "string":
+        if not isinstance(val, str):
+            print(f"boundary_schema_validation_error: type_mismatch:{key}")
+            sys.exit(1)
+        if len(val) < int(rule.get("minLength", 0)):
+            print(f"boundary_schema_validation_error: min_length_violation:{key}")
+            sys.exit(1)
+
+print("boundary_schema_validation: ok")
+PY
+then
+  echo "test_boundary_guard: invalid_boundary_pattern_schema_or_config"
   exit 1
 fi
 

@@ -16,3 +16,4 @@ Prevent test architecture from reverse-contaminating product architecture bounda
 ## Enforcement Artifacts
 - Runtime enforcement entrypoint: `scripts/closeout_workout_evaluation.sh`
 - Boundary regex config source: `scripts/closeout_boundary_patterns.json`
+- Boundary config schema: `schemas/closeout_boundary_patterns.schema.json`

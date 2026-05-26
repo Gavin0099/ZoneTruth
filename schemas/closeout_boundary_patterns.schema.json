@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-governance-framework/schemas/closeout_boundary_patterns.schema.json",
+  "title": "Closeout Boundary Patterns",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "comment_filter_regex",
+    "app_test_boundary_regex",
+    "app_source_boundary_regex"
+  ],
+  "properties": {
+    "comment_filter_regex": {
+      "type": "string",
+      "minLength": 1
+    },
+    "app_test_boundary_regex": {
+      "type": "string",
+      "minLength": 1
+    },
+    "app_source_boundary_regex": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
