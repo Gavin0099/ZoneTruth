@@ -4,6 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+if [[ ! -f "scripts/closeout_boundary_patterns.sh" ]]; then
+  echo "test_boundary_guard: missing_boundary_pattern_config"
+  exit 1
+fi
+source "scripts/closeout_boundary_patterns.sh"
+
 FIXTURE_PATH="Tests/ZoneTruthAppTests/Fixtures/workout_evaluation_snapshot.json"
 WEEKLY_FIXTURE_PATH="Tests/ZoneTruthCoreTests/Fixtures/weekly_load_policy_snapshot.json"
 WEEKLY_UI_PATH="Sources/ZoneTruthApp/WeeklyDashboardView.swift"
@@ -263,8 +269,8 @@ fi
 # Expand to entire app-test directory and report concrete hits.
 # Basic false-positive reduction: ignore comment-only lines.
 app_test_boundary_hits="$(
-  grep -RIn --include="*.swift" -E 'WeeklyInferenceClassifier\.classify|WeeklyConfidenceSemantics\.calibrated|WeeklyFreshnessSignal\.classify' Tests/ZoneTruthAppTests \
-  | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+  grep -RIn --include="*.swift" -E "$APP_TEST_BOUNDARY_REGEX" Tests/ZoneTruthAppTests \
+  | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
 )"
 if [[ -n "$app_test_boundary_hits" ]]; then
   test_boundary_guard="app_tests_retesting_core_inference_semantics"
@@ -278,9 +284,9 @@ fi
 # App layer must not create or classify inference authority.
 app_source_boundary_hits="$(
   grep -RIn --include="*.swift" -E \
-  'WeeklyInferenceClassifier\.classify|WeeklyAuthorityRendering\.authority|InferenceProvenanceFactory\.weekly|InferenceAuthorityCeiling|MissingEvidence\.(sleep|hrv)' \
+  "$APP_SOURCE_BOUNDARY_REGEX" \
   Sources/ZoneTruthApp \
-  | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+  | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
 )"
 if [[ -n "$app_source_boundary_hits" ]]; then
   app_source_boundary_guard="app_source_reintroduced_inference_authority_logic"

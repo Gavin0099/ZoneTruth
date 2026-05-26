@@ -34,6 +34,37 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         XCTAssertTrue(output.contains("WeeklyInferenceClassifier.classify"))
     }
 
+    func testAppSourceBoundaryScanReturnsFileLineHitFormat() throws {
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
+        let appSourceDir = tempRoot
+            .appendingPathComponent("Sources", isDirectory: true)
+            .appendingPathComponent("ZoneTruthApp", isDirectory: true)
+        try FileManager.default.createDirectory(at: appSourceDir, withIntermediateDirectories: true)
+
+        let sampleFile = appSourceDir.appendingPathComponent("BoundaryHitSourceSample.swift")
+        let sampleContent = """
+        import Foundation
+        struct BoundaryHitSourceSample {
+            func hit(authority: WeeklyDecisionAuthority) {
+                _ = WeeklyAuthorityRendering.authority(for: 0.85, freshness: .fresh)
+                _ = authority
+            }
+        }
+        """
+        try sampleContent.write(to: sampleFile, atomically: true, encoding: .utf8)
+
+        let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
+        let cmd = """
+        grep -RIn --include="*.swift" -E 'WeeklyInferenceClassifier\\.classify|WeeklyAuthorityRendering\\.authority|InferenceProvenanceFactory\\.weekly|InferenceAuthorityCeiling|MissingEvidence\\.(sleep|hrv)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '^[^:]+:[0-9]+:[[:space:]]*//' || true
+        """
+        let output = try runBash(cmd)
+
+        XCTAssertFalse(output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        XCTAssertTrue(output.contains("BoundaryHitSourceSample.swift:"))
+        XCTAssertTrue(output.contains("WeeklyAuthorityRendering.authority"))
+    }
+
     private func runBash(_ command: String) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
