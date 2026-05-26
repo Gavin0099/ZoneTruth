@@ -121,6 +121,78 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         XCTAssertTrue(output.contains("WeeklyAuthorityRendering.authority"))
     }
 
+    func testEveryAppSourceBoundaryRuleHasDedicatedNegativeFixtureHit() throws {
+        let config = try loadBoundaryConfig()
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
+        let appSourceDir = tempRoot
+            .appendingPathComponent("Sources", isDirectory: true)
+            .appendingPathComponent("ZoneTruthApp", isDirectory: true)
+        try FileManager.default.createDirectory(at: appSourceDir, withIntermediateDirectories: true)
+
+        let fixtureByRuleID: [String: String] = [
+            "core_classifier_in_app_source": """
+            import Foundation
+            struct RuleFixtureCoreClassifier {
+                func hit() {
+                    _ = WeeklyInferenceClassifier.classify(
+                        confidence: 0.8, freshness: .fresh, workoutCount: 2, elapsedDays: 7
+                    )
+                }
+            }
+            """,
+            "authority_rendering_classification_in_app_source": """
+            import Foundation
+            struct RuleFixtureAuthorityRendering {
+                func hit() {
+                    _ = WeeklyAuthorityRendering.authority(for: 0.7, freshness: .fresh)
+                }
+            }
+            """,
+            "provenance_factory_in_app_source": """
+            import Foundation
+            struct RuleFixtureProvenanceFactory {
+                func hit(workouts: [WorkoutObservation]) {
+                    _ = InferenceProvenanceFactory.weekly(from: workouts)
+                }
+            }
+            """,
+            "authority_ceiling_type_usage_in_app_source": """
+            import Foundation
+            struct RuleFixtureAuthorityCeilingType {
+                let ceiling: InferenceAuthorityCeiling = .nonInterventional
+            }
+            """,
+            "missing_evidence_inference_in_app_source": """
+            import Foundation
+            struct RuleFixtureMissingEvidence {
+                let evidence = MissingEvidence.sleep
+            }
+            """
+        ]
+
+        for rule in config.appSourceBoundaryRules {
+            guard let fixture = fixtureByRuleID[rule.id] else {
+                XCTFail("Missing fixture mapping for app source boundary rule id: \(rule.id)")
+                continue
+            }
+
+            let fileName = "RuleFixture_\(rule.id).swift".replacingOccurrences(of: "-", with: "_")
+            let fixtureFile = appSourceDir.appendingPathComponent(fileName)
+            try fixture.write(to: fixtureFile, atomically: true, encoding: .utf8)
+
+            let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
+            let cmd = """
+            grep -RIn --include="*.swift" -E '\(rule.regex)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '\(config.commentFilterRegex)' || true
+            """
+            let output = try runBash(cmd)
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            XCTAssertFalse(trimmed.isEmpty, "Expected rule to hit fixture: \(rule.id)")
+            XCTAssertTrue(output.contains("RuleFixture_"), "Expected file reference for rule: \(rule.id)")
+        }
+    }
+
     private func runBash(_ command: String) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
