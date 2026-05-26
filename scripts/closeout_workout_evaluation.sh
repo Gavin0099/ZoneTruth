@@ -58,6 +58,41 @@ for key, rule in props.items():
         if len(val) < int(rule.get("minLength", 0)):
             print(f"boundary_schema_validation_error: min_length_violation:{key}")
             sys.exit(1)
+    if rule.get("type") == "array":
+        if not isinstance(val, list):
+            print(f"boundary_schema_validation_error: type_mismatch:{key}")
+            sys.exit(1)
+        if len(val) < int(rule.get("minItems", 0)):
+            print(f"boundary_schema_validation_error: min_items_violation:{key}")
+            sys.exit(1)
+        item_rule = rule.get("items", {})
+        item_required = item_rule.get("required", [])
+        item_props = item_rule.get("properties", {})
+        item_allow_extra = not (item_rule.get("additionalProperties") is False)
+        for idx, item in enumerate(val):
+            if not isinstance(item, dict):
+                print(f"boundary_schema_validation_error: array_item_type_mismatch:{key}:{idx}")
+                sys.exit(1)
+            for req_key in item_required:
+                if req_key not in item:
+                    print(f"boundary_schema_validation_error: array_item_missing_required:{key}:{idx}:{req_key}")
+                    sys.exit(1)
+            if not item_allow_extra:
+                extra = [k for k in item.keys() if k not in item_props]
+                if extra:
+                    print(f"boundary_schema_validation_error: array_item_unexpected_keys:{key}:{idx}:{','.join(sorted(extra))}")
+                    sys.exit(1)
+            for item_key, item_prop_rule in item_props.items():
+                if item_key not in item:
+                    continue
+                item_val = item[item_key]
+                if item_prop_rule.get("type") == "string":
+                    if not isinstance(item_val, str):
+                        print(f"boundary_schema_validation_error: array_item_type_mismatch:{key}:{idx}:{item_key}")
+                        sys.exit(1)
+                    if len(item_val) < int(item_prop_rule.get("minLength", 0)):
+                        print(f"boundary_schema_validation_error: array_item_min_length_violation:{key}:{idx}:{item_key}")
+                        sys.exit(1)
 
 print("boundary_schema_validation: ok")
 PY
@@ -71,7 +106,7 @@ import json, sys
 path = sys.argv[1]
 with open(path, "r", encoding="utf-8") as fh:
     payload = json.load(fh)
-for key in ("comment_filter_regex", "app_test_boundary_regex", "app_source_boundary_regex"):
+for key in ("comment_filter_regex", "app_test_boundary_regex"):
     value = payload.get(key)
     if not isinstance(value, str) or not value:
         print("")
@@ -82,9 +117,27 @@ PY
 
 BOUNDARY_COMMENT_FILTER_REGEX="${boundary_patterns[0]:-}"
 APP_TEST_BOUNDARY_REGEX="${boundary_patterns[1]:-}"
-APP_SOURCE_BOUNDARY_REGEX="${boundary_patterns[2]:-}"
+if [[ -z "$BOUNDARY_COMMENT_FILTER_REGEX" || -z "$APP_TEST_BOUNDARY_REGEX" ]]; then
+  echo "test_boundary_guard: invalid_boundary_pattern_config"
+  exit 1
+fi
 
-if [[ -z "$BOUNDARY_COMMENT_FILTER_REGEX" || -z "$APP_TEST_BOUNDARY_REGEX" || -z "$APP_SOURCE_BOUNDARY_REGEX" ]]; then
+readarray -t app_source_boundary_rules < <(python - "$BOUNDARY_PATTERN_JSON" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+rules = payload.get("app_source_boundary_rules", [])
+for rule in rules:
+    rid = rule.get("id", "")
+    regex = rule.get("regex", "")
+    rationale = rule.get("rationale", "")
+    if isinstance(rid, str) and rid and isinstance(regex, str) and regex and isinstance(rationale, str) and rationale:
+        print(f"{rid}\t{regex}\t{rationale}")
+PY
+)
+
+if [[ ${#app_source_boundary_rules[@]} -eq 0 ]]; then
   echo "test_boundary_guard: invalid_boundary_pattern_config"
   exit 1
 fi
@@ -361,17 +414,31 @@ fi
 
 # App source boundary guard:
 # App layer must not create or classify inference authority.
-app_source_boundary_hits="$(
-  grep -RIn --include="*.swift" -E \
-  "$APP_SOURCE_BOUNDARY_REGEX" \
-  Sources/ZoneTruthApp \
-  | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
-)"
+app_source_boundary_hits=""
+for rule_line in "${app_source_boundary_rules[@]}"; do
+  IFS=$'\t' read -r rule_id rule_regex rule_rationale <<< "$rule_line"
+  if [[ -z "${rule_id:-}" || -z "${rule_regex:-}" ]]; then
+    continue
+  fi
+  rule_hits="$(
+    grep -RIn --include="*.swift" -E \
+    "$rule_regex" \
+    Sources/ZoneTruthApp \
+    | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
+  )"
+  if [[ -n "$rule_hits" ]]; then
+    while IFS= read -r hit_line; do
+      [[ -z "$hit_line" ]] && continue
+      app_source_boundary_hits+="$rule_id|$rule_rationale|$hit_line"$'\n'
+    done <<< "$rule_hits"
+  fi
+done
+
 if [[ -n "$app_source_boundary_hits" ]]; then
   app_source_boundary_guard="app_source_reintroduced_inference_authority_logic"
   echo "app_source_boundary_guard: ${app_source_boundary_guard}"
   echo "app_source_boundary_hits:"
-  echo "$app_source_boundary_hits"
+  printf '%s' "$app_source_boundary_hits"
   exit 1
 fi
 

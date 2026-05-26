@@ -1,5 +1,31 @@
 {
   "comment_filter_regex": "^[^:]+:[0-9]+:[[:space:]]*//",
   "app_test_boundary_regex": "WeeklyInferenceClassifier\\.classify|WeeklyConfidenceSemantics\\.calibrated|WeeklyFreshnessSignal\\.classify",
-  "app_source_boundary_regex": "WeeklyInferenceClassifier\\.classify|WeeklyAuthorityRendering\\.authority|InferenceProvenanceFactory\\.weekly|InferenceAuthorityCeiling|MissingEvidence\\.(sleep|hrv)"
+  "app_source_boundary_rules": [
+    {
+      "id": "core_classifier_in_app_source",
+      "regex": "WeeklyInferenceClassifier\\.classify",
+      "rationale": "App source must not run core inference classification."
+    },
+    {
+      "id": "authority_rendering_classification_in_app_source",
+      "regex": "WeeklyAuthorityRendering\\.authority",
+      "rationale": "App source must not classify authority from confidence/freshness."
+    },
+    {
+      "id": "provenance_factory_in_app_source",
+      "regex": "InferenceProvenanceFactory\\.weekly",
+      "rationale": "App source must not create provenance metadata."
+    },
+    {
+      "id": "authority_ceiling_type_usage_in_app_source",
+      "regex": "InferenceAuthorityCeiling",
+      "rationale": "Authority ceiling decisions must stay in ZoneTruthCore."
+    },
+    {
+      "id": "missing_evidence_inference_in_app_source",
+      "regex": "MissingEvidence\\.(sleep|hrv)",
+      "rationale": "Missing evidence inference must stay in ZoneTruthCore."
+    }
+  ]
 }

@@ -3,9 +3,15 @@ import XCTest
 
 final class GovernanceBoundaryGuardTests: XCTestCase {
     private struct BoundaryConfig: Decodable {
+        let appSourceBoundaryRules: [AppSourceBoundaryRule]
         let commentFilterRegex: String
         let appTestBoundaryRegex: String
-        let appSourceBoundaryRegex: String
+    }
+
+    private struct AppSourceBoundaryRule: Decodable {
+        let id: String
+        let regex: String
+        let rationale: String
     }
 
     private struct BoundarySchema: Decodable {
@@ -41,7 +47,8 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
 
         XCTAssertFalse(config.commentFilterRegex.isEmpty)
         XCTAssertFalse(config.appTestBoundaryRegex.isEmpty)
-        XCTAssertFalse(config.appSourceBoundaryRegex.isEmpty)
+        XCTAssertFalse(config.appSourceBoundaryRules.isEmpty)
+        XCTAssertTrue(config.appSourceBoundaryRules.allSatisfy { !$0.id.isEmpty && !$0.regex.isEmpty && !$0.rationale.isEmpty })
     }
 
     func testAppTestBoundaryScanReturnsFileLineHitFormat() throws {
@@ -99,8 +106,13 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         try sampleContent.write(to: sampleFile, atomically: true, encoding: .utf8)
 
         let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
+        guard let sourceRule = config.appSourceBoundaryRules.first(where: { $0.regex.contains("WeeklyAuthorityRendering\\.authority") }) else {
+            XCTFail("Missing app source boundary rule for authority rendering classification.")
+            return
+        }
+
         let cmd = """
-        grep -RIn --include="*.swift" -E '\(config.appSourceBoundaryRegex)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '\(config.commentFilterRegex)' || true
+        grep -RIn --include="*.swift" -E '\(sourceRule.regex)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '\(config.commentFilterRegex)' || true
         """
         let output = try runBash(cmd)
 
