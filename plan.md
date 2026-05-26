@@ -50,7 +50,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 ## 當前 Sprint / 當前工作
 
-已完成（Phase D 核心交付，本 sprint 已封閉）：
+已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
 - [x] 邊界 guard 設定遷至 JSON 單一來源（`scripts/closeout_boundary_patterns.json`）
 - [x] JSON schema 驗證（`schemas/closeout_boundary_patterns.schema.json`）
@@ -60,18 +60,22 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Enforce-mode smoke test（`scripts/closeout_clean_pilot_enforce_smoke.sh`）
 - [x] 10 個 GovernanceBoundaryGuardTests 全部通過
 
-待處理（Phase D 尾巴）：
-- [ ] 提交 `artifacts/governance/version_compatibility.json` 時間戳更新（小變更）
-- [ ] 可選：meta-closeout wrapper（一個指令跑全套 governance regression checks）
+已完成（Phase E P0）：
+- [x] 裝置端 HealthKit 授權 → 載入訓練 → 週報儀表板驗證（2026-05-26）
+- [x] ZoneTruthHost HealthKit capability 簽署確認（裝置可正常啟動）
+- [x] 使用者可見字串全面繁體中文化（e4510c3，185/185 tests pass）
+
+Phase E 進行中：
+- [ ] Strava OAuth 端對端測試（Client ID: 248735，redirect URI: zonetruth://localhost）
 
 ---
 
 ## Backlog
 
 ### P0（Phase E 就緒必要條件）
-- 裝置端 HealthKit 查詢路徑驗證（真實裝置，sparse HR 邊界）
-- Strava 真實憑證端對端測試（Client ID: 248735，repo private）
-- `ZoneTruthHost` Xcode project 在裝置上確認 HealthKit 能力簽署正確
+- [x] 裝置端 HealthKit 查詢路徑驗證（真實裝置，sparse HR 邊界）
+- [ ] Strava 真實憑證端對端測試（Client ID: 248735，redirect URI: zonetruth://localhost）
+- [x] `ZoneTruthHost` Xcode project 在裝置上確認 HealthKit 能力簽署正確
 
 ### P1（Phase E 品質提升）
 - 個人化 zone 界線設定（Resting HR、Zone 2 上下界輸入）
@@ -155,5 +159,6 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-05-26 | Phase E P0 裝置驗證通過；UI 字串全面中文化；推進至 Strava OAuth 端對端測試 |
 | 2026-05-26 | 全面重寫：從樣板文件改為實質專案計劃；導入當前 phase 狀態、backlog、anti-goals、gate 條件 |
 | 2026-05-25 | 對齊 header 欄位（最後更新 / Owner / Freshness）；加入 gitignore runtime artifacts |
