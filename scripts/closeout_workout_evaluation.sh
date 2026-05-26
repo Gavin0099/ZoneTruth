@@ -182,6 +182,50 @@ ui_smoke="pending"
 dual_run_review="not-found"
 annotation_gate="not-required"
 codeburn_render_guard="passed"
+boundary_telemetry_status="passed"
+boundary_telemetry_dir="artifacts/runtime/boundary-telemetry"
+mkdir -p "$boundary_telemetry_dir"
+boundary_telemetry_file="$boundary_telemetry_dir/boundary_telemetry_$(date -u +"%Y%m%dT%H%M%SZ").json"
+app_test_boundary_hit_count=0
+app_source_boundary_hit_count=0
+app_test_boundary_rule_total=${#app_test_boundary_rules[@]}
+app_source_boundary_rule_total=${#app_source_boundary_rules[@]}
+app_test_boundary_rule_hit_count=0
+app_source_boundary_rule_hit_count=0
+app_test_boundary_rule_hits=""
+app_source_boundary_rule_hits=""
+
+line_count() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    echo 0
+  else
+    printf '%s' "$value" | awk 'NF{c++} END{print c+0}'
+  fi
+}
+
+write_boundary_telemetry() {
+  python - "$boundary_telemetry_file" <<'PY'
+import json, os, sys
+
+path = sys.argv[1]
+payload = {
+    "generated_at_utc": os.environ.get("BOUNDARY_TELEMETRY_TS", ""),
+    "status": os.environ.get("BOUNDARY_TELEMETRY_STATUS", "unknown"),
+    "app_test_boundary_rule_total": int(os.environ.get("APP_TEST_BOUNDARY_RULE_TOTAL", "0")),
+    "app_test_boundary_rule_hit_count": int(os.environ.get("APP_TEST_BOUNDARY_RULE_HIT_COUNT", "0")),
+    "app_test_boundary_hit_count": int(os.environ.get("APP_TEST_BOUNDARY_HIT_COUNT", "0")),
+    "app_source_boundary_rule_total": int(os.environ.get("APP_SOURCE_BOUNDARY_RULE_TOTAL", "0")),
+    "app_source_boundary_rule_hit_count": int(os.environ.get("APP_SOURCE_BOUNDARY_RULE_HIT_COUNT", "0")),
+    "app_source_boundary_hit_count": int(os.environ.get("APP_SOURCE_BOUNDARY_HIT_COUNT", "0")),
+    "app_test_boundary_hits": [line for line in os.environ.get("APP_TEST_BOUNDARY_HITS", "").splitlines() if line.strip()],
+    "app_source_boundary_hits": [line for line in os.environ.get("APP_SOURCE_BOUNDARY_HITS", "").splitlines() if line.strip()],
+}
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(payload, fh, ensure_ascii=False, indent=2)
+    fh.write("\n")
+PY
+}
 
 if ! swift test; then
   semantic_guard="failed"
@@ -430,13 +474,28 @@ for rule_line in "${app_test_boundary_rules[@]}"; do
     | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
   )"
   if [[ -n "$rule_hits" ]]; then
+    app_test_boundary_rule_hit_count=$((app_test_boundary_rule_hit_count + 1))
     while IFS= read -r hit_line; do
       [[ -z "$hit_line" ]] && continue
       app_test_boundary_hits+="$rule_id|$rule_rationale|$hit_line"$'\n'
     done <<< "$rule_hits"
   fi
 done
+app_test_boundary_hit_count="$(line_count "$app_test_boundary_hits")"
+app_test_boundary_rule_hits="$app_test_boundary_hits"
 if [[ -n "$app_test_boundary_hits" ]]; then
+  boundary_telemetry_status="failed_app_test_boundary"
+  BOUNDARY_TELEMETRY_TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  BOUNDARY_TELEMETRY_STATUS="$boundary_telemetry_status" \
+  APP_TEST_BOUNDARY_RULE_TOTAL="$app_test_boundary_rule_total" \
+  APP_TEST_BOUNDARY_RULE_HIT_COUNT="$app_test_boundary_rule_hit_count" \
+  APP_TEST_BOUNDARY_HIT_COUNT="$app_test_boundary_hit_count" \
+  APP_SOURCE_BOUNDARY_RULE_TOTAL="$app_source_boundary_rule_total" \
+  APP_SOURCE_BOUNDARY_RULE_HIT_COUNT="$app_source_boundary_rule_hit_count" \
+  APP_SOURCE_BOUNDARY_HIT_COUNT="$app_source_boundary_hit_count" \
+  APP_TEST_BOUNDARY_HITS="$app_test_boundary_rule_hits" \
+  APP_SOURCE_BOUNDARY_HITS="$app_source_boundary_rule_hits" \
+  write_boundary_telemetry
   test_boundary_guard="app_tests_retesting_core_inference_semantics"
   echo "test_boundary_guard: ${test_boundary_guard}"
   echo "test_boundary_hits:"
@@ -459,14 +518,29 @@ for rule_line in "${app_source_boundary_rules[@]}"; do
     | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
   )"
   if [[ -n "$rule_hits" ]]; then
+    app_source_boundary_rule_hit_count=$((app_source_boundary_rule_hit_count + 1))
     while IFS= read -r hit_line; do
       [[ -z "$hit_line" ]] && continue
       app_source_boundary_hits+="$rule_id|$rule_rationale|$hit_line"$'\n'
     done <<< "$rule_hits"
   fi
 done
+app_source_boundary_hit_count="$(line_count "$app_source_boundary_hits")"
+app_source_boundary_rule_hits="$app_source_boundary_hits"
 
 if [[ -n "$app_source_boundary_hits" ]]; then
+  boundary_telemetry_status="failed_app_source_boundary"
+  BOUNDARY_TELEMETRY_TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  BOUNDARY_TELEMETRY_STATUS="$boundary_telemetry_status" \
+  APP_TEST_BOUNDARY_RULE_TOTAL="$app_test_boundary_rule_total" \
+  APP_TEST_BOUNDARY_RULE_HIT_COUNT="$app_test_boundary_rule_hit_count" \
+  APP_TEST_BOUNDARY_HIT_COUNT="$app_test_boundary_hit_count" \
+  APP_SOURCE_BOUNDARY_RULE_TOTAL="$app_source_boundary_rule_total" \
+  APP_SOURCE_BOUNDARY_RULE_HIT_COUNT="$app_source_boundary_rule_hit_count" \
+  APP_SOURCE_BOUNDARY_HIT_COUNT="$app_source_boundary_hit_count" \
+  APP_TEST_BOUNDARY_HITS="$app_test_boundary_rule_hits" \
+  APP_SOURCE_BOUNDARY_HITS="$app_source_boundary_rule_hits" \
+  write_boundary_telemetry
   app_source_boundary_guard="app_source_reintroduced_inference_authority_logic"
   echo "app_source_boundary_guard: ${app_source_boundary_guard}"
   echo "app_source_boundary_hits:"
@@ -677,6 +751,18 @@ if ! git diff --quiet || ! git diff --quiet --cached; then
   working_tree_clean="no"
 fi
 
+BOUNDARY_TELEMETRY_TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+BOUNDARY_TELEMETRY_STATUS="$boundary_telemetry_status" \
+APP_TEST_BOUNDARY_RULE_TOTAL="$app_test_boundary_rule_total" \
+APP_TEST_BOUNDARY_RULE_HIT_COUNT="$app_test_boundary_rule_hit_count" \
+APP_TEST_BOUNDARY_HIT_COUNT="$app_test_boundary_hit_count" \
+APP_SOURCE_BOUNDARY_RULE_TOTAL="$app_source_boundary_rule_total" \
+APP_SOURCE_BOUNDARY_RULE_HIT_COUNT="$app_source_boundary_rule_hit_count" \
+APP_SOURCE_BOUNDARY_HIT_COUNT="$app_source_boundary_hit_count" \
+APP_TEST_BOUNDARY_HITS="$app_test_boundary_rule_hits" \
+APP_SOURCE_BOUNDARY_HITS="$app_source_boundary_rule_hits" \
+write_boundary_telemetry
+
 echo "semantic_guard: ${semantic_guard}"
 echo "snapshot_fixture: ${snapshot_fixture}"
 echo "weekly_snapshot: ${weekly_snapshot}"
@@ -693,3 +779,4 @@ echo "codeburn_render_guard: ${codeburn_render_guard}"
 echo "working_tree_clean: ${working_tree_clean}"
 echo "ui_smoke: ${ui_smoke}"
 echo "dual_run_review: ${dual_run_review}"
+echo "boundary_telemetry_file: ${boundary_telemetry_file}"

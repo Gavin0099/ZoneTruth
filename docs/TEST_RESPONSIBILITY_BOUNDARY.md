@@ -17,3 +17,4 @@ Prevent test architecture from reverse-contaminating product architecture bounda
 - Runtime enforcement entrypoint: `scripts/closeout_workout_evaluation.sh`
 - Boundary policy config source: `scripts/closeout_boundary_patterns.json` (`app_test_boundary_rules[*]` + `app_source_boundary_rules[*]`)
 - Boundary config schema: `schemas/closeout_boundary_patterns.schema.json`
+- Boundary telemetry artifact: `artifacts/runtime/boundary-telemetry/boundary_telemetry_*.json`
