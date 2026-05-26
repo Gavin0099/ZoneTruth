@@ -191,6 +191,9 @@ boundary_trend_gate="passed"
 boundary_trend_window="${BOUNDARY_TREND_WINDOW:-20}"
 boundary_trend_max_failure_events="${BOUNDARY_TREND_MAX_FAILURE_EVENTS:-2}"
 boundary_trend_max_rule_hits="${BOUNDARY_TREND_MAX_RULE_HITS:-2}"
+clean_pilot_admissibility_guard="passed"
+clean_pilot_admissibility_enforce="${CLEAN_PILOT_ADMISSIBILITY_ENFORCE:-0}"
+clean_pilot_admissibility_summary_file="$boundary_telemetry_dir/clean_pilot_admissibility_latest.json"
 app_test_boundary_hit_count=0
 app_source_boundary_hit_count=0
 app_test_boundary_rule_total=${#app_test_boundary_rules[@]}
@@ -269,6 +272,38 @@ PY
   fi
 
   boundary_trend_gate="passed"
+  return 0
+}
+
+evaluate_clean_pilot_admissibility_guard() {
+  python3 governance_tools/clean_pilot_admissibility.py \
+    --repo . \
+    --policy governance/fleet/cleaning_admissibility_policy.yaml \
+    --format json > "$clean_pilot_admissibility_summary_file"
+
+  local admissible="false"
+  local unclassified_dirty_count=0
+  read -r admissible unclassified_dirty_count < <(python3 - "$clean_pilot_admissibility_summary_file" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+admissible = bool(payload.get("clean_pilot_admissible", False))
+unclassified_dirty = payload.get("unclassified_dirty_paths") or []
+print(f"{'true' if admissible else 'false'} {len(unclassified_dirty)}")
+PY
+)
+
+  if [[ "$admissible" != "true" ]]; then
+    clean_pilot_admissibility_guard="not_admissible"
+    echo "clean_pilot_admissibility_guard: ${clean_pilot_admissibility_guard}"
+    echo "clean_pilot_unclassified_dirty_count: ${unclassified_dirty_count}"
+    echo "clean_pilot_admissibility_summary_file: ${clean_pilot_admissibility_summary_file}"
+    if [[ "$clean_pilot_admissibility_enforce" == "1" ]]; then
+      return 1
+    fi
+  fi
+
   return 0
 }
 
@@ -810,6 +845,9 @@ write_boundary_telemetry
 if ! evaluate_boundary_trend_gate; then
   exit 1
 fi
+if ! evaluate_clean_pilot_admissibility_guard; then
+  exit 1
+fi
 
 echo "semantic_guard: ${semantic_guard}"
 echo "snapshot_fixture: ${snapshot_fixture}"
@@ -830,3 +868,5 @@ echo "dual_run_review: ${dual_run_review}"
 echo "boundary_telemetry_file: ${boundary_telemetry_file}"
 echo "boundary_trend_summary_file: ${boundary_trend_summary_file}"
 echo "boundary_trend_gate: ${boundary_trend_gate}"
+echo "clean_pilot_admissibility_guard: ${clean_pilot_admissibility_guard}"
+echo "clean_pilot_admissibility_summary_file: ${clean_pilot_admissibility_summary_file}"

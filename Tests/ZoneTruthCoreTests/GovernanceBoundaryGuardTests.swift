@@ -65,6 +65,9 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         XCTAssertTrue(script.contains("boundary_telemetry_file:"))
         XCTAssertTrue(script.contains("evaluate_boundary_trend_gate()"))
         XCTAssertTrue(script.contains("boundary_trend_gate:"))
+        XCTAssertTrue(script.contains("evaluate_clean_pilot_admissibility_guard()"))
+        XCTAssertTrue(script.contains("CLEAN_PILOT_ADMISSIBILITY_ENFORCE"))
+        XCTAssertTrue(script.contains("clean_pilot_admissibility_guard:"))
     }
 
     func testBoundaryTelemetryRollupScriptContractPresent() throws {
