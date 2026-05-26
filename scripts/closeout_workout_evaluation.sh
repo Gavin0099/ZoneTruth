@@ -186,6 +186,11 @@ boundary_telemetry_status="passed"
 boundary_telemetry_dir="artifacts/runtime/boundary-telemetry"
 mkdir -p "$boundary_telemetry_dir"
 boundary_telemetry_file="$boundary_telemetry_dir/boundary_telemetry_$(date -u +"%Y%m%dT%H%M%SZ").json"
+boundary_trend_summary_file="$boundary_telemetry_dir/summary_latest.json"
+boundary_trend_gate="passed"
+boundary_trend_window="${BOUNDARY_TREND_WINDOW:-20}"
+boundary_trend_max_failure_events="${BOUNDARY_TREND_MAX_FAILURE_EVENTS:-2}"
+boundary_trend_max_rule_hits="${BOUNDARY_TREND_MAX_RULE_HITS:-2}"
 app_test_boundary_hit_count=0
 app_source_boundary_hit_count=0
 app_test_boundary_rule_total=${#app_test_boundary_rules[@]}
@@ -225,6 +230,59 @@ with open(path, "w", encoding="utf-8") as fh:
     json.dump(payload, fh, ensure_ascii=False, indent=2)
     fh.write("\n")
 PY
+}
+
+evaluate_boundary_trend_gate() {
+  python3 scripts/summarize_boundary_telemetry.py \
+    --telemetry-dir "$boundary_telemetry_dir" \
+    --limit "$boundary_trend_window" \
+    --output "$boundary_trend_summary_file" >/dev/null 2>&1 || true
+  if [[ ! -f "$boundary_trend_summary_file" ]]; then
+    boundary_trend_gate="missing_summary"
+    echo "boundary_trend_gate: ${boundary_trend_gate}"
+    return 1
+  fi
+
+  local failure_events=0
+  local hottest_rule_hits=0
+  read -r failure_events hottest_rule_hits < <(python3 - "$boundary_trend_summary_file" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+status_counts = payload.get("statusCounts", {})
+failure_events = 0
+for key, val in status_counts.items():
+    if key.startswith("failed_"):
+        failure_events += int(val)
+rule_hit_trend = payload.get("ruleHitTrend", [])
+hottest = 0
+if rule_hit_trend:
+    hottest = int(rule_hit_trend[0].get("hitCount", 0))
+print(f"{failure_events} {hottest}")
+PY
+)
+
+  if [[ "$failure_events" -gt "$boundary_trend_max_failure_events" ]]; then
+    boundary_trend_gate="failure_event_threshold_exceeded"
+    echo "boundary_trend_gate: ${boundary_trend_gate}"
+    echo "boundary_trend_window: ${boundary_trend_window}"
+    echo "boundary_trend_failure_events: ${failure_events}"
+    echo "boundary_trend_max_failure_events: ${boundary_trend_max_failure_events}"
+    return 1
+  fi
+
+  if [[ "$hottest_rule_hits" -gt "$boundary_trend_max_rule_hits" ]]; then
+    boundary_trend_gate="rule_hit_threshold_exceeded"
+    echo "boundary_trend_gate: ${boundary_trend_gate}"
+    echo "boundary_trend_window: ${boundary_trend_window}"
+    echo "boundary_trend_hottest_rule_hits: ${hottest_rule_hits}"
+    echo "boundary_trend_max_rule_hits: ${boundary_trend_max_rule_hits}"
+    return 1
+  fi
+
+  boundary_trend_gate="passed"
+  return 0
 }
 
 if ! swift test; then
@@ -762,6 +820,9 @@ APP_SOURCE_BOUNDARY_HIT_COUNT="$app_source_boundary_hit_count" \
 APP_TEST_BOUNDARY_HITS="$app_test_boundary_rule_hits" \
 APP_SOURCE_BOUNDARY_HITS="$app_source_boundary_rule_hits" \
 write_boundary_telemetry
+if ! evaluate_boundary_trend_gate; then
+  exit 1
+fi
 
 echo "semantic_guard: ${semantic_guard}"
 echo "snapshot_fixture: ${snapshot_fixture}"
@@ -780,3 +841,5 @@ echo "working_tree_clean: ${working_tree_clean}"
 echo "ui_smoke: ${ui_smoke}"
 echo "dual_run_review: ${dual_run_review}"
 echo "boundary_telemetry_file: ${boundary_telemetry_file}"
+echo "boundary_trend_summary_file: ${boundary_trend_summary_file}"
+echo "boundary_trend_gate: ${boundary_trend_gate}"

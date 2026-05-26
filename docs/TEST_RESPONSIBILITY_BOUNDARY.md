@@ -19,3 +19,4 @@ Prevent test architecture from reverse-contaminating product architecture bounda
 - Boundary config schema: `schemas/closeout_boundary_patterns.schema.json`
 - Boundary telemetry artifact: `artifacts/runtime/boundary-telemetry/boundary_telemetry_*.json`
 - Boundary trend rollup command: `python3 scripts/summarize_boundary_telemetry.py --limit 20 --output artifacts/runtime/boundary-telemetry/summary_latest.json`
+- Boundary trend gate (in closeout): window/threshold can be tuned via `BOUNDARY_TREND_WINDOW`, `BOUNDARY_TREND_MAX_FAILURE_EVENTS`, `BOUNDARY_TREND_MAX_RULE_HITS`
