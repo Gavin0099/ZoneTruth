@@ -94,64 +94,12 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
 
     func testEveryAppTestBoundaryRuleHasDedicatedNegativeFixtureHit() throws {
         let config = try loadBoundaryConfig()
-        let tempRoot = FileManager.default.temporaryDirectory
-            .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
-        let appTestsDir = tempRoot
-            .appendingPathComponent("Tests", isDirectory: true)
-            .appendingPathComponent("ZoneTruthAppTests", isDirectory: true)
-        try FileManager.default.createDirectory(at: appTestsDir, withIntermediateDirectories: true)
-
-        let fixtureByRuleID: [String: String] = [
-            "core_inference_classifier_in_app_tests": """
-            import XCTest
-            final class RuleFixtureCoreInferenceClassifier: XCTestCase {
-                func testHit() {
-                    _ = WeeklyInferenceClassifier.classify(
-                        confidence: 0.85, freshness: .fresh, workoutCount: 3, elapsedDays: 7
-                    )
-                }
-            }
-            """,
-            "core_confidence_semantics_in_app_tests": """
-            import XCTest
-            final class RuleFixtureCoreConfidenceSemantics: XCTestCase {
-                func testHit() {
-                    _ = WeeklyConfidenceSemantics.calibrated(
-                        confidence: 0.75, freshness: .fresh, elapsedDays: 7
-                    )
-                }
-            }
-            """,
-            "core_freshness_classifier_in_app_tests": """
-            import XCTest
-            final class RuleFixtureCoreFreshnessClassifier: XCTestCase {
-                func testHit() {
-                    _ = WeeklyFreshnessSignal.classify(workoutCount: 2, elapsedDays: 7)
-                }
-            }
-            """
-        ]
-
-        for rule in config.appTestBoundaryRules {
-            guard let fixture = fixtureByRuleID[rule.id] else {
-                XCTFail("Missing fixture mapping for app test boundary rule id: \(rule.id)")
-                continue
-            }
-
-            let fileName = "RuleFixture_\(rule.id).swift".replacingOccurrences(of: "-", with: "_")
-            let fixtureFile = appTestsDir.appendingPathComponent(fileName)
-            try fixture.write(to: fixtureFile, atomically: true, encoding: .utf8)
-
-            let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
-            let cmd = """
-            grep -RIn --include="*.swift" -E '\(rule.regex)' "\(escapedRoot)/Tests/ZoneTruthAppTests" | grep -Ev '\(config.commentFilterRegex)' || true
-            """
-            let output = try runBash(cmd)
-            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            XCTAssertFalse(trimmed.isEmpty, "Expected rule to hit fixture: \(rule.id)")
-            XCTAssertTrue(output.contains("RuleFixture_"), "Expected file reference for rule: \(rule.id)")
-        }
+        try assertBoundaryRulesHaveFixtureCoverage(
+            rules: config.appTestBoundaryRules,
+            fixtureByRuleID: fixtureByRuleID(for: .appTests),
+            rootRelativeDir: "Tests/ZoneTruthAppTests",
+            commentFilterRegex: config.commentFilterRegex
+        )
     }
 
     func testAppSourceBoundaryScanReturnsFileLineHitFormat() throws {
@@ -193,67 +141,119 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
 
     func testEveryAppSourceBoundaryRuleHasDedicatedNegativeFixtureHit() throws {
         let config = try loadBoundaryConfig()
+        try assertBoundaryRulesHaveFixtureCoverage(
+            rules: config.appSourceBoundaryRules,
+            fixtureByRuleID: fixtureByRuleID(for: .appSource),
+            rootRelativeDir: "Sources/ZoneTruthApp",
+            commentFilterRegex: config.commentFilterRegex
+        )
+    }
+
+    private enum BoundaryDomain {
+        case appTests
+        case appSource
+    }
+
+    private func fixtureByRuleID(for domain: BoundaryDomain) -> [String: String] {
+        switch domain {
+        case .appTests:
+            return [
+                "core_inference_classifier_in_app_tests": """
+                import XCTest
+                final class RuleFixtureCoreInferenceClassifier: XCTestCase {
+                    func testHit() {
+                        _ = WeeklyInferenceClassifier.classify(
+                            confidence: 0.85, freshness: .fresh, workoutCount: 3, elapsedDays: 7
+                        )
+                    }
+                }
+                """,
+                "core_confidence_semantics_in_app_tests": """
+                import XCTest
+                final class RuleFixtureCoreConfidenceSemantics: XCTestCase {
+                    func testHit() {
+                        _ = WeeklyConfidenceSemantics.calibrated(
+                            confidence: 0.75, freshness: .fresh, elapsedDays: 7
+                        )
+                    }
+                }
+                """,
+                "core_freshness_classifier_in_app_tests": """
+                import XCTest
+                final class RuleFixtureCoreFreshnessClassifier: XCTestCase {
+                    func testHit() {
+                        _ = WeeklyFreshnessSignal.classify(workoutCount: 2, elapsedDays: 7)
+                    }
+                }
+                """
+            ]
+        case .appSource:
+            return [
+                "core_classifier_in_app_source": """
+                import Foundation
+                struct RuleFixtureCoreClassifier {
+                    func hit() {
+                        _ = WeeklyInferenceClassifier.classify(
+                            confidence: 0.8, freshness: .fresh, workoutCount: 2, elapsedDays: 7
+                        )
+                    }
+                }
+                """,
+                "authority_rendering_classification_in_app_source": """
+                import Foundation
+                struct RuleFixtureAuthorityRendering {
+                    func hit() {
+                        _ = WeeklyAuthorityRendering.authority(for: 0.7, freshness: .fresh)
+                    }
+                }
+                """,
+                "provenance_factory_in_app_source": """
+                import Foundation
+                struct RuleFixtureProvenanceFactory {
+                    func hit(workouts: [WorkoutObservation]) {
+                        _ = InferenceProvenanceFactory.weekly(from: workouts)
+                    }
+                }
+                """,
+                "authority_ceiling_type_usage_in_app_source": """
+                import Foundation
+                struct RuleFixtureAuthorityCeilingType {
+                    let ceiling: InferenceAuthorityCeiling = .nonInterventional
+                }
+                """,
+                "missing_evidence_inference_in_app_source": """
+                import Foundation
+                struct RuleFixtureMissingEvidence {
+                    let evidence = MissingEvidence.sleep
+                }
+                """
+            ]
+        }
+    }
+
+    private func assertBoundaryRulesHaveFixtureCoverage(
+        rules: [AppBoundaryRule],
+        fixtureByRuleID: [String: String],
+        rootRelativeDir: String,
+        commentFilterRegex: String
+    ) throws {
         let tempRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
-        let appSourceDir = tempRoot
-            .appendingPathComponent("Sources", isDirectory: true)
-            .appendingPathComponent("ZoneTruthApp", isDirectory: true)
-        try FileManager.default.createDirectory(at: appSourceDir, withIntermediateDirectories: true)
+        let targetDir = tempRoot.appendingPathComponent(rootRelativeDir, isDirectory: true)
+        try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
-        let fixtureByRuleID: [String: String] = [
-            "core_classifier_in_app_source": """
-            import Foundation
-            struct RuleFixtureCoreClassifier {
-                func hit() {
-                    _ = WeeklyInferenceClassifier.classify(
-                        confidence: 0.8, freshness: .fresh, workoutCount: 2, elapsedDays: 7
-                    )
-                }
-            }
-            """,
-            "authority_rendering_classification_in_app_source": """
-            import Foundation
-            struct RuleFixtureAuthorityRendering {
-                func hit() {
-                    _ = WeeklyAuthorityRendering.authority(for: 0.7, freshness: .fresh)
-                }
-            }
-            """,
-            "provenance_factory_in_app_source": """
-            import Foundation
-            struct RuleFixtureProvenanceFactory {
-                func hit(workouts: [WorkoutObservation]) {
-                    _ = InferenceProvenanceFactory.weekly(from: workouts)
-                }
-            }
-            """,
-            "authority_ceiling_type_usage_in_app_source": """
-            import Foundation
-            struct RuleFixtureAuthorityCeilingType {
-                let ceiling: InferenceAuthorityCeiling = .nonInterventional
-            }
-            """,
-            "missing_evidence_inference_in_app_source": """
-            import Foundation
-            struct RuleFixtureMissingEvidence {
-                let evidence = MissingEvidence.sleep
-            }
-            """
-        ]
-
-        for rule in config.appSourceBoundaryRules {
+        for rule in rules {
             guard let fixture = fixtureByRuleID[rule.id] else {
-                XCTFail("Missing fixture mapping for app source boundary rule id: \(rule.id)")
+                XCTFail("Missing fixture mapping for boundary rule id: \(rule.id)")
                 continue
             }
-
             let fileName = "RuleFixture_\(rule.id).swift".replacingOccurrences(of: "-", with: "_")
-            let fixtureFile = appSourceDir.appendingPathComponent(fileName)
+            let fixtureFile = targetDir.appendingPathComponent(fileName)
             try fixture.write(to: fixtureFile, atomically: true, encoding: .utf8)
 
             let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
             let cmd = """
-            grep -RIn --include="*.swift" -E '\(rule.regex)' "\(escapedRoot)/Sources/ZoneTruthApp" | grep -Ev '\(config.commentFilterRegex)' || true
+            grep -RIn --include="*.swift" -E '\(rule.regex)' "\(escapedRoot)/\(rootRelativeDir)" | grep -Ev '\(commentFilterRegex)' || true
             """
             let output = try runBash(cmd)
             let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
