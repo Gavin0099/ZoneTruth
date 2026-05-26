@@ -42,9 +42,9 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Phase B: App 資料源整合（HealthKit adapter、Strava OAuth + 自動 refresh、JSON import）
 - [x] Phase C: 語義治理層（WorkoutEvaluation、InferenceProvenance、weekly signal 遷入 Core）
 - [x] Phase D: 治理邊界強化（boundary guard 規則化、遙測、clean-pilot admissibility）
-- [>] Phase E: 裝置驗證 + 發版準備（on-device HealthKit、Strava 真實憑證測試）
+- [x] Phase E: 裝置驗證 + 發版準備（on-device HealthKit、Strava 真實憑證測試）
 
-**Current Phase**: Phase E — 裝置驗證 + 發版準備
+**Current Phase**: Phase E 完成 — 進入 P1 品質提升 / 發版準備
 
 ---
 
@@ -65,8 +65,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] ZoneTruthHost HealthKit capability 簽署確認（裝置可正常啟動）
 - [x] 使用者可見字串全面繁體中文化（e4510c3，185/185 tests pass）
 
-Phase E 進行中：
-- [ ] Strava OAuth 端對端測試（Client ID: 248735，redirect URI: zonetruth://localhost）
+已完成（Phase E P0 全部）：
+- [x] Strava OAuth 端對端測試（Client ID: 248735，redirect URI: zonetruth://localhost）
 
 ---
 
@@ -74,7 +74,7 @@ Phase E 進行中：
 
 ### P0（Phase E 就緒必要條件）
 - [x] 裝置端 HealthKit 查詢路徑驗證（真實裝置，sparse HR 邊界）
-- [ ] Strava 真實憑證端對端測試（Client ID: 248735，redirect URI: zonetruth://localhost）
+- [x] Strava 真實憑證端對端測試（Client ID: 248735，redirect URI: zonetruth://localhost）
 - [x] `ZoneTruthHost` Xcode project 在裝置上確認 HealthKit 能力簽署正確
 
 ### P1（Phase E 品質提升）
@@ -151,7 +151,7 @@ Phase E 進行中：
 | Phase B: 資料源整合完成 | 2026-05-10 | ✅ Done |
 | Phase C: 語義治理層完成 | 2026-05-20 | ✅ Done |
 | Phase D: 治理邊界強化完成 | 2026-05-26 | ✅ Done |
-| Phase E: 裝置驗證 + 發版準備 | 2026-06-30 | 🔄 In Progress |
+| Phase E: 裝置驗證 + 發版準備 | 2026-05-26 | ✅ Done |
 
 ---
 
@@ -159,6 +159,6 @@ Phase E 進行中：
 
 | 日期 | 更新內容 |
 |---|---|
-| 2026-05-26 | Phase E P0 裝置驗證通過；UI 字串全面中文化；推進至 Strava OAuth 端對端測試 |
+| 2026-05-26 | Phase E 全部完成：HealthKit、Strava OAuth、ZoneTruthHost 裝置驗證均通過 |
 | 2026-05-26 | 全面重寫：從樣板文件改為實質專案計劃；導入當前 phase 狀態、backlog、anti-goals、gate 條件 |
 | 2026-05-25 | 對齊 header 欄位（最後更新 / Owner / Freshness）；加入 gitignore runtime artifacts |
