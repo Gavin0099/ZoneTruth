@@ -322,6 +322,17 @@ def _print_refresh_delta_summary(
     previous_inventory: list[str],
     current_inventory: list[str],
 ) -> None:
+    def _safe_print(line: str) -> None:
+        try:
+            print(line)
+        except UnicodeEncodeError:
+            stream = getattr(sys.stdout, "buffer", None)
+            encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+            if stream is None:
+                print(line.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+                return
+            stream.write(line.encode(encoding, errors="replace") + b"\n")
+
     changed_files = [
         name
         for name, current_hash in current_hashes.items()
@@ -331,16 +342,16 @@ def _print_refresh_delta_summary(
     removed_sections = [item for item in previous_inventory if item not in current_inventory]
 
     if not changed_files and not added_sections and not removed_sections:
-        print("  Refresh delta: no tracked hash or plan inventory changes detected")
+        _safe_print("  Refresh delta: no tracked hash or plan inventory changes detected")
         return
 
-    print("  Refresh delta summary:")
+    _safe_print("  Refresh delta summary:")
     if changed_files:
-        print(f"    - tracked hash changes: {', '.join(changed_files)}")
+        _safe_print(f"    - tracked hash changes: {', '.join(changed_files)}")
     if added_sections:
-        print(f"    - plan sections added: {', '.join(added_sections)}")
+        _safe_print(f"    - plan sections added: {', '.join(added_sections)}")
     if removed_sections:
-        print(f"    - plan sections removed: {', '.join(removed_sections)}")
+        _safe_print(f"    - plan sections removed: {', '.join(removed_sections)}")
 
 
 # ── File hashing ──────────────────────────────────────────────────────────────

@@ -753,6 +753,23 @@ def classify_closeout(path: Path, project_root: Path) -> dict[str, Any]:
 # result dict produced by run_session_end_hook().
 _CANONICAL_AUDIT_LOG_RELPATH = Path("artifacts") / "runtime" / "canonical-audit-log.jsonl"
 
+
+def _get_repo_head(project_root: Path) -> str:
+    """Return the current HEAD commit hash of project_root, or '' on failure."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
 # Maximum number of entries retained in the log before rotation.
 # Oldest entries are removed when this limit is exceeded, so the log
 # never grows without bound.  Set conservatively — observability, not audit.
@@ -920,6 +937,7 @@ def _append_canonical_audit_log(
         # repo_name is an observability hint, not a canonical repo identifier.
         # project_root.resolve().name avoids any subprocess / git dependency.
         "repo_name": project_root.resolve().name,
+        "linked_head_commit": _get_repo_head(project_root),
         "artifact_state": artifact_state,
         "signals": canonical_path_audit.get("signals", []),
         "audit_note": canonical_path_audit.get("audit_note", ""),

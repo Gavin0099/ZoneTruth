@@ -66,6 +66,12 @@ def parse_header_fields(text: str) -> dict:
         key = match.group(1).strip()
         value = match.group(2).strip()
         fields[key] = value
+
+    # Accept common English aliases to avoid locale/encoding fragility.
+    if "最後更新" not in fields and "Last Updated" in fields:
+        fields["最後更新"] = fields["Last Updated"]
+    if "最後更新" not in fields and "Updated" in fields:
+        fields["最後更新"] = fields["Updated"]
     return fields
 
 

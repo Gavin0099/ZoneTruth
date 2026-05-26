@@ -258,3 +258,26 @@ L0 fast-track 路徑：
 
 原因：治理框架本身也需要停止條件。
 目前最大風險不是 governance 不夠，而是 governance recursive self-expansion。
+## 12. Governance Surface Expansion Gate (Mandatory)
+
+> **Mandatory gate. Enforced by design review.**
+
+Before adding any new governance layer, the proposer must answer:
+1. Is this problem governance-critical (contract/evidence/risk), or only operational hygiene?
+2. What existing governance rule cannot already cover it?
+3. What is the minimal added surface, and how will regression prove non-expansion side effects?
+
+Decision rule:
+- `governance_required=true` only when failure would weaken fail-closed semantics, evidence admissibility, or risk accountability.
+- Otherwise classify as `operational_hygiene` and do not create a new governance gate.
+
+Scope control rule:
+- One governance concept change per stream.
+- Do not bundle evidence semantics changes with unrelated policy expansion in the same commit stream.
+
+## 13. Operational Semantics Binding Rule (Mandatory)
+
+When using `hooks_ready`, `repo_native_verified`, `clean_admissibility`,
+`expected_dirty_ttl`, or `self_hosting_gap_closed`, use the definitions in
+`governance/fleet/operational_semantics_v1.md`. Do not imply broader authority
+than the verifier can prove.
