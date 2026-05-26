@@ -33,7 +33,7 @@ struct BodyCompositionView: View {
                     .font(.headline.bold())
                     .foregroundStyle(.white)
                 Spacer()
-                EvidencePill(label: "Direct observation", color: PremiumColor.emerald)
+                EvidencePill(label: "直接量測", color: PremiumColor.emerald)
             }
 
             Text(ledger.compositionNarrative)

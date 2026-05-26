@@ -129,7 +129,7 @@ struct CompositeWorkoutRepository: WorkoutRepository {
         }
 
         guard !realResults.isEmpty else {
-            return mockResult ?? WorkoutLoadResult(workouts: [], source: .none, statusMessage: "No workouts are available yet.")
+            return mockResult ?? WorkoutLoadResult(workouts: [], source: .none, statusMessage: "尚未連接任何資料來源。")
         }
 
         let merged = deduplicate(
@@ -143,7 +143,7 @@ struct CompositeWorkoutRepository: WorkoutRepository {
         let label: String
         if activeSources.contains(.healthKit) && activeSources.contains(.strava) {
             source = .combined
-            label = "Apple Health + Strava"
+            label = "Apple Health + Strava"  // 品牌名稱保留英文
         } else {
             source = activeSources[0]
             label = activeSources[0].rawValue
@@ -173,7 +173,7 @@ struct JSONWorkoutRepository: WorkoutRepository {
             return WorkoutLoadResult(
                 workouts: [],
                 source: .jsonImport,
-                statusMessage: "No imported JSON file was found at SampleData/workouts.json."
+                statusMessage: "找不到 JSON 匯入檔（Documents/workouts.json）。"
             )
         }
 
@@ -183,13 +183,13 @@ struct JSONWorkoutRepository: WorkoutRepository {
             return WorkoutLoadResult(
                 workouts: payload.workouts.map(\.toDomainWorkout),
                 source: .jsonImport,
-                statusMessage: "Loaded workouts from SampleData/workouts.json."
+                statusMessage: "已從 JSON 檔案載入訓練紀錄。"
             )
         } catch {
             return WorkoutLoadResult(
                 workouts: [],
                 source: .jsonImport,
-                statusMessage: "Imported JSON could not be parsed, so this source was skipped."
+                statusMessage: "JSON 格式無法解析，已略過此來源。"
             )
         }
     }

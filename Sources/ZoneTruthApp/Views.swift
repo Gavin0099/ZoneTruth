@@ -338,7 +338,7 @@ struct WorkoutRowView: View {
                         .font(.system(.body, design: .rounded).bold())
                         .foregroundStyle(.white)
 
-                    Text(workout.intentSource == .auto ? "Auto" : "Manual")
+                    Text(workout.intentSource == .auto ? "自動" : "手動")
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)

@@ -24,7 +24,7 @@ final class CalibrationEngineTests: XCTestCase {
         let suggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
         XCTAssertNotNil(suggestion)
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, policy.zoneBounds.zone2UpperBound + 3)
-        XCTAssertTrue(suggestion?.reason.contains("low heart rate drift") == true)
+        XCTAssertTrue(suggestion?.reason.contains("心率飄移持續偏低") == true)
     }
     
     func testSuggestLoweringUpperBoundForHighDrift() {
@@ -38,7 +38,7 @@ final class CalibrationEngineTests: XCTestCase {
         let suggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
         XCTAssertNotNil(suggestion)
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, policy.zoneBounds.zone2UpperBound - 3)
-        XCTAssertTrue(suggestion?.reason.contains("high heart rate drift") == true)
+        XCTAssertTrue(suggestion?.reason.contains("心率飄移持續偏高") == true)
     }
     
     // Helpers

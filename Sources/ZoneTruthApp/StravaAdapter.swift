@@ -518,14 +518,14 @@ final class StravaActivityRepository: WorkoutRepository {
             return WorkoutLoadResult(
                 workouts: [],
                 source: .strava,
-                statusMessage: "Strava is not configured for this build yet."
+                statusMessage: "此版本尚未設定 Strava 連線。"
             )
         case .disconnected:
             cachedWorkouts = []
             return WorkoutLoadResult(
                 workouts: [],
                 source: .strava,
-                statusMessage: "Strava is available as a future source, but no active session is connected."
+                statusMessage: "Strava 尚未連線，請點選「連接 Strava」進行授權。"
             )
         case .connected:
             do {
@@ -595,13 +595,13 @@ final class StravaActivityRepository: WorkoutRepository {
     private func statusMessage(for status: StravaConnectionStatus, workoutCount: Int) -> String {
         switch status {
         case .unavailable:
-            return "Strava is not configured for this build yet."
+            return "此版本尚未設定 Strava 連線。"
         case .disconnected:
-            return "Strava is available as a future source, but no active session is connected."
+            return "Strava 尚未連線，請點選「連接 Strava」進行授權。"
         case .connected:
             return workoutCount > 0
-                ? "Loaded workouts from Strava."
-                : "Strava is connected, but no recent activities were found."
+                ? "已從 Strava 載入活動紀錄。"
+                : "Strava 已連線，但找不到近期活動。"
         }
     }
 }

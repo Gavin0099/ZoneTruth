@@ -33,7 +33,7 @@ public enum CalibrationEngine {
                     zone4Threshold: currentPolicy.zoneBounds.zone4Threshold,
                     zone5Threshold: currentPolicy.zoneBounds.zone5Threshold
                 ),
-                reason: "Consistent low heart rate drift (avg \(Int(averageDrift * 100))%) suggests your aerobic threshold may be higher than currently set.",
+                reason: "心率飄移持續偏低（平均 \(Int(averageDrift * 100))%），建議你的有氧閾值可能高於目前設定的 Zone 2 上限。",
                 confidence: min(0.9, 0.5 + Double(zone2Passes.count) * 0.1),
                 sourceSessionIDs: zone2Passes.map { $0.0.id }
             )
@@ -51,7 +51,7 @@ public enum CalibrationEngine {
                     zone4Threshold: currentPolicy.zoneBounds.zone4Threshold,
                     zone5Threshold: currentPolicy.zoneBounds.zone5Threshold
                 ),
-                reason: "Consistent high heart rate drift (avg \(Int(averageDrift * 100))%) suggests your current Zone 2 upper bound may be too intense for steady-state aerobic work.",
+                reason: "心率飄移持續偏高（平均 \(Int(averageDrift * 100))%），目前的 Zone 2 上限對穩態有氧訓練可能過於激進，建議適度下調。",
                 confidence: min(0.9, 0.5 + Double(zone2Passes.count) * 0.1),
                 sourceSessionIDs: zone2Passes.map { $0.0.id }
             )
