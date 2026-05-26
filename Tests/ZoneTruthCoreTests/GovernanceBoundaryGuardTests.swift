@@ -3,16 +3,18 @@ import XCTest
 
 final class GovernanceBoundaryGuardTests: XCTestCase {
     private struct BoundaryConfig: Decodable {
+        let appTestBoundaryRules: [AppBoundaryRule]
         let appSourceBoundaryRules: [AppSourceBoundaryRule]
         let commentFilterRegex: String
-        let appTestBoundaryRegex: String
     }
 
-    private struct AppSourceBoundaryRule: Decodable {
+    private struct AppBoundaryRule: Decodable {
         let id: String
         let regex: String
         let rationale: String
     }
+
+    private typealias AppSourceBoundaryRule = AppBoundaryRule
 
     private struct BoundarySchema: Decodable {
         let type: String
@@ -46,7 +48,8 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         }
 
         XCTAssertFalse(config.commentFilterRegex.isEmpty)
-        XCTAssertFalse(config.appTestBoundaryRegex.isEmpty)
+        XCTAssertFalse(config.appTestBoundaryRules.isEmpty)
+        XCTAssertTrue(config.appTestBoundaryRules.allSatisfy { !$0.id.isEmpty && !$0.regex.isEmpty && !$0.rationale.isEmpty })
         XCTAssertFalse(config.appSourceBoundaryRules.isEmpty)
         XCTAssertTrue(config.appSourceBoundaryRules.allSatisfy { !$0.id.isEmpty && !$0.regex.isEmpty && !$0.rationale.isEmpty })
     }
@@ -74,14 +77,81 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         try sampleContent.write(to: sampleFile, atomically: true, encoding: .utf8)
 
         let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
+        guard let testRule = config.appTestBoundaryRules.first(where: { $0.regex.contains("WeeklyInferenceClassifier\\.classify") }) else {
+            XCTFail("Missing app test boundary rule for core inference classifier.")
+            return
+        }
+
         let cmd = """
-        grep -RIn --include="*.swift" -E '\(config.appTestBoundaryRegex)' "\(escapedRoot)/Tests/ZoneTruthAppTests" | grep -Ev '\(config.commentFilterRegex)' || true
+        grep -RIn --include="*.swift" -E '\(testRule.regex)' "\(escapedRoot)/Tests/ZoneTruthAppTests" | grep -Ev '\(config.commentFilterRegex)' || true
         """
         let output = try runBash(cmd)
 
         XCTAssertFalse(output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         XCTAssertTrue(output.contains("BoundaryHitSample.swift:"))
         XCTAssertTrue(output.contains("WeeklyInferenceClassifier.classify"))
+    }
+
+    func testEveryAppTestBoundaryRuleHasDedicatedNegativeFixtureHit() throws {
+        let config = try loadBoundaryConfig()
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("zt-boundary-\(UUID().uuidString)", isDirectory: true)
+        let appTestsDir = tempRoot
+            .appendingPathComponent("Tests", isDirectory: true)
+            .appendingPathComponent("ZoneTruthAppTests", isDirectory: true)
+        try FileManager.default.createDirectory(at: appTestsDir, withIntermediateDirectories: true)
+
+        let fixtureByRuleID: [String: String] = [
+            "core_inference_classifier_in_app_tests": """
+            import XCTest
+            final class RuleFixtureCoreInferenceClassifier: XCTestCase {
+                func testHit() {
+                    _ = WeeklyInferenceClassifier.classify(
+                        confidence: 0.85, freshness: .fresh, workoutCount: 3, elapsedDays: 7
+                    )
+                }
+            }
+            """,
+            "core_confidence_semantics_in_app_tests": """
+            import XCTest
+            final class RuleFixtureCoreConfidenceSemantics: XCTestCase {
+                func testHit() {
+                    _ = WeeklyConfidenceSemantics.calibrated(
+                        confidence: 0.75, freshness: .fresh, elapsedDays: 7
+                    )
+                }
+            }
+            """,
+            "core_freshness_classifier_in_app_tests": """
+            import XCTest
+            final class RuleFixtureCoreFreshnessClassifier: XCTestCase {
+                func testHit() {
+                    _ = WeeklyFreshnessSignal.classify(workoutCount: 2, elapsedDays: 7)
+                }
+            }
+            """
+        ]
+
+        for rule in config.appTestBoundaryRules {
+            guard let fixture = fixtureByRuleID[rule.id] else {
+                XCTFail("Missing fixture mapping for app test boundary rule id: \(rule.id)")
+                continue
+            }
+
+            let fileName = "RuleFixture_\(rule.id).swift".replacingOccurrences(of: "-", with: "_")
+            let fixtureFile = appTestsDir.appendingPathComponent(fileName)
+            try fixture.write(to: fixtureFile, atomically: true, encoding: .utf8)
+
+            let escapedRoot = tempRoot.path.replacingOccurrences(of: "\"", with: "\\\"")
+            let cmd = """
+            grep -RIn --include="*.swift" -E '\(rule.regex)' "\(escapedRoot)/Tests/ZoneTruthAppTests" | grep -Ev '\(config.commentFilterRegex)' || true
+            """
+            let output = try runBash(cmd)
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            XCTAssertFalse(trimmed.isEmpty, "Expected rule to hit fixture: \(rule.id)")
+            XCTAssertTrue(output.contains("RuleFixture_"), "Expected file reference for rule: \(rule.id)")
+        }
     }
 
     func testAppSourceBoundaryScanReturnsFileLineHitFormat() throws {

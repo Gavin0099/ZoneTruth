@@ -1,6 +1,22 @@
 {
   "comment_filter_regex": "^[^:]+:[0-9]+:[[:space:]]*//",
-  "app_test_boundary_regex": "WeeklyInferenceClassifier\\.classify|WeeklyConfidenceSemantics\\.calibrated|WeeklyFreshnessSignal\\.classify",
+  "app_test_boundary_rules": [
+    {
+      "id": "core_inference_classifier_in_app_tests",
+      "regex": "WeeklyInferenceClassifier\\.classify",
+      "rationale": "App tests must not re-test core inference classification semantics."
+    },
+    {
+      "id": "core_confidence_semantics_in_app_tests",
+      "regex": "WeeklyConfidenceSemantics\\.calibrated",
+      "rationale": "App tests must not re-test core confidence calibration semantics."
+    },
+    {
+      "id": "core_freshness_classifier_in_app_tests",
+      "regex": "WeeklyFreshnessSignal\\.classify",
+      "rationale": "App tests must not re-test core freshness classification semantics."
+    }
+  ],
   "app_source_boundary_rules": [
     {
       "id": "core_classifier_in_app_source",

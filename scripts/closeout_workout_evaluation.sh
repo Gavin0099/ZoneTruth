@@ -106,7 +106,7 @@ import json, sys
 path = sys.argv[1]
 with open(path, "r", encoding="utf-8") as fh:
     payload = json.load(fh)
-for key in ("comment_filter_regex", "app_test_boundary_regex"):
+for key in ("comment_filter_regex",):
     value = payload.get(key)
     if not isinstance(value, str) or not value:
         print("")
@@ -116,8 +116,27 @@ PY
 )
 
 BOUNDARY_COMMENT_FILTER_REGEX="${boundary_patterns[0]:-}"
-APP_TEST_BOUNDARY_REGEX="${boundary_patterns[1]:-}"
-if [[ -z "$BOUNDARY_COMMENT_FILTER_REGEX" || -z "$APP_TEST_BOUNDARY_REGEX" ]]; then
+if [[ -z "$BOUNDARY_COMMENT_FILTER_REGEX" ]]; then
+  echo "test_boundary_guard: invalid_boundary_pattern_config"
+  exit 1
+fi
+
+readarray -t app_test_boundary_rules < <(python - "$BOUNDARY_PATTERN_JSON" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+rules = payload.get("app_test_boundary_rules", [])
+for rule in rules:
+    rid = rule.get("id", "")
+    regex = rule.get("regex", "")
+    rationale = rule.get("rationale", "")
+    if isinstance(rid, str) and rid and isinstance(regex, str) and regex and isinstance(rationale, str) and rationale:
+        print(f"{rid}\t{regex}\t{rationale}")
+PY
+)
+
+if [[ ${#app_test_boundary_rules[@]} -eq 0 ]]; then
   echo "test_boundary_guard: invalid_boundary_pattern_config"
   exit 1
 fi
@@ -400,15 +419,28 @@ fi
 
 # Expand to entire app-test directory and report concrete hits.
 # Basic false-positive reduction: ignore comment-only lines.
-app_test_boundary_hits="$(
-  grep -RIn --include="*.swift" -E "$APP_TEST_BOUNDARY_REGEX" Tests/ZoneTruthAppTests \
-  | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
-)"
+app_test_boundary_hits=""
+for rule_line in "${app_test_boundary_rules[@]}"; do
+  IFS=$'\t' read -r rule_id rule_regex rule_rationale <<< "$rule_line"
+  if [[ -z "${rule_id:-}" || -z "${rule_regex:-}" ]]; then
+    continue
+  fi
+  rule_hits="$(
+    grep -RIn --include="*.swift" -E "$rule_regex" Tests/ZoneTruthAppTests \
+    | grep -Ev "$BOUNDARY_COMMENT_FILTER_REGEX" || true
+  )"
+  if [[ -n "$rule_hits" ]]; then
+    while IFS= read -r hit_line; do
+      [[ -z "$hit_line" ]] && continue
+      app_test_boundary_hits+="$rule_id|$rule_rationale|$hit_line"$'\n'
+    done <<< "$rule_hits"
+  fi
+done
 if [[ -n "$app_test_boundary_hits" ]]; then
   test_boundary_guard="app_tests_retesting_core_inference_semantics"
   echo "test_boundary_guard: ${test_boundary_guard}"
   echo "test_boundary_hits:"
-  echo "$app_test_boundary_hits"
+  printf '%s' "$app_test_boundary_hits"
   exit 1
 fi
 
