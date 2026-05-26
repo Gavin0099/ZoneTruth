@@ -257,9 +257,11 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
             let store = HKHealthStore()
             let workouts = try await recentWorkouts(from: store, limit: limit)
 
-            return try await workouts.asyncMap { workout in
-                let heartRateSamples = try await heartRateSamples(for: workout, from: store)
-                let hrvSDNNMilliseconds = try await averageHRVSDNN(for: workout, from: store)
+            return await workouts.asyncMapResilient { workout in
+                // Per-workout resilience: if HR or HRV query fails for one workout,
+                // return it with empty samples rather than failing the entire batch.
+                let hrSamples = (try? await heartRateSamples(for: workout, from: store)) ?? []
+                let hrvSDNNMilliseconds = try? await averageHRVSDNN(for: workout, from: store)
                 let wType = domainWorkoutType(for: workout.workoutActivityType)
                 let calories = workoutActiveCalories(workout)
                 let distance = workoutDistance(workout, workoutType: wType)
@@ -267,7 +269,7 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
                     workoutType: wType,
                     startDate: workout.startDate,
                     endDate: workout.endDate,
-                    heartRateSamples: heartRateSamples,
+                    heartRateSamples: hrSamples,
                     hrvSDNNMilliseconds: hrvSDNNMilliseconds,
                     activeCaloriesKcal: calories,
                     totalDistanceMeters: distance
@@ -459,6 +461,14 @@ private extension Sequence {
         var results: [T] = []
         for element in self {
             results.append(try await transform(element))
+        }
+        return results
+    }
+
+    func asyncMapResilient<T>(_ transform: (Element) async -> T) async -> [T] {
+        var results: [T] = []
+        for element in self {
+            results.append(await transform(element))
         }
         return results
     }
