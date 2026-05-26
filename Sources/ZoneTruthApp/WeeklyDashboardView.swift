@@ -278,6 +278,18 @@ extension TrainingState {
         }
     }
 
+    // Used by StateProgressionBar chips. Must not expose clinical term;
+    // progressionBarLabel is the only label path for progression bar rendering.
+    var progressionBarLabel: String {
+        switch self {
+        case .recovered:             return "恢復穩定"
+        case .accumulatingLoad:      return "累積負荷"
+        case .functionalFatigue:     return "恢復壓力偏高"
+        case .possibleUnderRecovery: return "可能恢復不足"
+        case .recoveryNormalizing:   return "恢復回穩"
+        }
+    }
+
     // Claim ceiling for training state labels.
     // .functionalFatigue requires longitudinal performance degradation data which
     // this system does not collect; the internal classification fires on
@@ -1106,7 +1118,7 @@ private struct StateProgressionBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(TrainingState.progression, id: \.rawValue) { state in
-                    Text(state.localizedLabel)
+                    Text(state.progressionBarLabel)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(state == currentState ? .white : .secondary)
                         .padding(.horizontal, 8)
