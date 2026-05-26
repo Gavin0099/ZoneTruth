@@ -233,49 +233,36 @@ PY
 }
 
 evaluate_boundary_trend_gate() {
+  local summarize_rc=0
   python3 scripts/summarize_boundary_telemetry.py \
     --telemetry-dir "$boundary_telemetry_dir" \
     --limit "$boundary_trend_window" \
-    --output "$boundary_trend_summary_file" >/dev/null 2>&1 || true
+    --max-failure-events "$boundary_trend_max_failure_events" \
+    --max-rule-hits "$boundary_trend_max_rule_hits" \
+    --output "$boundary_trend_summary_file" >/dev/null 2>&1 || summarize_rc=$?
   if [[ ! -f "$boundary_trend_summary_file" ]]; then
     boundary_trend_gate="missing_summary"
     echo "boundary_trend_gate: ${boundary_trend_gate}"
     return 1
   fi
 
-  local failure_events=0
-  local hottest_rule_hits=0
-  read -r failure_events hottest_rule_hits < <(python3 - "$boundary_trend_summary_file" <<'PY'
+  local failure_events=0 hottest_rule_hits=0 gate_reason="unknown" gate_verdict="unknown"
+  read -r failure_events hottest_rule_hits gate_verdict gate_reason < <(python3 - "$boundary_trend_summary_file" <<'PY'
 import json, sys
 path = sys.argv[1]
 with open(path, "r", encoding="utf-8") as fh:
     payload = json.load(fh)
-status_counts = payload.get("statusCounts", {})
-failure_events = 0
-for key, val in status_counts.items():
-    if key.startswith("failed_"):
-        failure_events += int(val)
-rule_hit_trend = payload.get("ruleHitTrend", [])
-hottest = 0
-if rule_hit_trend:
-    hottest = int(rule_hit_trend[0].get("hitCount", 0))
-print(f"{failure_events} {hottest}")
+gate = payload.get("trendGate", {})
+print(f"{int(gate.get('failureEvents', 0))} {int(gate.get('hottestRuleHits', 0))} {gate.get('verdict', 'unknown')} {gate.get('reason', 'unknown')}")
 PY
 )
 
-  if [[ "$failure_events" -gt "$boundary_trend_max_failure_events" ]]; then
-    boundary_trend_gate="failure_event_threshold_exceeded"
+  if [[ "$summarize_rc" -ne 0 || "$gate_verdict" == "fail" ]]; then
+    boundary_trend_gate="${gate_reason}"
     echo "boundary_trend_gate: ${boundary_trend_gate}"
     echo "boundary_trend_window: ${boundary_trend_window}"
     echo "boundary_trend_failure_events: ${failure_events}"
     echo "boundary_trend_max_failure_events: ${boundary_trend_max_failure_events}"
-    return 1
-  fi
-
-  if [[ "$hottest_rule_hits" -gt "$boundary_trend_max_rule_hits" ]]; then
-    boundary_trend_gate="rule_hit_threshold_exceeded"
-    echo "boundary_trend_gate: ${boundary_trend_gate}"
-    echo "boundary_trend_window: ${boundary_trend_window}"
     echo "boundary_trend_hottest_rule_hits: ${hottest_rule_hits}"
     echo "boundary_trend_max_rule_hits: ${boundary_trend_max_rule_hits}"
     return 1

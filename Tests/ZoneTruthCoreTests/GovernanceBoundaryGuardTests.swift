@@ -76,6 +76,61 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         XCTAssertTrue(script.contains("boundary_telemetry_*.json"))
         XCTAssertTrue(script.contains("ruleHitTrend"))
         XCTAssertTrue(script.contains("statusCounts"))
+        XCTAssertTrue(script.contains("trendGate"))
+    }
+
+    func testBoundaryTrendGatePassesWithinThresholds() throws {
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("zt-boundary-telemetry-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        try writeTelemetryFixture(
+            at: tempRoot.appendingPathComponent("boundary_telemetry_20260526T000000Z.json"),
+            status: "passed",
+            appTestHits: [],
+            appSourceHits: []
+        )
+        let outputFile = tempRoot.appendingPathComponent("summary.json")
+        let scriptPath = boundaryRoot()
+            .appendingPathComponent("scripts", isDirectory: true)
+            .appendingPathComponent("summarize_boundary_telemetry.py")
+            .path
+        let cmd = """
+        python3 "\(scriptPath)" --telemetry-dir "\(tempRoot.path)" --limit 20 --max-failure-events 1 --max-rule-hits 1 --output "\(outputFile.path)"
+        """
+        let result = try runBashWithExit(cmd)
+        XCTAssertEqual(result.exitCode, 0, "Expected trend gate pass, got output: \(result.output)")
+
+        let summaryData = try Data(contentsOf: outputFile)
+        let payload = try JSONSerialization.jsonObject(with: summaryData) as? [String: Any]
+        let trendGate = payload?["trendGate"] as? [String: Any]
+        XCTAssertEqual(trendGate?["verdict"] as? String, "pass")
+    }
+
+    func testBoundaryTrendGateFailsWhenThresholdExceeded() throws {
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("zt-boundary-telemetry-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        try writeTelemetryFixture(
+            at: tempRoot.appendingPathComponent("boundary_telemetry_20260526T000000Z.json"),
+            status: "failed_app_test_boundary",
+            appTestHits: ["core_inference_classifier_in_app_tests|rationale|Tests/ZoneTruthAppTests/A.swift:10:hit"],
+            appSourceHits: []
+        )
+        let outputFile = tempRoot.appendingPathComponent("summary.json")
+        let scriptPath = boundaryRoot()
+            .appendingPathComponent("scripts", isDirectory: true)
+            .appendingPathComponent("summarize_boundary_telemetry.py")
+            .path
+        let cmd = """
+        python3 "\(scriptPath)" --telemetry-dir "\(tempRoot.path)" --limit 20 --max-failure-events 0 --max-rule-hits 0 --output "\(outputFile.path)"
+        """
+        let result = try runBashWithExit(cmd)
+        XCTAssertEqual(result.exitCode, 2, "Expected trend gate fail (exit 2), got output: \(result.output)")
+
+        let summaryData = try Data(contentsOf: outputFile)
+        let payload = try JSONSerialization.jsonObject(with: summaryData) as? [String: Any]
+        let trendGate = payload?["trendGate"] as? [String: Any]
+        XCTAssertEqual(trendGate?["verdict"] as? String, "fail")
     }
 
     func testAppTestBoundaryScanReturnsFileLineHitFormat() throws {
@@ -288,6 +343,11 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
     }
 
     private func runBash(_ command: String) throws -> String {
+        let result = try runBashWithExit(command)
+        return result.output
+    }
+
+    private func runBashWithExit(_ command: String) throws -> (output: String, exitCode: Int32) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = ["-lc", command]
@@ -300,7 +360,29 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         process.waitUntilExit()
 
         let data = stdout.fileHandleForReading.readDataToEndOfFile()
-        return String(decoding: data, as: UTF8.self)
+        return (String(decoding: data, as: UTF8.self), process.terminationStatus)
+    }
+
+    private func writeTelemetryFixture(
+        at url: URL,
+        status: String,
+        appTestHits: [String],
+        appSourceHits: [String]
+    ) throws {
+        let payload: [String: Any] = [
+            "generated_at_utc": "2026-05-26T00:00:00Z",
+            "status": status,
+            "app_test_boundary_rule_total": 3,
+            "app_test_boundary_rule_hit_count": appTestHits.isEmpty ? 0 : 1,
+            "app_test_boundary_hit_count": appTestHits.count,
+            "app_source_boundary_rule_total": 5,
+            "app_source_boundary_rule_hit_count": appSourceHits.isEmpty ? 0 : 1,
+            "app_source_boundary_hit_count": appSourceHits.count,
+            "app_test_boundary_hits": appTestHits,
+            "app_source_boundary_hits": appSourceHits
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted])
+        try data.write(to: url)
     }
 
     private func boundaryRoot() -> URL {
