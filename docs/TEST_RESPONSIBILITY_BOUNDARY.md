@@ -22,3 +22,4 @@ Prevent test architecture from reverse-contaminating product architecture bounda
 - Boundary trend gate (in closeout): window/threshold can be tuned via `BOUNDARY_TREND_WINDOW`, `BOUNDARY_TREND_MAX_FAILURE_EVENTS`, `BOUNDARY_TREND_MAX_RULE_HITS`
 - Boundary rollup includes `trendGate` verdict (`pass`/`fail`), and returns exit code `2` when thresholds are exceeded.
 - Clean-pilot admissibility is evaluated in closeout and always disclosed; set `CLEAN_PILOT_ADMISSIBILITY_ENFORCE=1` to make non-admissible state fail-close.
+- Enforce smoke command: `CLEAN_PILOT_ADMISSIBILITY_ENFORCE=1 bash scripts/closeout_clean_pilot_enforce_smoke.sh` (expects non-zero exit when repo is non-admissible).

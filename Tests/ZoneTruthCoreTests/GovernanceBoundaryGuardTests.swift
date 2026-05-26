@@ -70,6 +70,17 @@ final class GovernanceBoundaryGuardTests: XCTestCase {
         XCTAssertTrue(script.contains("clean_pilot_admissibility_guard:"))
     }
 
+    func testCleanPilotEnforceSmokeScriptContractPresent() throws {
+        let scriptURL = boundaryRoot()
+            .appendingPathComponent("scripts", isDirectory: true)
+            .appendingPathComponent("closeout_clean_pilot_enforce_smoke.sh", isDirectory: false)
+        let script = try String(contentsOf: scriptURL, encoding: .utf8)
+
+        XCTAssertTrue(script.contains("clean_pilot_admissibility_guard:"))
+        XCTAssertTrue(script.contains("clean_pilot_admissibility_enforce: enabled"))
+        XCTAssertTrue(script.contains("exit 1"))
+    }
+
     func testBoundaryTelemetryRollupScriptContractPresent() throws {
         let scriptURL = boundaryRoot()
             .appendingPathComponent("scripts", isDirectory: true)
