@@ -41,10 +41,10 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Phase A: 核心分析引擎建立（Zone 2 / VO2 / 強度分析器，觀測 + 政策層分離）
 - [x] Phase B: App 資料源整合（HealthKit adapter、Strava OAuth + 自動 refresh、JSON import）
 - [x] Phase C: 語義治理層（WorkoutEvaluation、InferenceProvenance、weekly signal 遷入 Core）
-- [>] Phase D: 治理邊界強化（boundary guard 規則化、遙測、clean-pilot admissibility）
-- [ ] Phase E: 裝置驗證 + 發版準備（on-device HealthKit、Strava 真實憑證測試）
+- [x] Phase D: 治理邊界強化（boundary guard 規則化、遙測、clean-pilot admissibility）
+- [>] Phase E: 裝置驗證 + 發版準備（on-device HealthKit、Strava 真實憑證測試）
 
-**Current Phase**: Phase D — 治理邊界強化
+**Current Phase**: Phase E — 裝置驗證 + 發版準備
 
 ---
 
@@ -117,8 +117,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] clean-pilot admissibility smoke 可執行（enforce 模式）
 
 ### Phase E 開始條件
-- [ ] `version_compatibility.json` 時間戳變更已提交
-- [ ] Phase D 記憶文件已更新
+- [x] `version_compatibility.json` 時間戳變更已提交（928f835）
+- [x] Phase D 記憶文件已更新（7fd8a09）
 
 ### Phase E 完成條件（待定義）
 - on-device HealthKit 路徑驗證 pass
@@ -147,7 +147,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Phase B: 資料源整合完成 | 2026-05-10 | ✅ Done |
 | Phase C: 語義治理層完成 | 2026-05-20 | ✅ Done |
 | Phase D: 治理邊界強化完成 | 2026-05-26 | ✅ Done |
-| Phase E: 裝置驗證 + 發版準備 | 2026-06-30 | 🔄 Next |
+| Phase E: 裝置驗證 + 發版準備 | 2026-06-30 | 🔄 In Progress |
 
 ---
 
