@@ -6,320 +6,154 @@ overridden_by: ~
 default_load: always
 ---
 
-# PLAN.md 模板與治理說明
+# PLAN.md — ZoneTruth
 
-> **最後更新**: 2026-05-25
+> **Project Type**: iOS fitness app + governance toolchain
+> **Primary Language**: Swift (app core) / Python (governance tooling)
+> **Task Level**: L2
+> **Planning Window**: 2026-04-01 ~ 2026-06-30
+> **最後更新**: 2026-05-26
 > **Owner**: Gavin Wu
 > **Freshness**: Sprint (7d)
->
-> **這是 repo 的規劃單一真相來源範本。**
-> 真正提供 AI 與 reviewer 使用的專案規劃檔，應放在 repo root 的 [`PLAN.md`](../PLAN.md)。
-> 本文件的角色是說明 PLAN 應該長什麼樣，以及為什麼需要它。
-
----
-
-## 1. PLAN.md 的角色
-
-`PLAN.md` 不是 README，也不是任意備忘錄。它是專案目前規劃狀態的 canonical source，負責：
-- 當前 focus 是什麼
-- 目前在第幾個 phase
-- 這個 phase 明確要做什麼
-- 哪些事情刻意不做
-- AI 在這個 phase 中怎麼判斷 scope 與 next step
-
-如果沒有 `PLAN.md`，AI 很容易：
-- 看見 backlog 就一路往外擴
-- 把相鄰工程工作與 feature expansion 混在一起
-- 在沒有 anti-goal 的情況下誤解使用者意圖
-
----
-
-## 2. PLAN 的基本原則
-
-### 2.1 Single Source of Truth
-
-對 planned work、phase status、anti-goals 而言：
-
-```text
-PLAN.md = 單一真相來源
-```
-
-其他文件可以補充，但不應各自維護另一份長期規劃，並讓它和 `PLAN.md` 漂移。
-
-### 2.2 AI 會怎麼用它
-
-AI 讀 `PLAN.md` 主要是為了回答：
-- 當前 phase 是什麼
-- 哪些 backlog 還沒輪到
-- 哪些工作雖然看似合理，但被 anti-goals 明確排除
-- 使用者新要求屬於：當前 phase、相鄰工程、還是 feature expansion
-
-### 2.3 它不是萬能阻擋器
-
-`PLAN.md` 管的是 feature priority，不是用來阻止所有相鄰工程活動。
-
-預設仍屬於可直接處理的相鄰工程包括：
-- build
-- test
-- debugging
-- review
-- commit preparation
-- documentation synchronization
-- bounded governance analysis
-
-只有當這些工作跨到 hard boundary、risk gate、或 feature expansion，才需要 escalate。
-
----
-
-## 3. Mandatory Structure
-
-每個 repo 的 root `PLAN.md` 至少應包含以下區塊：
-
-```markdown
-# PLAN.md - [Project Name]
-
-> **Project Type**: [type]
-> **Primary Language**: [language]
-> **Task Level**: L1 / L2 / L3
-> **Planning Window**: [start] ~ [end]
-> **Last Updated**: YYYY-MM-DD
-> **Owner**: [name]
-> **Freshness**: Sprint (7d) | Phase (30d) | Custom (Nd)
 
 ---
 
 ## 專案目標
 
+ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質判斷、多週適應趨勢、以及跨資料源整合。
+
+**Bounded Context:**
+- Zone 2 / VO2 / 肌力訓練品質分析（觀測層 + 政策層分離）
+- Apple HealthKit、Strava、JSON 手動匯入整合
+- 每週適應訊號與訓練狀態推論（non-interventional authority ceiling）
+- AI 代理 token 可觀測性工具（CodeBurn，Class C 觀測，不跨 provider 比較）
+
+**Not Responsible For:**
+- 即時運動監控或即時 coaching
+- Garmin 整合（明確延後至 MVP 後）
+- 計費計算或 cross-provider token 成本估算（CodeBurn P6 constraint C-1）
+- 訓練計劃生成（不在當前語義權限內）
+
+---
+
 ## 當前階段與 phase 狀態
+
+- [x] Phase A: 核心分析引擎建立（Zone 2 / VO2 / 強度分析器，觀測 + 政策層分離）
+- [x] Phase B: App 資料源整合（HealthKit adapter、Strava OAuth + 自動 refresh、JSON import）
+- [x] Phase C: 語義治理層（WorkoutEvaluation、InferenceProvenance、weekly signal 遷入 Core）
+- [>] Phase D: 治理邊界強化（boundary guard 規則化、遙測、clean-pilot admissibility）
+- [ ] Phase E: 裝置驗證 + 發版準備（on-device HealthKit、Strava 真實憑證測試）
+
+**Current Phase**: Phase D — 治理邊界強化
+
+---
 
 ## 當前 Sprint / 當前工作
 
+已完成（Phase D 核心交付，本 sprint 已封閉）：
+- [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
+- [x] 邊界 guard 設定遷至 JSON 單一來源（`scripts/closeout_boundary_patterns.json`）
+- [x] JSON schema 驗證（`schemas/closeout_boundary_patterns.schema.json`）
+- [x] 境界 guard 遙測排放（`artifacts/runtime/boundary-telemetry/`）
+- [x] 邊界趨勢閘道整合 closeout（threshold 控制 + fail-close）
+- [x] Clean-pilot admissibility 整合 closeout（disclosed guard + optional enforce mode）
+- [x] Enforce-mode smoke test（`scripts/closeout_clean_pilot_enforce_smoke.sh`）
+- [x] 10 個 GovernanceBoundaryGuardTests 全部通過
+
+待處理（Phase D 尾巴）：
+- [ ] 提交 `artifacts/governance/version_compatibility.json` 時間戳更新（小變更）
+- [ ] 可選：meta-closeout wrapper（一個指令跑全套 governance regression checks）
+
+---
+
 ## Backlog
 
-## Anti-Goals
+### P0（Phase E 就緒必要條件）
+- 裝置端 HealthKit 查詢路徑驗證（真實裝置，sparse HR 邊界）
+- Strava 真實憑證端對端測試（Client ID: 248735，repo private）
+- `ZoneTruthHost` Xcode project 在裝置上確認 HealthKit 能力簽署正確
+
+### P1（Phase E 品質提升）
+- 個人化 zone 界線設定（Resting HR、Zone 2 上下界輸入）
+- 擴充邊緣案例標籤集（drift / leakage 閾值附近）
+- VO2/強度分析路徑擴充（超出「MVP 範圍外」佔位符後）
+
+### P2（非阻擋，有空再做）
+- Meta-closeout wrapper（一個指令跑全套 governance regression checks）
+- CodeBurn P6：acquisition surface statistics display（觀測層，需遵守 A-1/T-1/C-1/R-1/O-1/V-1 約束）
+- 文字/UI 語氣精修
+
+---
+
+## Anti-Goals（當前 sprint / Phase D～E）
+
+- 不實作 Garmin 整合（明確延後至 MVP 後語義/model 穩定）
+- 不實作成本估算、跨 provider token 比較（CodeBurn P6 constraint C-1 / O-1）
+- 不把 advisory threshold 升格為 verified boundary（CodeBurn P7 AT-4）
+- 不在 App layer 重新加入 inference 語義分類呼叫（已由 Core 負責，boundary guard 防線保護）
+- 不在沒有 observed failure 驅動下擴展治理表面（AGENTS.md 原則）
+- 不在 Phase E 開始前做 feature expansion
+
+---
 
 ## AI 執行規則
+
+1. **當前 phase 外的 feature** → escalate，不默默開始
+2. **adjacent engineering**（build / test / debug / docs sync / governance analysis）→ 可直接做
+3. **遇到 PLAN.md 不完整或過期** → 先更新 PLAN.md，再繼續
+4. **boundary guard 相關測試** → 任何改動都要跑 `swift test --filter GovernanceBoundaryGuardTests`
+5. **closeout 相關腳本改動** → 要跑 `bash -n scripts/closeout_workout_evaluation.sh`
+6. **App layer 不得** 呼叫 inference 語義分類 / 產生 provenance（boundary guard 負責檢查）
+7. **CodeBurn 工作** → 嚴格遵守 P6 六大約束（A-1、T-1、C-1、R-1、O-1、V-1）
+
+---
 
 ## Gate / 完成條件
 
-## 已知問題或技術債（選填）
+### Phase D 完成條件（已達成）
+- [x] GovernanceBoundaryGuardTests 10 tests, 0 failures
+- [x] `bash -n scripts/closeout_workout_evaluation.sh` SYNTAX OK
+- [x] boundary telemetry artifact 存在於 `artifacts/runtime/boundary-telemetry/`
+- [x] clean-pilot admissibility smoke 可執行（enforce 模式）
+
+### Phase E 開始條件
+- [ ] `version_compatibility.json` 時間戳變更已提交
+- [ ] Phase D 記憶文件已更新
+
+### Phase E 完成條件（待定義）
+- on-device HealthKit 路徑驗證 pass
+- Strava 真實憑證端對端 pass
+- `ZoneTruthHost` 裝置簽署確認
+
+---
+
+## 已知問題與技術債
+
+| 項目 | 狀態 | 優先 |
+|---|---|---|
+| `artifacts/governance/version_compatibility.json` 時間戳未提交 | 待提交 | Low |
+| `PLAN.md` 過去為樣板文件，實質規劃缺失 | 已修正（本次） | Done |
+| `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
+| clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
+| Garmin 整合尚未啟動 | 明確延後 | Deferred |
+
+---
 
 ## 里程碑
 
-## 更新紀錄
-```
-
-缺少這些基本區塊，AI 就比較難穩定判斷目前「該做什麼」與「不該做什麼」。
-
----
-
-## 4. Header 欄位
-
-`Last Updated`、`Owner`、`Freshness` 必須在 header 中明示。
-
-```markdown
-> **Last Updated**: YYYY-MM-DD
-> **Owner**: <owner>
-> **Freshness**: Sprint (7d)
-```
-
-Freshness policy：
-
-| Policy | 說明 | 判定 |
+| 里程碑 | 目標日期 | 狀態 |
 |---|---|---|
-| `Sprint (7d)` | 以 sprint 為單位 | 超過 7 天可視為 stale |
-| `Phase (30d)` | 以 phase 為單位 | 超過 30 天可視為 stale |
-| `Custom (Nd)` | 自定義天數 | 超過 N 天可視為 stale |
-
-`governance_tools/plan_freshness.py` 會使用這些欄位做 freshness 檢查。
-
----
-
-## 5. 內容區塊說明
-
-### 5.1 專案目標
-
-這裡要簡短說清楚：
-- 專案在解什麼問題
-- bounded context 是什麼
-- 明確不負責什麼
-
-至少應回答：
-- responsible for X
-- NOT responsible for Y
-
-### 5.2 當前階段與 phase 狀態
-
-應清楚標出：
-- phase 序列
-- 當前 phase
-- 已完成 / 進行中 / 尚未開始
-
-範例：
-
-```markdown
-## 當前階段與 phase 狀態
-
-- [x] Phase A: 基礎建置
-- [>] Phase B: 核心功能整合
-- [ ] Phase C: 驗證與收斂
-- [ ] Phase D: 發版準備
-
-**Current Phase**: Phase B - 核心功能整合
-```
-
-### 5.3 當前 Sprint / 當前工作
-
-這裡要回答：
-- 這個 sprint / 這個 phase 現在真正要做什麼
-- 哪些任務是當前 focus
-- 哪些工作雖存在，但不屬於 current sprint
-
-### 5.4 Backlog
-
-Backlog 應至少分成：
-- P0
-- P1
-- P2
-
-避免把所有想法平鋪成一個巨大清單，讓 AI 誤以為都可以立刻開始做。
-
-### 5.5 Anti-Goals
-
-這是最重要的區塊之一。它明確說明：
-- 這個 phase / sprint 刻意不做什麼
-- 哪些看似合理的延伸其實不屬於目前 scope
-
-如果沒有 anti-goals，AI 很容易把「可以做」誤解成「現在就該做」。
-
-### 5.6 AI 執行規則
-
-這裡應清楚告訴 AI：
-- 遇到不在 current phase 的工作時怎麼判斷
-- 什麼時候可以視為 adjacent engineering work
-- 什麼時候要 escalate
-
-### 5.7 Gate / 完成條件
-
-對 L2+ repo，建議列出：
-- phase gate
-- build / test / validation 最低要求
-- release 或 reviewer-facing completion condition
-
-### 5.8 里程碑與更新紀錄
-
-至少應留下：
-- milestone 名稱
-- 預計日期
-- 當前狀態
-- update log
-
-這能讓 reviewer 與未來 session 看得出規劃是活的，不是一次性文件。
+| Phase A: 分析引擎完成 | 2026-04-30 | ✅ Done |
+| Phase B: 資料源整合完成 | 2026-05-10 | ✅ Done |
+| Phase C: 語義治理層完成 | 2026-05-20 | ✅ Done |
+| Phase D: 治理邊界強化完成 | 2026-05-26 | ✅ Done |
+| Phase E: 裝置驗證 + 發版準備 | 2026-06-30 | 🔄 Next |
 
 ---
 
-## 6. AI 使用規則
+## 更新紀錄
 
-AI 在讀 `PLAN.md` 時，至少要做這些事：
-- 對照當前請求是否落在 current phase
-- 對照 anti-goals，避免默默擴 scope
-- 對照 backlog priority，避免跳過明顯更重要的項目
-- 在不確定時，提出選項而不是自行重排 roadmap
-
-若 `PLAN.md` 結構明顯不完整、欄位缺失、或 freshness 過舊，應明說這個風險，而不是假裝規劃仍然可靠。
-
----
-
-## 7. L1 / L2 / L3 適用建議
-
-### L1
-
-可用較輕量的 phase / sprint 結構，但仍應具備：
-- 專案目標
-- 當前工作
-- backlog
-- anti-goals
-- AI 執行規則
-
-### L2
-
-應完整具備本文件列出的 mandatory structure。
-
-### L3
-
-除了完整結構，還建議補：
-- ADR 對應
-- 明確 phase gate
-- 更清楚的 reviewer / release criteria
-
----
-
-## 8. 最小範例
-
-```markdown
-# PLAN.md - Example Project
-
-> **Project Type**: tooling
-> **Primary Language**: Python
-> **Task Level**: L1
-> **Planning Window**: 2026-04-01 ~ 2026-04-30
-> **Last Updated**: 2026-04-08
-> **Owner**: example-owner
-> **Freshness**: Sprint (7d)
-
-## 專案目標
-
-這個 repo 負責生成與驗證治理 artifact。
-
-**Bounded Context**:
-- governance toolchain
-- status generation
-- repo-local validation
-
-**Not Responsible For**:
-- 外部部署系統
-- 非 repo-local production orchestration
-
-## 當前階段與 phase 狀態
-
-- [x] Phase A: baseline 建立
-- [>] Phase B: runtime hardening
-- [ ] Phase C: adoption cleanup
-
-**Current Phase**: Phase B - runtime hardening
-
-## 當前 Sprint / 當前工作
-
-- closeout audit status surface
-- adoption source audit
-- docs 中文主敘事清理
-
-## Backlog
-
-### P0
-- consuming repo readiness gaps
-
-### P1
-- additional release surface cleanup
-
-### P2
-- optional comparative docs refinement
-
-## Anti-Goals
-
-- 不在這一輪做 full multi-agent orchestration
-- 不把 advisory 直接升格成 verdict authority
-
-## AI 執行規則
-
-- 當前 phase 外的 feature expansion 先 escalate
-- bounded docs / test / status cleanup 可直接做
-```
-
----
-
-## 9. Final Principle
-
-`PLAN.md` 的目的不是把 repo 寫得很完整，而是讓 AI 與 reviewer 對「現在該做什麼、刻意不做什麼」有同一張圖。
-
-如果這張圖不存在，擴張幾乎一定會發生。
+| 日期 | 更新內容 |
+|---|---|
+| 2026-05-26 | 全面重寫：從樣板文件改為實質專案計劃；導入當前 phase 狀態、backlog、anti-goals、gate 條件 |
+| 2026-05-25 | 對齊 header 欄位（最後更新 / Owner / Freshness）；加入 gitignore runtime artifacts |
