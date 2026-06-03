@@ -90,6 +90,14 @@ final class SettingsManager: ObservableObject {
         pendingSuggestion = nil
     }
 
+    func resetZone2BoundsToDefault() {
+        let defaultBounds = AnalysisPolicy.default.zoneBounds
+        updateZone2Bounds(
+            lower: defaultBounds.zone2LowerBound,
+            upper: defaultBounds.zone2UpperBound
+        )
+    }
+
     func updateCalibrationSuggestion(analyses: [(WorkoutInput, AnalysisResult)]) {
         pendingSuggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
     }

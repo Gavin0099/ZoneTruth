@@ -1159,6 +1159,19 @@ struct CalibrationSuggestionView: View {
                 .foregroundStyle(.white.opacity(0.9))
                 .lineSpacing(4)
 
+            HStack(spacing: 8) {
+                Text(suggestion.source.displayLabel)
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white.opacity(0.82))
+                Text(suggestion.source.verificationLabel)
+                    .font(.caption2.bold())
+                    .foregroundStyle(PremiumColor.gold)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(Color.black.opacity(0.16))
+                    .clipShape(Capsule())
+            }
+
             HStack(spacing: 12) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading) {
@@ -1396,6 +1409,27 @@ struct SettingsView: View {
             HStack(spacing: 20) {
                 zone2BoundField(title: "下限", value: zone2LowerBinding)
                 zone2BoundField(title: "上限", value: zone2UpperBinding)
+            }
+
+            HStack(spacing: 10) {
+                Button("重設為預設") {
+                    withAnimation {
+                        settingsManager.resetZone2BoundsToDefault()
+                    }
+                }
+                .font(.caption.bold())
+                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .background(Color.white.opacity(0.1))
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+                .disabled(!settingsManager.isUsingCustomZoneBounds)
+
+                if !settingsManager.isUsingCustomZoneBounds {
+                    Text("目前已是預設界線")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(14)

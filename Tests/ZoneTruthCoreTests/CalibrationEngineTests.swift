@@ -24,6 +24,7 @@ final class CalibrationEngineTests: XCTestCase {
         let suggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
         XCTAssertNotNil(suggestion)
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, policy.zoneBounds.zone2UpperBound + 3)
+        XCTAssertEqual(suggestion?.source, .driftTrend)
         XCTAssertTrue(suggestion?.reason.contains("心率飄移持續偏低") == true)
     }
     
@@ -38,6 +39,7 @@ final class CalibrationEngineTests: XCTestCase {
         let suggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
         XCTAssertNotNil(suggestion)
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, policy.zoneBounds.zone2UpperBound - 3)
+        XCTAssertEqual(suggestion?.source, .driftTrend)
         XCTAssertTrue(suggestion?.reason.contains("心率飄移持續偏高") == true)
     }
 
@@ -52,6 +54,9 @@ final class CalibrationEngineTests: XCTestCase {
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, 125)
         XCTAssertEqual(suggestion?.suggestedBounds.zone4Threshold, 141)
         XCTAssertEqual(suggestion?.suggestedBounds.zone5Threshold, 156)
+        XCTAssertEqual(suggestion?.source, .restingHeartRateHeuristic)
+        XCTAssertEqual(suggestion?.source.displayLabel, "來源：Resting HR 起始建議")
+        XCTAssertEqual(suggestion?.source.verificationLabel, "非驗證閾值")
         XCTAssertTrue(suggestion?.reason.contains("Resting HR") == true)
     }
 

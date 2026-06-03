@@ -450,11 +450,35 @@ public typealias WorkoutKind = WorkoutType
 public typealias AnalysisStatus = AnalysisVerdict
 public typealias WorkoutSummary = WorkoutInput
 
+public enum CalibrationSuggestionSource: String, Codable, Equatable, Sendable {
+    case restingHeartRateHeuristic
+    case driftTrend
+
+    public var displayLabel: String {
+        switch self {
+        case .restingHeartRateHeuristic:
+            return "來源：Resting HR 起始建議"
+        case .driftTrend:
+            return "來源：歷史心率飄移校正"
+        }
+    }
+
+    public var verificationLabel: String {
+        switch self {
+        case .restingHeartRateHeuristic:
+            return "非驗證閾值"
+        case .driftTrend:
+            return "訓練觀測校正"
+        }
+    }
+}
+
 public struct CalibrationSuggestion: Equatable, Sendable {
     public let currentBounds: ZoneBounds
     public let suggestedBounds: ZoneBounds
     public let reason: String
     public let confidence: Double
+    public let source: CalibrationSuggestionSource
     public let sourceSessionIDs: [UUID]
 
     public init(
@@ -462,12 +486,14 @@ public struct CalibrationSuggestion: Equatable, Sendable {
         suggestedBounds: ZoneBounds,
         reason: String,
         confidence: Double,
+        source: CalibrationSuggestionSource,
         sourceSessionIDs: [UUID]
     ) {
         self.currentBounds = currentBounds
         self.suggestedBounds = suggestedBounds
         self.reason = reason
         self.confidence = confidence
+        self.source = source
         self.sourceSessionIDs = sourceSessionIDs
     }
 }
