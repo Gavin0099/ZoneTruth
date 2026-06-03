@@ -170,7 +170,7 @@ public enum SampleWorkoutCases {
                     intent: .vo2Interval
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["時間過少"]
+                expectedReasonSnippets: ["時間偏少"]
             )
         ]
     }
@@ -209,7 +209,7 @@ public enum SampleWorkoutCases {
                     intent: .strength
                 ),
                 expectedVerdict: .fail,
-                expectedReasonSnippets: ["非常高", "體能代謝"]
+                expectedReasonSnippets: ["偏高", "體能代謝"]
             )
         ]
     }

@@ -189,13 +189,13 @@ public enum Zone2QualityAnalyzer {
         let leakageVerdict = Zone3LeakageAnalyzer.verdict(for: distribution)
         switch leakageVerdict {
         case .pass:
-            reasons.append("Zone 3 區間的時間比例維持在 10% 以下，控制得非常好。")
+            reasons.append("Zone 3 區間的時間比例維持在 10% 以下，強度分布偏穩定。")
             severityScores.append(0)
         case .warning:
             reasons.append("Zone 3 區間的時間比例介於 10% 到 20% 之間，對 Zone 2 訓練來說稍微偏高。")
             severityScores.append(1)
         case .fail:
-            reasons.append("Zone 3 區間的時間比例超過 20%，對於 Zone 2 訓練來說強度太高了。")
+            reasons.append("Zone 3 區間的時間比例超過 20%，對 Zone 2 目標來說強度偏高。")
             severityScores.append(2)
         }
         if let leakageBoundaryLabel = Zone3LeakageAnalyzer.boundaryLabel(for: distribution) {
@@ -206,13 +206,13 @@ public enum Zone2QualityAnalyzer {
         let stabilityVerdict = HeartRateStabilityAnalyzer.verdict(for: preparedSamples, policy: policy)
         switch stabilityVerdict {
         case .pass:
-            reasons.append("在整個分析區間內，您的心率保持得非常穩定。")
+            reasons.append("在整個分析區間內，心率波動偏低。")
             severityScores.append(0)
         case .warning:
             reasons.append("心率變異度為中等，這表示您的配速或阻力可能不太均勻。")
             severityScores.append(1)
         case .fail:
-            reasons.append("心率波動過大，這削弱了維持在 Zone 2 狀態的效果。")
+            reasons.append("心率波動偏大，較不利於維持穩定 Zone 2 型態。")
             severityScores.append(2)
         }
 
@@ -220,7 +220,7 @@ public enum Zone2QualityAnalyzer {
         let driftVerdict = HeartRateDriftAnalyzer.verdict(for: preparedSamples)
         switch driftVerdict {
         case .pass:
-            reasons.append("前半段與後半段的心率飄移維持在 5% 以下，耐力表現優秀。")
+            reasons.append("前半段與後半段的心率飄移維持在 5% 以下，後段穩定度偏佳。")
             severityScores.append(0)
         case .warning:
             reasons.append("心率飄移介於 5% 到 8% 之間，顯示有輕微的心率脫鉤現象 (Cardiac Drift)。")
@@ -291,13 +291,13 @@ public enum VO2IntervalAnalyzer {
         
         if highIntensityRatio > 0.10 {
             verdict = .pass
-            reasons.append("在高強度區間 (Zone 4/5) 停留的時間充足，這是一次達標的間歇訓練。")
+            reasons.append("在高強度區間 (Zone 4/5) 停留的時間充足，與間歇訓練目標較一致。")
         } else if highIntensityRatio >= 0.05 {
             verdict = .warning
-            reasons.append("在高強度區間的時間適中；建議下次間歇訓練時可以試著拉高一點強度。")
+            reasons.append("在高強度區間的時間適中；若目標是 VO2，可考慮微調間歇段強度或時間。")
         } else {
             verdict = .fail
-            reasons.append("在高強度區間的時間過少，而這通常是間歇訓練所必備的。")
+            reasons.append("在高強度區間的時間偏少，較不像典型 VO2 間歇訓練。")
         }
 
         switch observation.intervalPatternHint {
@@ -513,10 +513,10 @@ public enum StrengthAnalyzer {
             reasons.append("平均心率 (\(Int(averageHR)) bpm) 稍微偏高，這暗示了組間休息較短，或是這項訓練的代謝需求高於純肌力訓練。")
         } else if averageHR > 130 {
             verdict = .fail
-            reasons.append("平均心率 (\(Int(averageHR)) bpm) 非常高。這次訓練的實質效果比較像是體能代謝循環訓練，而不是傳統肌力訓練。")
+            reasons.append("平均心率 (\(Int(averageHR)) bpm) 偏高。這次訓練型態較像體能代謝循環訓練，而不是傳統肌力訓練。")
         } else {
             verdict = .pass
-            reasons.append("平均心率 (\(Int(averageHR)) bpm) 偏低，這對於組間完全恢復的純肌力訓練來說是非常理想的。")
+            reasons.append("平均心率 (\(Int(averageHR)) bpm) 偏低，與組間恢復較充分的肌力訓練型態一致。")
         }
 
         if verdict == .fail {

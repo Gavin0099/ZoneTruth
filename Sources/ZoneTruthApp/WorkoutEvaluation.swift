@@ -226,7 +226,7 @@ private struct Zone2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationL
             tendency = "偏混合有氧訓練"
             score = 42
             findings = ["Zone 3 比例偏高，與 Zone 2 目標有偏離。", "心率飄移穩定性需搭配整體強度一起看。"]
-            nextAction = "若目標是 Zone 2，請降低配速或阻力，避免長時間停留在 Zone 3。"
+            nextAction = "若目標是 Zone 2，可考慮降低配速或阻力，減少長時間停留在 Zone 3。"
         } else if zone3 >= 0.10 {
             tendency = "偏 Zone 2 但強度略高"
             score = 58
@@ -259,17 +259,17 @@ private struct VO2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationLog
             tendency = "偏高強度間歇訓練"
             score = 84
             findings = ["Zone 4/5 佔比足夠，符合高強度刺激需求。"]
-            nextAction = "維持間歇品質，下一次優先確保每組恢復完整。"
+            nextAction = "可維持目前間歇結構，下一次優先觀察每組之間的恢復是否完整。"
         } else if highIntensity >= 0.05 {
             tendency = "偏中高強度有氧訓練"
             score = 64
             findings = ["有進入高強度區，但總量仍偏中等。", "與標準 VO2 間歇相比，刺激密度略不足。"]
-            nextAction = "下次提高間歇段強度或延長高強度停留時間。"
+            nextAction = "若目標是 VO2，可考慮提高間歇段強度或延長高強度停留時間。"
         } else {
             tendency = "偏穩態有氧訓練"
             score = 45
             findings = ["高強度區停留不足，較不像 VO2 間歇訓練。"]
-            nextAction = "若目標是 VO2，請增加衝刺段強度，確保進入 Zone 4/5。"
+            nextAction = "若目標是 VO2，可考慮增加衝刺段刺激，觀察是否更容易進入 Zone 4/5。"
         }
         return buildEvaluation(
             from: observation,
@@ -290,7 +290,7 @@ private struct StrengthEvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluati
             ? ["高強度停留較多，整體較偏代謝循環刺激。"]
             : ["強度分布較接近傳統肌力訓練節奏。"]
         let nextAction = highIntensity > 0.20
-            ? "若目標是純肌力，請拉長組間休息，降低連續高心率時間。"
+            ? "若目標是純肌力，可考慮拉長組間休息，降低連續高心率時間。"
             : "維持目前訓練節奏，並觀察組間恢復是否穩定。"
         return buildEvaluation(
             from: observation,
@@ -309,7 +309,7 @@ private struct ActivityEvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluati
             trainingTendency: "偏一般活動訓練",
             goalFitScore: 72 + (observation.evaluationConfidence - 70) / 8,
             keyFindings: ["本次為一般活動型態，建議以描述性回顧為主。"],
-            nextAction: "若需要嚴格訓練品質評估，請改用明確訓練目標（Zone2/VO2/Strength）。"
+            nextAction: "若需要嚴格訓練品質評估，可改用明確訓練目標（Zone2/VO2/Strength）。"
         )
     }
 }

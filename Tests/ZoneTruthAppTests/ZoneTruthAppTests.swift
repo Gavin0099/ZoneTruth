@@ -707,6 +707,28 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(combinedText.contains("不及格"))
     }
 
+    func testWorkoutEvaluationUserVisibleToneAvoidsCommandLanguage() {
+        let cases: [(String, TrainingIntent, WorkoutInput)] = [
+            ("zone2_deviation", .zone2, SampleWorkoutCases.zone2ValidationCases().first { $0.name == "leaky_zone2_run" }!.workout),
+            ("vo2_pass", .vo2Interval, SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout),
+            ("vo2_fail", .vo2Interval, SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "low_intensity_intervals" }!.workout),
+            ("strength_metabolic", .strength, SampleWorkoutCases.strengthValidationCases().first { $0.name == "metabolic_strength_circuit" }!.workout),
+            ("activity", .activityReview, SampleWorkoutCases.zone2ValidationCases().first { $0.name == "badminton_activity_review" }!.workout)
+        ]
+        let forbiddenTerms = ["請", "確保", "必須", "保證", "達成", "診斷", "非常"]
+
+        for (id, intent, workout) in cases {
+            let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+                primaryIntentBaseline: intent,
+                legacy: WorkoutIntentAnalyzer.analyze(workout)
+            )
+            let text = ([evaluation.trainingTendency, evaluation.nextAction] + evaluation.keyFindings).joined(separator: " ")
+            for term in forbiddenTerms {
+                XCTAssertFalse(text.contains(term), "Case '\(id)' contains command or overclaiming term: \(term)")
+            }
+        }
+    }
+
     func testWorkoutEvaluationSnapshotFixture() throws {
         let records = buildEvaluationFixtureRecords()
         let fixtureURL = try fixtureFileURL()

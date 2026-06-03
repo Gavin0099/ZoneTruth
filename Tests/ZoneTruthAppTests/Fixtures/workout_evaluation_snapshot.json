@@ -30,7 +30,7 @@
         "Zone 4/5 佔比足夠，符合高強度刺激需求。"
       ],
       "legacyPassFail" : true,
-      "nextAction" : "維持間歇品質，下一次優先確保每組恢復完整。",
+      "nextAction" : "可維持目前間歇結構，下一次優先觀察每組之間的恢復是否完整。",
       "primaryIntent" : "vo2Max",
       "secondarySignals" : [
         "Zone 3 比例 0%",
@@ -51,7 +51,7 @@
         "高強度停留較多，整體較偏代謝循環刺激。"
       ],
       "legacyPassFail" : false,
-      "nextAction" : "若目標是純肌力，請拉長組間休息，降低連續高心率時間。",
+      "nextAction" : "若目標是純肌力，可考慮拉長組間休息，降低連續高心率時間。",
       "primaryIntent" : "strength",
       "secondarySignals" : [
         "Zone 3 比例 50%",
@@ -72,7 +72,7 @@
         "本次為一般活動型態，建議以描述性回顧為主。"
       ],
       "legacyPassFail" : true,
-      "nextAction" : "若需要嚴格訓練品質評估，請改用明確訓練目標（Zone2/VO2/Strength）。",
+      "nextAction" : "若需要嚴格訓練品質評估，可改用明確訓練目標（Zone2/VO2/Strength）。",
       "primaryIntent" : "activity",
       "secondarySignals" : [
         "Zone 3 比例 0%",

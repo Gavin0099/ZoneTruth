@@ -194,6 +194,21 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(circuitResult.reasons.contains { $0.contains("代謝循環訓練型態") })
     }
 
+    func testWorkoutAnalysisUserVisibleToneAvoidsOverclaimingOrCommandLanguage() {
+        let cases = SampleWorkoutCases.zone2ValidationCases()
+            + SampleWorkoutCases.vo2IntervalValidationCases()
+            + SampleWorkoutCases.strengthValidationCases()
+        let forbiddenTerms = ["表現優異", "耐力表現優秀", "達到", "必須", "確保", "請", "非常", "效果"]
+
+        for testCase in cases {
+            let result = WorkoutIntentAnalyzer.analyze(testCase.workout)
+            let text = (result.reasons + result.recommendations).joined(separator: " ")
+            for term in forbiddenTerms {
+                XCTAssertFalse(text.contains(term), "Case '\(testCase.name)' contains overclaiming or command term: \(term)")
+            }
+        }
+    }
+
     func testValidationDatasetMatchesExpectedVerdicts() {
         let allCases = SampleWorkoutCases.zone2ValidationCases() +
                       SampleWorkoutCases.vo2IntervalValidationCases() +
