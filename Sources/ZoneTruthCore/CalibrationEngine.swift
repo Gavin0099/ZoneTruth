@@ -1,6 +1,37 @@
 import Foundation
 
 public enum CalibrationEngine {
+    public static func suggestZoneBounds(
+        restingHeartRate: Double,
+        currentPolicy: AnalysisPolicy
+    ) -> CalibrationSuggestion? {
+        guard restingHeartRate >= 35, restingHeartRate <= 100 else { return nil }
+
+        let suggestedLower = restingHeartRate + 55
+        let suggestedUpper = restingHeartRate + 70
+        guard suggestedUpper > suggestedLower else { return nil }
+
+        let zone4Gap = currentPolicy.zoneBounds.zone4Threshold - currentPolicy.zoneBounds.zone2UpperBound
+        let zone5Gap = currentPolicy.zoneBounds.zone5Threshold - currentPolicy.zoneBounds.zone2UpperBound
+        let suggestedZone4 = max(suggestedUpper + 8, suggestedUpper + zone4Gap)
+        let suggestedZone5 = max(suggestedZone4 + 8, suggestedUpper + zone5Gap)
+
+        let suggestedBounds = ZoneBounds(
+            zone2LowerBound: suggestedLower,
+            zone2UpperBound: suggestedUpper,
+            zone4Threshold: suggestedZone4,
+            zone5Threshold: suggestedZone5
+        )
+
+        return CalibrationSuggestion(
+            currentBounds: currentPolicy.zoneBounds,
+            suggestedBounds: suggestedBounds,
+            reason: "依目前 Resting HR \(Int(restingHeartRate.rounded())) bpm 產生個人化 Zone 2 起始建議。這是設定起點，後續仍應搭配實際心率飄移與訓練感受校正。",
+            confidence: 0.55,
+            sourceSessionIDs: []
+        )
+    }
+
     /// Analyzes a set of historical workout results to determine if the heart rate zones should be adjusted.
     /// Currently focuses on Zone 2 sessions.
     public static func analyzeDriftTrend(

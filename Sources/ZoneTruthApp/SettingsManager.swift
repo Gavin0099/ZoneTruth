@@ -8,12 +8,14 @@ final class SettingsManager: ObservableObject {
     @Published var migrationMode: MigrationMode
     @Published var trainingGoal: UserTrainingGoal?
     @Published var defaultIntentOverrides: [WorkoutType: TrainingIntent]
+    @Published var restingHeartRate: Double?
 
     private let userDefaults: UserDefaults
     private let policyKey = "com.zonetruth.analysisPolicy"
     private let migrationModeKey = "com.zonetruth.migrationMode"
     private let trainingGoalKey = "com.zonetruth.trainingGoal"
     private let defaultIntentOverridesKey = "com.zonetruth.defaultIntentOverrides"
+    private let restingHeartRateKey = "com.zonetruth.restingHeartRate"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -51,6 +53,13 @@ final class SettingsManager: ObservableObject {
         } else {
             self.defaultIntentOverrides = [:]
         }
+
+        let storedRestingHeartRate = userDefaults.object(forKey: restingHeartRateKey) as? Double
+        if let storedRestingHeartRate, storedRestingHeartRate > 0 {
+            self.restingHeartRate = storedRestingHeartRate
+        } else {
+            self.restingHeartRate = nil
+        }
     }
 
     func updatePolicy(_ newPolicy: AnalysisPolicy) {
@@ -85,6 +94,17 @@ final class SettingsManager: ObservableObject {
         pendingSuggestion = CalibrationEngine.analyzeDriftTrend(analyses: analyses, currentPolicy: policy)
     }
 
+    func generateRestingHeartRateSuggestion() {
+        guard let restingHeartRate else {
+            pendingSuggestion = nil
+            return
+        }
+        pendingSuggestion = CalibrationEngine.suggestZoneBounds(
+            restingHeartRate: restingHeartRate,
+            currentPolicy: policy
+        )
+    }
+
     func applySuggestion() {
         guard let suggestion = pendingSuggestion else { return }
         let newPolicy = AnalysisPolicy(
@@ -116,6 +136,21 @@ final class SettingsManager: ObservableObject {
         }
     }
 
+    func updateRestingHeartRate(_ bpm: Double?) {
+        let sanitized: Double?
+        if let bpm, bpm > 0 {
+            sanitized = bpm
+        } else {
+            sanitized = nil
+        }
+        restingHeartRate = sanitized
+        if let sanitized {
+            userDefaults.set(sanitized, forKey: restingHeartRateKey)
+        } else {
+            userDefaults.removeObject(forKey: restingHeartRateKey)
+        }
+    }
+
     func updateMigrationMode(_ mode: MigrationMode) {
         // P1j guard: policy_primary is reserved until migration gates are explicitly unlocked.
         let effectiveMode: MigrationMode = (mode == .policyPrimary) ? .observeOnly : mode
@@ -141,6 +176,22 @@ final class SettingsManager: ObservableObject {
             .map { "\($0.key.rawValue)=\($0.value.rawValue)" }
             .sorted()
             .joined(separator: "|")
+    }
+
+    var zoneProfileSignature: String {
+        let bounds = policy.zoneBounds
+        let resting = restingHeartRate.map { String(format: "%.1f", $0) } ?? "nil"
+        return [
+            String(format: "%.1f", bounds.zone2LowerBound),
+            String(format: "%.1f", bounds.zone2UpperBound),
+            String(format: "%.1f", bounds.zone4Threshold),
+            String(format: "%.1f", bounds.zone5Threshold),
+            resting
+        ].joined(separator: "|")
+    }
+
+    var isUsingCustomZoneBounds: Bool {
+        policy.zoneBounds != AnalysisPolicy.default.zoneBounds
     }
 
     private func saveDefaultIntentOverrides() {

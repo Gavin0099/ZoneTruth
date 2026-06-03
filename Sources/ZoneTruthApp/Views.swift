@@ -203,6 +203,9 @@ struct WorkoutListView: View {
         .onChange(of: settingsManager.defaultIntentOverrideSignature) { _, _ in
             viewModel.applyDefaultIntentOverridesToCurrentWorkouts()
         }
+        .onChange(of: settingsManager.zoneProfileSignature) { _, _ in
+            viewModel.refreshDerivedDataForCurrentPolicy()
+        }
     }
 }
 
@@ -1159,10 +1162,10 @@ struct CalibrationSuggestionView: View {
             HStack(spacing: 12) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading) {
-                        Text("目前上限")
+                        Text("目前 Zone 2")
                             .font(.system(size: 8))
                             .foregroundStyle(.white.opacity(0.6))
-                        Text("\(Int(suggestion.currentBounds.zone2UpperBound)) bpm")
+                        Text("\(Int(suggestion.currentBounds.zone2LowerBound))-\(Int(suggestion.currentBounds.zone2UpperBound)) bpm")
                             .font(.caption.bold())
                             .foregroundStyle(.white)
                     }
@@ -1172,10 +1175,10 @@ struct CalibrationSuggestionView: View {
                         .foregroundStyle(.white.opacity(0.6))
 
                     VStack(alignment: .leading) {
-                        Text("建議上限")
+                        Text("建議 Zone 2")
                             .font(.system(size: 8))
                             .foregroundStyle(.white.opacity(0.6))
-                        Text("\(Int(suggestion.suggestedBounds.zone2UpperBound)) bpm")
+                        Text("\(Int(suggestion.suggestedBounds.zone2LowerBound))-\(Int(suggestion.suggestedBounds.zone2UpperBound)) bpm")
                             .font(.caption.bold())
                             .foregroundStyle(PremiumColor.gold)
                     }
@@ -1228,57 +1231,8 @@ struct SettingsView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Zone 2 邊界設定 (bpm)", systemImage: "slider.horizontal.2.square.on.square")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                
-                HStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("下限")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        TextField("下限", value: Binding(
-                            get: { settingsManager.policy.zoneBounds.zone2LowerBound },
-                            set: { settingsManager.updateZone2Bounds(lower: $0, upper: settingsManager.policy.zoneBounds.zone2UpperBound) }
-                        ), format: .number)
-                        .textFieldStyle(.plain)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color.white.opacity(0.04))
-                        .cornerRadius(8)
-                        .foregroundColor(.white)
-                        .font(.system(.body, design: .rounded).bold())
-                        .frame(width: 90)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("上限")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        TextField("上限", value: Binding(
-                            get: { settingsManager.policy.zoneBounds.zone2UpperBound },
-                            set: { settingsManager.updateZone2Bounds(lower: settingsManager.policy.zoneBounds.zone2LowerBound, upper: $0) }
-                        ), format: .number)
-                        .textFieldStyle(.plain)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color.white.opacity(0.04))
-                        .cornerRadius(8)
-                        .foregroundColor(.white)
-                        .font(.system(.body, design: .rounded).bold())
-                        .frame(width: 90)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                    }
-                }
-            }
+            restingHeartRateSection
+            zone2BoundsSection
 
             VStack(alignment: .leading, spacing: 12) {
                 Label("運動類型預設目標", systemImage: "scope")
@@ -1375,5 +1329,120 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(PremiumColor.border, lineWidth: 1)
         )
+    }
+
+    private var restingHeartRateSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("個人化心率基線", systemImage: "heart.circle")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            Text("Resting HR 目前只作為個人化設定檔顯示與週報上下文，不會自動改寫 Zone 2 邊界；分析器實際採用的是下方 bpm 邊界。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Resting HR")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                TextField("例如 55", value: restingHeartRateBinding, format: .number)
+                    .textFieldStyle(.plain)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color.white.opacity(0.04))
+                    .cornerRadius(8)
+                    .foregroundColor(.white)
+                    .font(.system(.body, design: .rounded).bold())
+                    .frame(width: 120)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+            }
+
+            HStack(spacing: 10) {
+                Button("依 Resting HR 產生建議") {
+                    withAnimation {
+                        settingsManager.generateRestingHeartRateSuggestion()
+                    }
+                }
+                .font(.caption.bold())
+                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .background(PremiumColor.skyBlue.gradient)
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+                .disabled(settingsManager.restingHeartRate == nil)
+
+                if settingsManager.restingHeartRate == nil {
+                    Text("先輸入 Resting HR")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.02))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var zone2BoundsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Zone 2 邊界設定 (bpm)", systemImage: "slider.horizontal.2.square.on.square")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            HStack(spacing: 20) {
+                zone2BoundField(title: "下限", value: zone2LowerBinding)
+                zone2BoundField(title: "上限", value: zone2UpperBinding)
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.02))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var restingHeartRateBinding: Binding<Double> {
+        Binding(
+            get: { settingsManager.restingHeartRate ?? 0 },
+            set: { settingsManager.updateRestingHeartRate($0 == 0 ? nil : $0) }
+        )
+    }
+
+    private var zone2LowerBinding: Binding<Double> {
+        Binding(
+            get: { settingsManager.policy.zoneBounds.zone2LowerBound },
+            set: { settingsManager.updateZone2Bounds(lower: $0, upper: settingsManager.policy.zoneBounds.zone2UpperBound) }
+        )
+    }
+
+    private var zone2UpperBinding: Binding<Double> {
+        Binding(
+            get: { settingsManager.policy.zoneBounds.zone2UpperBound },
+            set: { settingsManager.updateZone2Bounds(lower: settingsManager.policy.zoneBounds.zone2LowerBound, upper: $0) }
+        )
+    }
+
+    @ViewBuilder
+    private func zone2BoundField(title: String, value: Binding<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            TextField(title, value: value, format: .number)
+                .textFieldStyle(.plain)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color.white.opacity(0.04))
+                .cornerRadius(8)
+                .foregroundColor(.white)
+                .font(.system(.body, design: .rounded).bold())
+                .frame(width: 90)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        }
     }
 }

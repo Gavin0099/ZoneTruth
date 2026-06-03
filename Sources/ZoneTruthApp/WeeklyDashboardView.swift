@@ -393,6 +393,7 @@ struct WeeklyDashboardView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     weekRangeHeader
+                    WeeklyPersonalizationCard(settingsManager: settingsManager)
                     WeeklyOverviewCard(
                         summary: viewModel.weeklySummary,
                         policy: viewModel.weeklyPolicy,
@@ -431,6 +432,56 @@ struct WeeklyDashboardView: View {
                 .foregroundStyle(.secondary)
             Spacer()
         }
+    }
+}
+
+struct WeeklyPersonalizationCard: View {
+    @ObservedObject var settingsManager: SettingsManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("個人化設定", systemImage: "slider.horizontal.3")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                EvidenceChip(
+                    label: settingsManager.isUsingCustomZoneBounds ? "自訂界線" : "預設界線",
+                    color: settingsManager.isUsingCustomZoneBounds ? PremiumColor.skyBlue : PremiumColor.gold
+                )
+            }
+
+            Text(zoneSummaryText)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.9))
+
+            if let restingHeartRate = settingsManager.restingHeartRate {
+                Text("Resting HR：\(Int(restingHeartRate.rounded())) bpm")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Resting HR：尚未設定")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("本週區間分布與單筆分析都會使用目前這組 Zone 2 bpm 邊界。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .background(PremiumColor.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(PremiumColor.border, lineWidth: 1)
+        )
+    }
+
+    private var zoneSummaryText: String {
+        let bounds = settingsManager.policy.zoneBounds
+        return "Zone 2：\(Int(bounds.zone2LowerBound.rounded()))-\(Int(bounds.zone2UpperBound.rounded())) bpm"
     }
 }
 

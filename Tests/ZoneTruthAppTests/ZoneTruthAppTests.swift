@@ -759,6 +759,45 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsManagerPersistsRestingHeartRate() {
+        let suiteName = "test.resting.hr.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        XCTAssertNil(manager.restingHeartRate)
+
+        manager.updateRestingHeartRate(56)
+        let reloaded = SettingsManager(userDefaults: defaults)
+        XCTAssertEqual(reloaded.restingHeartRate, 56)
+
+        reloaded.updateRestingHeartRate(nil)
+        let cleared = SettingsManager(userDefaults: defaults)
+        XCTAssertNil(cleared.restingHeartRate)
+    }
+
+    @MainActor
+    func testSettingsManagerGeneratesAndAppliesRestingHeartRateSuggestion() {
+        let suiteName = "test.resting.hr.suggestion.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        manager.updateRestingHeartRate(60)
+        manager.generateRestingHeartRateSuggestion()
+
+        XCTAssertNotNil(manager.pendingSuggestion)
+        XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2LowerBound, 115)
+        XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2UpperBound, 130)
+
+        manager.applySuggestion()
+
+        XCTAssertEqual(manager.policy.zoneBounds.zone2LowerBound, 115)
+        XCTAssertEqual(manager.policy.zoneBounds.zone2UpperBound, 130)
+        XCTAssertNil(manager.pendingSuggestion)
+    }
+
+    @MainActor
     func testSettingsManagerPolicyPrimaryIsGatedToObserveOnly() {
         let suiteName = "test.migration.gate.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -1101,6 +1140,52 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertNotNil(viewModel.weeklySummary.weekStart)
         XCTAssertFalse(viewModel.weeklyPolicy.keyFindings.isEmpty)
         _ = view.body
+    }
+
+    @MainActor
+    func testWeeklySummaryRecomputesZoneDistributionFromCustomPolicy() {
+        let suiteName = "test.weekly.custom.policy.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = SettingsManager(userDefaults: defaults)
+        let templateWorkout = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        let startDate = Calendar.current.date(byAdding: .hour, value: -2, to: Date())!
+        let remappedSamples = templateWorkout.heartRateSamples.enumerated().map { index, sample in
+            HeartRateSample(
+                timestamp: startDate.addingTimeInterval(Double(index) * 60),
+                bpm: sample.bpm
+            )
+        }
+        let workout = WorkoutInput(
+            workoutType: templateWorkout.workoutType,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(templateWorkout.durationSeconds),
+            durationSeconds: templateWorkout.durationSeconds,
+            heartRateSamples: remappedSamples,
+            hrvSDNNMilliseconds: templateWorkout.hrvSDNNMilliseconds,
+            intent: templateWorkout.intent,
+            intentSource: templateWorkout.intentSource,
+            dataSource: templateWorkout.dataSource,
+            activeCaloriesKcal: templateWorkout.activeCaloriesKcal,
+            totalDistanceMeters: templateWorkout.totalDistanceMeters
+        )
+        let repository = StaticWorkoutRepository(workouts: [workout])
+        let viewModel = WorkoutListViewModel(
+            repository: repository,
+            settingsManager: settings
+        )
+
+        let baselineZone2 = viewModel.weeklySummary.zoneDistribution.counts[.zone2, default: 0]
+        XCTAssertGreaterThan(baselineZone2, 0)
+
+        settings.updateZone2Bounds(lower: 110, upper: 116)
+        viewModel.refreshDerivedDataForCurrentPolicy()
+
+        let updatedZone2 = viewModel.weeklySummary.zoneDistribution.counts[.zone2, default: 0]
+        let updatedZone3 = viewModel.weeklySummary.zoneDistribution.counts[.zone3, default: 0]
+        XCTAssertLessThan(updatedZone2, baselineZone2)
+        XCTAssertGreaterThan(updatedZone3, 0)
     }
 
     func testBodyCompositionSeedLedgerHasExpectedCoverage() {
@@ -1887,6 +1972,14 @@ private struct StubStravaOAuthClient: StravaOAuthClient {
 
     func refreshToken(using request: StravaTokenRefreshRequest) async throws -> StravaTokenExchangeResponse {
         try result.get()
+    }
+}
+
+private struct StaticWorkoutRepository: WorkoutRepository {
+    let workouts: [WorkoutInput]
+
+    func loadResult() -> WorkoutLoadResult {
+        WorkoutLoadResult(workouts: workouts, source: .mockSamples)
     }
 }
 

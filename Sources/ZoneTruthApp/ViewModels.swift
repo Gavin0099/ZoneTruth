@@ -263,6 +263,11 @@ final class WorkoutListViewModel: ObservableObject {
         )
     }
 
+    func refreshDerivedDataForCurrentPolicy() {
+        updateWeeklyData(workouts: workouts)
+        triggerCalibrationCheck()
+    }
+
     func effectiveIntentSource(for workout: WorkoutInput) -> IntentSource {
         guard selectedWorkout?.id == workout.id else { return workout.intentSource }
         return selectedIntent == workout.intent ? workout.intentSource : .userOverride
@@ -371,7 +376,11 @@ final class WorkoutListViewModel: ObservableObject {
 
     private func updateWeeklyData(workouts: [WorkoutInput]) {
         let monday = Self.currentWeekMonday()
-        let summary = WeeklyObservationBuilder.build(workouts: workouts, weekStart: monday)
+        let summary = WeeklyObservationBuilder.build(
+            workouts: workouts,
+            weekStart: monday,
+            policy: settingsManager.policy
+        )
         weeklySummary = summary
         weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: summary)
         weeklyOverrideInsight = buildWeeklyOverrideInsight(workouts: workouts, weekStart: monday)
@@ -380,7 +389,11 @@ final class WorkoutListViewModel: ObservableObject {
         let cal = Calendar.current
         let last4 = (0..<4).map { offset -> WeeklyWorkoutSummary in
             let weekMonday = cal.date(byAdding: .day, value: -7 * offset, to: monday) ?? monday
-            return WeeklyObservationBuilder.build(workouts: workouts, weekStart: weekMonday)
+            return WeeklyObservationBuilder.build(
+                workouts: workouts,
+                weekStart: weekMonday,
+                policy: settingsManager.policy
+            )
         }
         adaptationTrend28d = MultiWeekAdaptationAnalyzer.analyze(summaries: last4)
     }

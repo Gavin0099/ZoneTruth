@@ -40,6 +40,25 @@ final class CalibrationEngineTests: XCTestCase {
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, policy.zoneBounds.zone2UpperBound - 3)
         XCTAssertTrue(suggestion?.reason.contains("心率飄移持續偏高") == true)
     }
+
+    func testSuggestZoneBoundsFromRestingHeartRateUsesDefaultAnchors() {
+        let suggestion = CalibrationEngine.suggestZoneBounds(
+            restingHeartRate: 55,
+            currentPolicy: .default
+        )
+
+        XCTAssertNotNil(suggestion)
+        XCTAssertEqual(suggestion?.suggestedBounds.zone2LowerBound, 110)
+        XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, 125)
+        XCTAssertEqual(suggestion?.suggestedBounds.zone4Threshold, 141)
+        XCTAssertEqual(suggestion?.suggestedBounds.zone5Threshold, 156)
+        XCTAssertTrue(suggestion?.reason.contains("Resting HR") == true)
+    }
+
+    func testSuggestZoneBoundsFromRestingHeartRateRejectsOutOfRangeInput() {
+        XCTAssertNil(CalibrationEngine.suggestZoneBounds(restingHeartRate: 20, currentPolicy: .default))
+        XCTAssertNil(CalibrationEngine.suggestZoneBounds(restingHeartRate: 120, currentPolicy: .default))
+    }
     
     // Helpers
     private func createWorkout(drift: Double) -> WorkoutInput {
