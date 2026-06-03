@@ -231,6 +231,32 @@ final class SettingsManager: ObservableObject {
         policy.zoneBounds != AnalysisPolicy.default.zoneBounds
     }
 
+    var zone2ProfileStatusSummary: String {
+        let bounds = policy.zoneBounds
+        let sourceLabel: String
+        if zoneBoundsSource == .restingHeartRateHeuristic {
+            sourceLabel = "Resting HR 建議已套用"
+        } else if zoneBoundsSource == .driftTrend {
+            sourceLabel = "歷史飄移校正已套用"
+        } else if isUsingCustomZoneBounds {
+            sourceLabel = "自訂界線"
+        } else {
+            sourceLabel = "預設界線"
+        }
+
+        let restingLabel = restingHeartRate
+            .map { "Resting HR \(Self.formattedBPM($0)) bpm" } ?? "Resting HR 未設定"
+        let offsetsLabel = "偏移 +\(Self.formattedBPM(restingHeartRateSuggestionOffsets.lowerOffset))/+\(Self.formattedBPM(restingHeartRateSuggestionOffsets.upperOffset))"
+        let pendingLabel: String
+        if let pendingSuggestion {
+            pendingLabel = "有待套用建議 \(Self.formattedBPM(pendingSuggestion.suggestedBounds.zone2LowerBound))-\(Self.formattedBPM(pendingSuggestion.suggestedBounds.zone2UpperBound)) bpm"
+        } else {
+            pendingLabel = "沒有待套用建議"
+        }
+
+        return "\(sourceLabel) · Zone 2 \(Self.formattedBPM(bounds.zone2LowerBound))-\(Self.formattedBPM(bounds.zone2UpperBound)) bpm · \(restingLabel) · \(offsetsLabel) · \(pendingLabel)"
+    }
+
     private func saveDefaultIntentOverrides() {
         let rawMap = Dictionary(uniqueKeysWithValues: defaultIntentOverrides.map { ($0.key.rawValue, $0.value) })
         if let encoded = try? JSONEncoder().encode(rawMap) {
@@ -245,5 +271,9 @@ final class SettingsManager: ObservableObject {
             return nil
         }
         return offsets
+    }
+
+    private static func formattedBPM(_ value: Double) -> String {
+        String(Int(value.rounded()))
     }
 }

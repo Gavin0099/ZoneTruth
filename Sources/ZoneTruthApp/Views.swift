@@ -1272,6 +1272,7 @@ struct SettingsView: View {
                 }
             }
 
+            zone2ProfileStatusSection
             restingHeartRateSection
             zone2BoundsSection
 
@@ -1370,6 +1371,23 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(PremiumColor.border, lineWidth: 1)
         )
+    }
+
+    private var zone2ProfileStatusSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("目前 Zone 2 設定狀態", systemImage: "checklist.checked")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            Text(settingsManager.zone2ProfileStatusSummary)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.88))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.02))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private var restingHeartRateSection: some View {

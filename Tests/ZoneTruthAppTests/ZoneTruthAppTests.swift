@@ -831,6 +831,35 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testZone2ProfileStatusSummaryTracksSettingsState() {
+        let suiteName = "test.zone.profile.summary.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("預設界線"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 110-125 bpm"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 未設定"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待套用建議"))
+
+        manager.updateRestingHeartRate(60)
+        manager.updateRestingHeartRateSuggestionOffsets(lowerOffset: 48, upperOffset: 62)
+        manager.generateRestingHeartRateSuggestion()
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 60 bpm"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("偏移 +48/+62"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("有待套用建議 108-122 bpm"))
+
+        manager.applySuggestion()
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 建議已套用"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 108-122 bpm"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待套用建議"))
+
+        manager.updateZone2Bounds(lower: 112, upper: 126)
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("自訂界線"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 112-126 bpm"))
+    }
+
+    @MainActor
     func testSettingsManagerResetsZone2BoundsToDefault() {
         let suiteName = "test.zone.reset.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
