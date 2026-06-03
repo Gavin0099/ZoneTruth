@@ -17,6 +17,27 @@
 | Contract | `phase1/CODEBURN_PHASE1_ANALYSIS_CONTRACT.md` (v1.0.0) |
 | Phase 2 limits | `phase1/CODEBURN_PHASE2_ENTRY_CONSTRAINTS.md` |
 | Final closeout | `phase1/CODEBURN_PHASE1_FINAL_CLOSEOUT_2026-04-30.md` |
+| P6 acquisition surface statistics | `python codeburn/phase2/acquisition_surface_stats.py --demo-fixtures` |
+
+## P6 Acquisition Surface Statistics
+
+Minimal display command:
+
+```bash
+python codeburn/phase2/acquisition_surface_stats.py --db path/to/codeburn.db
+```
+
+Fixture smoke display:
+
+```bash
+python codeburn/phase2/acquisition_surface_stats.py --demo-fixtures
+python codeburn/phase2/acquisition_surface_stats.py --demo-fixtures --json
+```
+
+This display is structural observation only. It reports acquisition surface record
+counts, source type counts, quarantine counts, epistemic class, and P6 constraints.
+It does not compute token totals, cost estimates, cross-provider comparisons,
+efficiency rankings, trends, or optimization decisions.
 
 ---
 
@@ -143,4 +164,3 @@ Phase 3 entry requires explicit Phase 2 → Phase 3 gate passage and reviewer si
 
 This prohibition is currently enforced at documentation level only.
 Runtime enforcement is not yet implemented.
-
