@@ -56,8 +56,10 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 補齊缺漏 governance 文件並修正 `contract.yaml` repo identity
 - [x] 更新 framework lock 與 baseline freshness
 
-下一個產品優先建議：
-- [ ] 進入 P1「個人化 zone 界線設定」切一個可用垂直 slice：使用者輸入 Resting HR / Zone 2 上下界 → 分析器採用自訂界線 → 週報顯示已套用個人化設定
+本次產品切片（2026-06-03）：
+- [x] 完成 P1「個人化 zone 界線設定」垂直 slice：使用者輸入 Resting HR / Zone 2 上下界 → 分析器採用自訂界線 → 週報與單筆詳情顯示已套用個人化設定
+- [x] 支援 Resting HR 產生 Zone 2 起始建議、來源 / 非驗證閾值標示、套用建議、重設回預設界線
+- [x] 支援 Resting HR 建議公式上下偏移量調整，並在設定頁顯示目前 Zone 2 設定狀態摘要
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
@@ -87,7 +89,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] `ZoneTruthHost` Xcode project 在裝置上確認 HealthKit 能力簽署正確
 
 ### P1（Phase E 品質提升）
-- 個人化 zone 界線設定（Resting HR、Zone 2 上下界輸入）
+- [x] 個人化 zone 界線設定（Resting HR、Zone 2 上下界輸入、建議 / 套用 / 重設 / 狀態摘要）
 - 擴充邊緣案例標籤集（drift / leakage 閾值附近）
 - VO2/強度分析路徑擴充（超出「MVP 範圍外」佔位符後）
 
@@ -133,10 +135,10 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] `version_compatibility.json` 時間戳變更已提交（928f835）
 - [x] Phase D 記憶文件已更新（7fd8a09）
 
-### Phase E 完成條件（待定義）
-- on-device HealthKit 路徑驗證 pass
-- Strava 真實憑證端對端 pass
-- `ZoneTruthHost` 裝置簽署確認
+### Phase E 完成條件（已達成）
+- [x] on-device HealthKit 路徑驗證 pass
+- [x] Strava 真實憑證端對端 pass
+- [x] `ZoneTruthHost` 裝置簽署確認
 
 ---
 
@@ -146,6 +148,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 |---|---|---|
 | `artifacts/governance/version_compatibility.json` 時間戳未提交 | 待提交 | Low |
 | `PLAN.md` 過去為樣板文件，實質規劃缺失 | 已修正（本次） | Done |
+| P1 個人化 zone 界線設定 | 已完成（Resting HR 建議 / 套用 / 重設 / 狀態摘要） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
 | Garmin 整合尚未啟動 | 明確延後 | Deferred |
@@ -168,6 +171,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-03 | 完成 P1 個人化 Zone 2 設定產品線：Resting HR 輸入、建議公式、偏移量調整、套用 / 重設、週報與單筆詳情顯示、設定狀態摘要 |
 | 2026-06-03 | 同步 ai-governance-framework 最新 baseline（70a54b3）導入分析；補齊缺漏治理文件、修正 contract identity、刷新 PLAN freshness |
 | 2026-05-26 | Phase E 全部完成：HealthKit、Strava OAuth、ZoneTruthHost 裝置驗證均通過 |
 | 2026-05-26 | 全面重寫：從樣板文件改為實質專案計劃；導入當前 phase 狀態、backlog、anti-goals、gate 條件 |
