@@ -473,6 +473,21 @@ public enum CalibrationSuggestionSource: String, Codable, Equatable, Sendable {
     }
 }
 
+public struct RestingHeartRateSuggestionOffsets: Codable, Equatable, Hashable, Sendable {
+    public let lowerOffset: Double
+    public let upperOffset: Double
+
+    public init(lowerOffset: Double, upperOffset: Double) {
+        self.lowerOffset = lowerOffset
+        self.upperOffset = upperOffset
+    }
+
+    public static let `default` = RestingHeartRateSuggestionOffsets(
+        lowerOffset: 55,
+        upperOffset: 70
+    )
+}
+
 public struct CalibrationSuggestion: Equatable, Sendable {
     public let currentBounds: ZoneBounds
     public let suggestedBounds: ZoneBounds

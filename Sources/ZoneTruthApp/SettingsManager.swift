@@ -9,6 +9,7 @@ final class SettingsManager: ObservableObject {
     @Published var trainingGoal: UserTrainingGoal?
     @Published var defaultIntentOverrides: [WorkoutType: TrainingIntent]
     @Published var restingHeartRate: Double?
+    @Published var restingHeartRateSuggestionOffsets: RestingHeartRateSuggestionOffsets
     @Published private(set) var zoneBoundsSource: CalibrationSuggestionSource?
 
     private let userDefaults: UserDefaults
@@ -17,6 +18,7 @@ final class SettingsManager: ObservableObject {
     private let trainingGoalKey = "com.zonetruth.trainingGoal"
     private let defaultIntentOverridesKey = "com.zonetruth.defaultIntentOverrides"
     private let restingHeartRateKey = "com.zonetruth.restingHeartRate"
+    private let restingHeartRateSuggestionOffsetsKey = "com.zonetruth.restingHeartRateSuggestionOffsets"
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -60,6 +62,13 @@ final class SettingsManager: ObservableObject {
             self.restingHeartRate = storedRestingHeartRate
         } else {
             self.restingHeartRate = nil
+        }
+
+        if let data = userDefaults.data(forKey: restingHeartRateSuggestionOffsetsKey),
+           let decoded = try? JSONDecoder().decode(RestingHeartRateSuggestionOffsets.self, from: data) {
+            self.restingHeartRateSuggestionOffsets = Self.validOffsets(decoded) ?? .default
+        } else {
+            self.restingHeartRateSuggestionOffsets = .default
         }
         self.zoneBoundsSource = nil
     }
@@ -112,7 +121,8 @@ final class SettingsManager: ObservableObject {
         }
         pendingSuggestion = CalibrationEngine.suggestZoneBounds(
             restingHeartRate: restingHeartRate,
-            currentPolicy: policy
+            currentPolicy: policy,
+            offsets: restingHeartRateSuggestionOffsets
         )
     }
 
@@ -163,6 +173,19 @@ final class SettingsManager: ObservableObject {
         }
     }
 
+    func updateRestingHeartRateSuggestionOffsets(lowerOffset: Double, upperOffset: Double) {
+        let offsets = RestingHeartRateSuggestionOffsets(
+            lowerOffset: lowerOffset,
+            upperOffset: upperOffset
+        )
+        guard let validOffsets = Self.validOffsets(offsets) else { return }
+        restingHeartRateSuggestionOffsets = validOffsets
+        if let encoded = try? JSONEncoder().encode(validOffsets) {
+            userDefaults.set(encoded, forKey: restingHeartRateSuggestionOffsetsKey)
+        }
+        pendingSuggestion = nil
+    }
+
     func updateMigrationMode(_ mode: MigrationMode) {
         // P1j guard: policy_primary is reserved until migration gates are explicitly unlocked.
         let effectiveMode: MigrationMode = (mode == .policyPrimary) ? .observeOnly : mode
@@ -198,7 +221,9 @@ final class SettingsManager: ObservableObject {
             String(format: "%.1f", bounds.zone2UpperBound),
             String(format: "%.1f", bounds.zone4Threshold),
             String(format: "%.1f", bounds.zone5Threshold),
-            resting
+            resting,
+            String(format: "%.1f", restingHeartRateSuggestionOffsets.lowerOffset),
+            String(format: "%.1f", restingHeartRateSuggestionOffsets.upperOffset)
         ].joined(separator: "|")
     }
 
@@ -211,5 +236,14 @@ final class SettingsManager: ObservableObject {
         if let encoded = try? JSONEncoder().encode(rawMap) {
             userDefaults.set(encoded, forKey: defaultIntentOverridesKey)
         }
+    }
+
+    private static func validOffsets(_ offsets: RestingHeartRateSuggestionOffsets) -> RestingHeartRateSuggestionOffsets? {
+        guard offsets.lowerOffset >= 35,
+              offsets.upperOffset <= 95,
+              offsets.upperOffset > offsets.lowerOffset else {
+            return nil
+        }
+        return offsets
     }
 }

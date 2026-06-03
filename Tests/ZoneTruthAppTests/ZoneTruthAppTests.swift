@@ -801,6 +801,36 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsManagerGeneratesSuggestionFromCustomRestingHeartRateOffsets() {
+        let suiteName = "test.resting.hr.offsets.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        manager.updateRestingHeartRate(60)
+        manager.updateRestingHeartRateSuggestionOffsets(lowerOffset: 50, upperOffset: 65)
+        manager.generateRestingHeartRateSuggestion()
+
+        XCTAssertEqual(manager.restingHeartRateSuggestionOffsets.lowerOffset, 50)
+        XCTAssertEqual(manager.restingHeartRateSuggestionOffsets.upperOffset, 65)
+        XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2LowerBound, 110)
+        XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2UpperBound, 125)
+
+        manager.updateRestingHeartRateSuggestionOffsets(lowerOffset: 48, upperOffset: 62)
+        manager.generateRestingHeartRateSuggestion()
+        XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2LowerBound, 108)
+        XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2UpperBound, 122)
+
+        manager.applySuggestion()
+        XCTAssertEqual(manager.policy.zoneBounds.zone2LowerBound, 108)
+        XCTAssertEqual(manager.policy.zoneBounds.zone2UpperBound, 122)
+
+        let reloaded = SettingsManager(userDefaults: defaults)
+        XCTAssertEqual(reloaded.restingHeartRateSuggestionOffsets.lowerOffset, 48)
+        XCTAssertEqual(reloaded.restingHeartRateSuggestionOffsets.upperOffset, 62)
+    }
+
+    @MainActor
     func testSettingsManagerResetsZone2BoundsToDefault() {
         let suiteName = "test.zone.reset.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

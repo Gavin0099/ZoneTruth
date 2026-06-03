@@ -3,12 +3,13 @@ import Foundation
 public enum CalibrationEngine {
     public static func suggestZoneBounds(
         restingHeartRate: Double,
-        currentPolicy: AnalysisPolicy
+        currentPolicy: AnalysisPolicy,
+        offsets: RestingHeartRateSuggestionOffsets = .default
     ) -> CalibrationSuggestion? {
         guard restingHeartRate >= 35, restingHeartRate <= 100 else { return nil }
 
-        let suggestedLower = restingHeartRate + 55
-        let suggestedUpper = restingHeartRate + 70
+        let suggestedLower = restingHeartRate + offsets.lowerOffset
+        let suggestedUpper = restingHeartRate + offsets.upperOffset
         guard suggestedUpper > suggestedLower else { return nil }
 
         let zone4Gap = currentPolicy.zoneBounds.zone4Threshold - currentPolicy.zoneBounds.zone2UpperBound
@@ -26,7 +27,7 @@ public enum CalibrationEngine {
         return CalibrationSuggestion(
             currentBounds: currentPolicy.zoneBounds,
             suggestedBounds: suggestedBounds,
-            reason: "依目前 Resting HR \(Int(restingHeartRate.rounded())) bpm 產生個人化 Zone 2 起始建議。這是設定起點，後續仍應搭配實際心率飄移與訓練感受校正。",
+            reason: "依目前 Resting HR \(Int(restingHeartRate.rounded())) bpm 與偏移量 +\(Int(offsets.lowerOffset.rounded()))/+\(Int(offsets.upperOffset.rounded())) 產生個人化 Zone 2 起始建議。這是設定起點，後續仍應搭配實際心率飄移與訓練感受校正。",
             confidence: 0.55,
             source: .restingHeartRateHeuristic,
             sourceSessionIDs: []

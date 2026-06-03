@@ -1378,7 +1378,7 @@ struct SettingsView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            Text("Resting HR 目前只作為個人化設定檔顯示與週報上下文，不會自動改寫 Zone 2 邊界；分析器實際採用的是下方 bpm 邊界。")
+            Text("Resting HR 會用下方偏移量產生 Zone 2 起始建議；只有按下套用建議後，分析器才會改用新的 bpm 邊界。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1400,6 +1400,19 @@ struct SettingsView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.white.opacity(0.1), lineWidth: 1)
                     )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("建議公式偏移量")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 20) {
+                    restingHeartRateOffsetField(title: "下限 +", value: restingLowerOffsetBinding)
+                    restingHeartRateOffsetField(title: "上限 +", value: restingUpperOffsetBinding)
+                }
+                Text("目前公式：Resting HR + \(Int(settingsManager.restingHeartRateSuggestionOffsets.lowerOffset.rounded())) 到 + \(Int(settingsManager.restingHeartRateSuggestionOffsets.upperOffset.rounded())) bpm。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
@@ -1472,6 +1485,30 @@ struct SettingsView: View {
         )
     }
 
+    private var restingLowerOffsetBinding: Binding<Double> {
+        Binding(
+            get: { settingsManager.restingHeartRateSuggestionOffsets.lowerOffset },
+            set: {
+                settingsManager.updateRestingHeartRateSuggestionOffsets(
+                    lowerOffset: $0,
+                    upperOffset: settingsManager.restingHeartRateSuggestionOffsets.upperOffset
+                )
+            }
+        )
+    }
+
+    private var restingUpperOffsetBinding: Binding<Double> {
+        Binding(
+            get: { settingsManager.restingHeartRateSuggestionOffsets.upperOffset },
+            set: {
+                settingsManager.updateRestingHeartRateSuggestionOffsets(
+                    lowerOffset: settingsManager.restingHeartRateSuggestionOffsets.lowerOffset,
+                    upperOffset: $0
+                )
+            }
+        )
+    }
+
     private var zone2LowerBinding: Binding<Double> {
         Binding(
             get: { settingsManager.policy.zoneBounds.zone2LowerBound },
@@ -1488,6 +1525,28 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func zone2BoundField(title: String, value: Binding<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            TextField(title, value: value, format: .number)
+                .textFieldStyle(.plain)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color.white.opacity(0.04))
+                .cornerRadius(8)
+                .foregroundColor(.white)
+                .font(.system(.body, design: .rounded).bold())
+                .frame(width: 90)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        }
+    }
+
+    @ViewBuilder
+    private func restingHeartRateOffsetField(title: String, value: Binding<Double>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.caption2)

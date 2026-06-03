@@ -60,6 +60,19 @@ final class CalibrationEngineTests: XCTestCase {
         XCTAssertTrue(suggestion?.reason.contains("Resting HR") == true)
     }
 
+    func testSuggestZoneBoundsFromRestingHeartRateUsesCustomOffsets() {
+        let suggestion = CalibrationEngine.suggestZoneBounds(
+            restingHeartRate: 58,
+            currentPolicy: .default,
+            offsets: RestingHeartRateSuggestionOffsets(lowerOffset: 50, upperOffset: 64)
+        )
+
+        XCTAssertNotNil(suggestion)
+        XCTAssertEqual(suggestion?.suggestedBounds.zone2LowerBound, 108)
+        XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, 122)
+        XCTAssertTrue(suggestion?.reason.contains("+50/+64") == true)
+    }
+
     func testSuggestZoneBoundsFromRestingHeartRateRejectsOutOfRangeInput() {
         XCTAssertNil(CalibrationEngine.suggestZoneBounds(restingHeartRate: 20, currentPolicy: .default))
         XCTAssertNil(CalibrationEngine.suggestZoneBounds(restingHeartRate: 120, currentPolicy: .default))
