@@ -70,6 +70,23 @@ public enum Zone3LeakageAnalyzer {
         if zone3Ratio >= 0.10 { return .warning }
         return .pass
     }
+
+    public static func boundaryLabel(for distribution: ZoneDistribution) -> String? {
+        let zone3Ratio = distribution.ratio(for: .zone3)
+        if zone3Ratio >= 0.08 && zone3Ratio < 0.10 {
+            return "Zone 3 比例接近 10% 提醒線，這次仍屬於可接受範圍，但已接近 Zone 2 純度下降的邊界。"
+        }
+        if zone3Ratio >= 0.10 && zone3Ratio < 0.12 {
+            return "Zone 3 比例剛超過 10% 提醒線，屬於輕微偏高，建議先視為配速微調訊號。"
+        }
+        if zone3Ratio >= 0.18 && zone3Ratio <= 0.20 {
+            return "Zone 3 比例接近 20% 失敗線，這次尚未超過失敗閾值，但已接近偏離 Zone 2 訓練的上緣。"
+        }
+        if zone3Ratio > 0.20 && zone3Ratio <= 0.22 {
+            return "Zone 3 比例剛超過 20% 失敗線，判定為偏離 Zone 2；這是邊界附近的失敗訊號，不代表整體能力退步。"
+        }
+        return nil
+    }
 }
 
 public enum HeartRateStabilityAnalyzer {
@@ -110,6 +127,23 @@ public enum HeartRateDriftAnalyzer {
         if drift < 0.05 { return .pass }
         if drift <= 0.08 { return .warning }
         return .fail
+    }
+
+    public static func boundaryLabel(for driftRatio: Double?) -> String? {
+        guard let driftRatio else { return nil }
+        if driftRatio >= 0.045 && driftRatio < 0.05 {
+            return "心率飄移接近 5% 提醒線，這次仍在穩定範圍內，但後段已有輕微上升跡象。"
+        }
+        if driftRatio >= 0.05 && driftRatio < 0.055 {
+            return "心率飄移剛超過 5% 提醒線，屬於輕微脫鉤訊號，建議觀察是否連續出現。"
+        }
+        if driftRatio >= 0.075 && driftRatio <= 0.08 {
+            return "心率飄移接近 8% 失敗線，這次尚未超過失敗閾值，但後段穩定度已接近上限。"
+        }
+        if driftRatio > 0.08 && driftRatio <= 0.085 {
+            return "心率飄移剛超過 8% 失敗線，判定為偏離穩定有氧狀態；這是邊界附近的失敗訊號。"
+        }
+        return nil
     }
 }
 
@@ -164,6 +198,9 @@ public enum Zone2QualityAnalyzer {
             reasons.append("Zone 3 區間的時間比例超過 20%，對於 Zone 2 訓練來說強度太高了。")
             severityScores.append(2)
         }
+        if let leakageBoundaryLabel = Zone3LeakageAnalyzer.boundaryLabel(for: distribution) {
+            reasons.append(leakageBoundaryLabel)
+        }
 
         let stabilityValue = HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples)
         let stabilityVerdict = HeartRateStabilityAnalyzer.verdict(for: preparedSamples, policy: policy)
@@ -191,6 +228,9 @@ public enum Zone2QualityAnalyzer {
         case .fail:
             reasons.append("心率飄移超過 8%，顯示後段訓練已經偏離了穩定的有氧狀態。")
             severityScores.append(2)
+        }
+        if let driftBoundaryLabel = HeartRateDriftAnalyzer.boundaryLabel(for: driftValue) {
+            reasons.append(driftBoundaryLabel)
         }
 
         let verdict = overallVerdict(from: severityScores)

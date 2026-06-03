@@ -233,6 +233,14 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(Zone3LeakageAnalyzer.verdict(for: distribution), .fail)
     }
 
+    func testZone3LeakageBoundaryLabelsNearThresholds() {
+        XCTAssertNil(Zone3LeakageAnalyzer.boundaryLabel(for: distributionWithZone3Ratio(0.05)))
+        XCTAssertTrue(Zone3LeakageAnalyzer.boundaryLabel(for: distributionWithZone3Ratio(0.09))?.contains("接近 10%") == true)
+        XCTAssertTrue(Zone3LeakageAnalyzer.boundaryLabel(for: distributionWithZone3Ratio(0.101))?.contains("剛超過 10%") == true)
+        XCTAssertTrue(Zone3LeakageAnalyzer.boundaryLabel(for: distributionWithZone3Ratio(0.19))?.contains("接近 20%") == true)
+        XCTAssertTrue(Zone3LeakageAnalyzer.boundaryLabel(for: distributionWithZone3Ratio(0.21))?.contains("剛超過 20%") == true)
+    }
+
     func testDriftBoundaryAt4Point9PercentPasses() {
         let samples = driftSamples(firstHalfBPM: 100, secondHalfBPM: 104.9)
         XCTAssertNotNil(HeartRateDriftAnalyzer.driftRatio(for: samples))
@@ -255,6 +263,47 @@ final class ZoneTruthCoreTests: XCTestCase {
         let samples = driftSamples(firstHalfBPM: 100, secondHalfBPM: 108.1)
         XCTAssertNotNil(HeartRateDriftAnalyzer.driftRatio(for: samples))
         XCTAssertEqual(HeartRateDriftAnalyzer.verdict(for: samples), .fail)
+    }
+
+    func testDriftBoundaryLabelsNearThresholds() {
+        XCTAssertNil(HeartRateDriftAnalyzer.boundaryLabel(for: 0.03))
+        XCTAssertTrue(HeartRateDriftAnalyzer.boundaryLabel(for: 0.049)?.contains("接近 5%") == true)
+        XCTAssertTrue(HeartRateDriftAnalyzer.boundaryLabel(for: 0.052)?.contains("剛超過 5%") == true)
+        XCTAssertTrue(HeartRateDriftAnalyzer.boundaryLabel(for: 0.079)?.contains("接近 8%") == true)
+        XCTAssertTrue(HeartRateDriftAnalyzer.boundaryLabel(for: 0.082)?.contains("剛超過 8%") == true)
+    }
+
+    func testZone2AnalyzerIncludesNearThresholdLabelsInReasons() {
+        let start = Date()
+        let samples = (0..<100).map { index in
+            HeartRateSample(
+                timestamp: start.addingTimeInterval(Double(index) * 60),
+                bpm: index < 50 ? 118 : (index < 90 ? 123 : 126)
+            )
+        }
+        let workout = WorkoutInput(
+            workoutType: .running,
+            startDate: start,
+            endDate: start.addingTimeInterval(99 * 60),
+            heartRateSamples: samples,
+            intent: .zone2
+        )
+        let policy = AnalysisPolicy(
+            warmupExclusionSeconds: 0,
+            cooldownExclusionSeconds: 0,
+            minimumDurationSeconds: AnalysisPolicy.default.minimumDurationSeconds,
+            minimumSampleCount: AnalysisPolicy.default.minimumSampleCount,
+            abnormalSpikeDeltaBPM: AnalysisPolicy.default.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
+            mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+
+        let result = Zone2QualityAnalyzer.analyze(workout: workout, policy: policy)
+
+        XCTAssertEqual(result.verdict, .warning)
+        XCTAssertTrue(result.reasons.contains { $0.contains("剛超過 10%") })
+        XCTAssertTrue(result.reasons.contains { $0.contains("接近 5%") || $0.contains("剛超過 5%") })
     }
 
     func testZone2ObservationAnalyzerProducesObservationOnlyOutput() {

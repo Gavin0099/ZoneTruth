@@ -90,7 +90,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 ### P1（Phase E 品質提升）
 - [x] 個人化 zone 界線設定（Resting HR、Zone 2 上下界輸入、建議 / 套用 / 重設 / 狀態摘要）
-- 擴充邊緣案例標籤集（drift / leakage 閾值附近）
+- [x] 擴充邊緣案例標籤集（drift / leakage 閾值附近）
 - VO2/強度分析路徑擴充（超出「MVP 範圍外」佔位符後）
 
 ### P2（非阻擋，有空再做）
@@ -149,6 +149,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | `artifacts/governance/version_compatibility.json` 時間戳未提交 | 待提交 | Low |
 | `PLAN.md` 過去為樣板文件，實質規劃缺失 | 已修正（本次） | Done |
 | P1 個人化 zone 界線設定 | 已完成（Resting HR 建議 / 套用 / 重設 / 狀態摘要） | Done |
+| P1 drift / leakage 邊緣案例標籤 | 已完成（10%/20% leakage、5%/8% drift 邊界提示） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
 | Garmin 整合尚未啟動 | 明確延後 | Deferred |
@@ -171,6 +172,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-03 | 完成 P1 drift / leakage 邊緣案例標籤：Zone 3 leakage 10%/20% 與 heart-rate drift 5%/8% 附近會產生低宣稱提示 |
 | 2026-06-03 | 完成 P1 個人化 Zone 2 設定產品線：Resting HR 輸入、建議公式、偏移量調整、套用 / 重設、週報與單筆詳情顯示、設定狀態摘要 |
 | 2026-06-03 | 同步 ai-governance-framework 最新 baseline（70a54b3）導入分析；補齊缺漏治理文件、修正 contract identity、刷新 PLAN freshness |
 | 2026-05-26 | Phase E 全部完成：HealthKit、Strava OAuth、ZoneTruthHost 裝置驗證均通過 |
