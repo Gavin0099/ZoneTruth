@@ -84,6 +84,14 @@
   - Added `ObservationBridge` (primitives → `WorkoutObservation`, `TrainingIntent` → `PrimaryIntent`).
   - Rewired `ObservationPolicyShadowEvaluator` to use `ObservationBridge` + `WorkoutEvaluationPolicyFactory`; removed hand-coded inline scoring.
   - Added guard tests: tendency convergence, bridge validity, minor-drift assertion for clean Zone 2.
+- Completed first personalized zone slice:
+  - Added persisted `restingHeartRate` in `SettingsManager`.
+  - Weekly summary now rebuilds with `settingsManager.policy` instead of hardcoded default policy.
+  - Added weekly personalization card so the dashboard shows active Zone 2 bounds and Resting HR context.
+- Extended the slice to a one-click suggestion flow:
+  - Added `CalibrationEngine.suggestZoneBounds(restingHeartRate:currentPolicy:)`.
+  - Settings screen can generate and apply a Resting HR based Zone 2 suggestion.
+  - Targeted tests now cover suggestion generation, suggestion apply, and weekly summary recomputation.
 
 - 填入真實 Strava 憑證至 `StravaCredentials`（Client ID: 248735），Repo 為 private，使用者已確認。
 
@@ -92,6 +100,7 @@
 - Open Package.swift in Xcode and verify Info.plist is picked up; run on real device with Strava credentials.
 - Consider adding VO2/Interval and Strength analysis paths beyond the current "outside MVP scope" placeholder.
 - Add personalized zone bounds via user settings (Resting HR, Zone 2 lower/upper bound inputs).
+- Validate and tune the initial Resting HR -> Zone 2 heuristic against real workouts after device usage.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.
 - Expand the labeled case dataset with more edge cases near drift and leakage thresholds.
 - Validate the HealthKit query path on-device and decide how to handle workouts with sparse or missing heart-rate samples.

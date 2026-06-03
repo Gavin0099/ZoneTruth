@@ -17,6 +17,9 @@
 - Health access requests now flow through the same repository boundary (`requestHealthAccess`) so UI code can trigger authorization without importing or depending on HealthKit types.
 - Strava now has a parallel adapter boundary (`StravaClient`, `StravaSessionStore`, `StravaActivityRepository`) and reads an optional `SampleData/strava-session.json` session file, but network fetching is still intentionally unimplemented.
 - Strava OAuth specifics are now modeled explicitly with `StravaOAuthConfiguration`, `StravaAuthorizationParser`, and token exchange request/response types, using the official short-lived token + refresh token flow.
+- `WeeklyObservationBuilder.build(..., policy:)` must receive `settingsManager.policy` if weekly charts are expected to reflect user-customized Zone 2 bounds; otherwise the dashboard silently stays on `AnalysisPolicy.default`.
+- Large SwiftUI setting screens can trigger "compiler is unable to type-check this expression in reasonable time"; the reliable fix here is to split the `body` into smaller computed subviews/bindings instead of trying to tweak the expression inline.
+- The current Resting HR personalization heuristic is intentionally bounded and non-verified: `zone2Lower = restingHR + 55`, `zone2Upper = restingHR + 70`, with upper-zone gaps preserved forward for Zone 4/5 thresholds. Treat it as a starting suggestion, not a validated physiological threshold.
 ## Refine analyzer logic for sparse HR data and strength training classification.
 - Captured: 2026-04-28T10:36:04.239225+00:00
 - Approved by: governance-auto
@@ -44,4 +47,3 @@
 - Risk: low
 - Oversight: auto
 - Summary: Implement Automatic Threshold Calibration (Phase 5) and finalize governance verification.
-
