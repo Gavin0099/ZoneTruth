@@ -94,7 +94,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] VO2/強度分析路徑擴充（接入 interval pattern / recovery hint 觀測訊號到 user-facing reasons）
 
 ### P2（非阻擋，有空再做）
-- Meta-closeout wrapper（一個指令跑全套 governance regression checks）
+- [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）
 - CodeBurn P6：acquisition surface statistics display（觀測層，需遵守 A-1/T-1/C-1/R-1/O-1/V-1 約束）
 - 文字/UI 語氣精修
 
@@ -151,6 +151,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | P1 個人化 zone 界線設定 | 已完成（Resting HR 建議 / 套用 / 重設 / 狀態摘要） | Done |
 | P1 drift / leakage 邊緣案例標籤 | 已完成（10%/20% leakage、5%/8% drift 邊界提示） | Done |
 | P1 VO2/強度分析路徑擴充 | 已完成（VO2 interval pattern、Strength recovery hint reason） | Done |
+| P2 meta-closeout wrapper | 已完成（`bash scripts/meta_closeout.sh`） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
 | Garmin 整合尚未啟動 | 明確延後 | Deferred |
@@ -173,6 +174,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-03 | 完成 P2 meta-closeout wrapper：新增 `bash scripts/meta_closeout.sh` 一鍵跑 syntax、runtime governance smoke、boundary guard 與 weekly UI smoke |
 | 2026-06-03 | 完成 P1 VO2/強度分析路徑擴充：VO2 analysis 顯示 interval pattern hint，Strength analysis 顯示 recovery pattern hint |
 | 2026-06-03 | 完成 P1 drift / leakage 邊緣案例標籤：Zone 3 leakage 10%/20% 與 heart-rate drift 5%/8% 附近會產生低宣稱提示 |
 | 2026-06-03 | 完成 P1 個人化 Zone 2 設定產品線：Resting HR 輸入、建議公式、偏移量調整、套用 / 重設、週報與單筆詳情顯示、設定狀態摘要 |
