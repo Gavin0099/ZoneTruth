@@ -133,11 +133,65 @@ final class ZoneTruthCoreTests: XCTestCase {
         }
     }
 
+    func testVO2IntervalAnalysisIncludesPatternHintReasons() {
+        let solid = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let low = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "low_intensity_intervals" }!
+            .workout
+        let policy = AnalysisPolicy(
+            warmupExclusionSeconds: 0,
+            cooldownExclusionSeconds: 0,
+            minimumDurationSeconds: AnalysisPolicy.default.minimumDurationSeconds,
+            minimumSampleCount: 1,
+            abnormalSpikeDeltaBPM: AnalysisPolicy.default.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
+            mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+
+        let solidResult = VO2IntervalAnalyzer.analyze(workout: solid, policy: policy)
+        let lowResult = VO2IntervalAnalyzer.analyze(workout: low, policy: policy)
+
+        XCTAssertTrue(solidResult.reasons.contains { $0.contains("多次高峰") })
+        XCTAssertTrue(lowResult.reasons.contains { $0.contains("未呈現明顯重複高峰") })
+    }
+
     func testStrengthAnalysis() {
         for testCase in SampleWorkoutCases.strengthValidationCases() {
             let result = WorkoutIntentAnalyzer.analyze(testCase.workout)
             XCTAssertEqual(result.verdict, testCase.expectedVerdict, "Case \(testCase.name) failed")
         }
+    }
+
+    func testStrengthAnalysisIncludesRecoveryPatternReasons() {
+        let traditional = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+        let circuit = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "metabolic_strength_circuit" }!
+            .workout
+        let policy = AnalysisPolicy(
+            warmupExclusionSeconds: 0,
+            cooldownExclusionSeconds: 0,
+            minimumDurationSeconds: AnalysisPolicy.default.minimumDurationSeconds,
+            minimumSampleCount: 1,
+            abnormalSpikeDeltaBPM: AnalysisPolicy.default.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
+            mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+
+        let traditionalResult = StrengthAnalyzer.analyze(workout: traditional, policy: policy)
+        let circuitResult = StrengthAnalyzer.analyze(workout: circuit, policy: policy)
+
+        XCTAssertTrue(traditionalResult.reasons.contains { $0.contains("組間下降") })
+        XCTAssertTrue(circuitResult.reasons.contains { $0.contains("代謝循環訓練型態") })
     }
 
     func testValidationDatasetMatchesExpectedVerdicts() {

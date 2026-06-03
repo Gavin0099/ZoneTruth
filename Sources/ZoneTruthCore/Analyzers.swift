@@ -284,6 +284,7 @@ public enum VO2IntervalAnalyzer {
         )
 
         let highIntensityRatio = distribution.ratio(for: .zone4) + distribution.ratio(for: .zone5)
+        let observation = VO2ObservationAnalyzer.analyze(workout: workout, policy: policy)
         
         var verdict: AnalysisVerdict = .pass
         var reasons: [String] = []
@@ -297,6 +298,15 @@ public enum VO2IntervalAnalyzer {
         } else {
             verdict = .fail
             reasons.append("在高強度區間的時間過少，而這通常是間歇訓練所必備的。")
+        }
+
+        switch observation.intervalPatternHint {
+        case .repeatedPeaks:
+            reasons.append("心率型態出現多次高峰，與間歇訓練結構較一致。")
+        case .possible:
+            reasons.append("心率型態可能包含間歇段，但證據仍偏描述性，需要搭配實際課表確認。")
+        case .none:
+            reasons.append("心率型態未呈現明顯重複高峰，較不像典型 VO2 間歇結構。")
         }
 
         return AnalysisResult(
@@ -490,6 +500,7 @@ public enum StrengthAnalyzer {
         )
 
         let averageHR = preparedSamples.isEmpty ? 0 : preparedSamples.map(\.bpm).reduce(0, +) / Double(preparedSamples.count)
+        let observation = StrengthObservationAnalyzer.analyze(workout: workout, policy: policy)
         
         var verdict: AnalysisVerdict = .pass
         var reasons: [String] = []
@@ -506,6 +517,19 @@ public enum StrengthAnalyzer {
         } else {
             verdict = .pass
             reasons.append("平均心率 (\(Int(averageHR)) bpm) 偏低，這對於組間完全恢復的純肌力訓練來說是非常理想的。")
+        }
+
+        if verdict == .fail {
+            reasons.append("心率長時間維持在高區間，較偏代謝循環訓練型態，而非充分恢復的肌力節奏。")
+        } else {
+            switch observation.recoveryDropHint {
+            case .visibleDrops:
+                reasons.append("心率型態可見組間下降，與傳統肌力訓練的恢復節奏較一致。")
+            case .possible:
+                reasons.append("心率型態可能包含組間恢復，但僅靠心率仍屬描述性線索。")
+            case .none:
+                reasons.append("心率長時間維持在高區間，較偏代謝循環訓練型態，而非充分恢復的肌力節奏。")
+            }
         }
 
         return AnalysisResult(
