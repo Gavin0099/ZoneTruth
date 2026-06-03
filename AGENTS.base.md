@@ -48,17 +48,7 @@ The following events require updating PLAN.md and/or the relevant memory/ file:
 | Architecture decision made | PLAN.md decision log + memory/knowledge_base |
 | Bug fixed with root cause identified | memory/knowledge_base |
 | Risk or incident encountered | PLAN.md risk section + memory/active_task |
-| Session end | memory/active_task (current status) |
-
-## Definition of Done
-
-A task is done when:
-
-- Behavior is explicit and observable
-- Failure paths are guarded
-- Architecture boundaries remain intact
-- Evidence matches the declared risk level
-- PLAN.md and memory/ reflect the new state
+| Session end | memory/active_task (current status) + session_end hook |
 
 ## Session Closeout Obligation
 
@@ -94,15 +84,19 @@ RECOMMENDED_MEMORY_UPDATE: <what memory/ file should change and why, or NO_UPDAT
 - `NOT_DONE` and `OPEN_RISKS` are the most important fields. AI agents tend to
   omit failures. Do not.
 
-### Observable anchor requirement
-
-`WORK_COMPLETED` and `CHECKS_RUN` must contain an observable anchor:
-a filename (`word.ext`) or a known tool name (pytest, session_end_hook, etc.).
-A sentence with no such anchor is treated as vague content even if it looks specific.
-
 ### If you cannot write the closeout
 
 Write it anyway with `WORK_COMPLETED: NONE` and explain in `OPEN_RISKS` why
 the session produced no verifiable output. This is a valid closeout.
 
 See `docs/session-closeout-schema.md` for examples and field constraints.
+
+## Definition of Done
+
+A task is done when:
+
+- Behavior is explicit and observable
+- Failure paths are guarded
+- Architecture boundaries remain intact
+- Evidence matches the declared risk level
+- PLAN.md and memory/ reflect the new state

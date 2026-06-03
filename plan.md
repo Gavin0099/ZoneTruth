@@ -12,7 +12,7 @@ default_load: always
 > **Primary Language**: Swift (app core) / Python (governance tooling)
 > **Task Level**: L2
 > **Planning Window**: 2026-04-01 ~ 2026-06-30
-> **最後更新**: 2026-05-26
+> **最後更新**: 2026-06-03
 > **Owner**: Gavin Wu
 > **Freshness**: Sprint (7d)
 
@@ -49,6 +49,15 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 ---
 
 ## 當前 Sprint / 當前工作
+
+本次治理同步（2026-06-03）：
+- [x] 確認 `ai-governance-framework` upstream 最新快照為 `70a54b3`
+- [x] dry-run adopt / readiness 分析，確認安全導入不會覆寫既有 repo-local 治理檔
+- [x] 補齊缺漏 governance 文件並修正 `contract.yaml` repo identity
+- [x] 更新 framework lock 與 baseline freshness
+
+下一個產品優先建議：
+- [ ] 進入 P1「個人化 zone 界線設定」切一個可用垂直 slice：使用者輸入 Resting HR / Zone 2 上下界 → 分析器採用自訂界線 → 週報顯示已套用個人化設定
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
@@ -159,6 +168,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-03 | 同步 ai-governance-framework 最新 baseline（70a54b3）導入分析；補齊缺漏治理文件、修正 contract identity、刷新 PLAN freshness |
 | 2026-05-26 | Phase E 全部完成：HealthKit、Strava OAuth、ZoneTruthHost 裝置驗證均通過 |
 | 2026-05-26 | 全面重寫：從樣板文件改為實質專案計劃；導入當前 phase 狀態、backlog、anti-goals、gate 條件 |
 | 2026-05-25 | 對齊 header 欄位（最後更新 / Owner / Freshness）；加入 gitignore runtime artifacts |

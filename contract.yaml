@@ -1,11 +1,13 @@
-name: ai-governance-framework-contract
+name: zonetruth-governance-contract
 plugin_version: "1.0.0"
 framework_interface_version: "1"
 framework_compatible: ">=1.0.0,<2.0.0"
-domain: ai-governance
+domain: zonetruth
 documents:
   - AGENTS.base.md
   - PLAN.md
+  - governance/TESTING.md
+  - governance/ARCHITECTURE.md
 ai_behavior_override:
   - AGENTS.base.md
 rule_roots:

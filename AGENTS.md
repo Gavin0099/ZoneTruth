@@ -16,52 +16,104 @@ Before doing anything else:
 
 Don't ask permission. Just do it.
 
-## Product-First Session Discipline (Mandatory)
+## Delivery Recovery Constraints
 
-### VERTICAL SLICE FIRST
-- Before expanding governance surface, complete one usable end-to-end product slice.
-- Examples:
-  - `scan -> select -> execute -> result`
-  - `launch -> interact -> complete -> recover`
-- No governance expansion before the vertical slice is usable.
+These constraints apply to implementation sessions in this repository. Their purpose is to prevent governance work from displacing product delivery.
 
-### FAILURE-DRIVEN GOVERNANCE ONLY
-- New governance surface is allowed only after an observed failure.
-- Valid triggers:
-  - unsafe behavior
-  - irreversible failure
-  - false-positive / false-negative
-  - authority escalation
-  - replay inconsistency
-  - production ambiguity
-- Invalid triggers:
-  - future extensibility
-  - theoretical completeness
-  - semantic elegance
-  - "might be useful later"
+### 1. Vertical Slice First
 
-### SESSION DONE DEFINITION REQUIRED
-- Within the first 5 messages of every implementation session, define a concrete done-condition.
-- Examples:
-  - Avalonia UI detects 2 hubs
-  - update flow completes
-  - cancel path works
-  - packaged app launches
+Before expanding governance surface, complete one usable end-to-end product slice.
 
-### HARD STOP AFTER DONE
-- When the session done-condition is achieved, the implementation session stops.
-- No additional telemetry, qualification, readiness, artifact, or governance expansion is allowed unless triggered by an observed failure.
+Examples:
+- `analyse workout → render weekly summary → user sees actionable signal`
+- `HealthKit auth → load → dashboard`
 
-### PRODUCT CAPABILITY RULE
-- Every implementation session must produce at least one observable user-facing or operational capability increase.
-- Examples:
-  - detect hardware
-  - launch UI
-  - complete update flow
-  - show staged progress
-  - recover from cancel
-  - reduce manual steps
-- Governance-only expansion without capability increase is discouraged.
+No governance expansion before the vertical slice is usable unless triggered by an observed failure.
+
+### 2. Failure-Driven Governance Only
+
+New governance surface is allowed only after an observed failure.
+
+Valid triggers:
+- unsafe behavior
+- irreversible failure
+- false-positive / false-negative
+- authority escalation
+- replay inconsistency
+- production ambiguity
+
+Invalid triggers:
+- future extensibility
+- theoretical completeness
+- semantic elegance
+- might be useful later
+
+### 3. Session Done Definition Required
+
+Every implementation session must have a concrete DONE condition before file edits begin.
+
+If the user provides DONE, use it directly.
+If the user does not provide DONE, propose one measurable product outcome and wait for confirmation.
+
+Format:
+
+`DONE = <one measurable product outcome>`
+
+Do not infer broad project direction as DONE. DONE must be narrow and testable.
+
+### 4. Hard Stop After Done
+
+When DONE is achieved, stop.
+
+Do not add extra telemetry, readiness, qualification, runtime hooks, artifacts, or governance work unless there is an observed failure.
+
+### 5. Result-First Final Report (reporting convention, not a gate)
+
+Final reports should be result-first, not process-first.
+
+Use this format:
+
+1. Result: Done / Not done
+2. Capability increased:
+3. Changed files:
+4. Validation:
+5. Governance surface change: none / list
+6. Remaining blocker:
+
+## Repo-Specific Risk Levels
+<!-- governance:key=risk_levels -->
+
+- HIGH: any change to `WeeklyDashboardView.swift` rendering functions (`admissibleLabel`, `progressionBarLabel`, `WeeklyCTAPresenter`) — claim ceiling logic lives here; wrong output directly exposes clinical overclaiming
+- HIGH: any change to `WeeklySignals.swift` classifier (`WeeklyInferenceClassifier`, `WeeklyAdaptationSignal.from`, `WeeklyTrainingStateSignal.from`) — classifier gates the rendering contract; wrong output bypasses the ceiling
+- HIGH: any change to `WeeklyRenderingContractTests.swift` test assertions — these are the rendering contract lock; weakening tests silently allows overclaiming
+- MEDIUM: any change to `WorkoutEvaluationAdapter` or `WorkoutEvaluationPolicyFactory` — semantic evaluation path; wrong output affects goal-fit scores and training tendency wording
+- MEDIUM: any change to `BodyCompositionLedger` narrative or trend computation — narrative must not attribute long-term body composition changes to Zone 2 training
+- LOW: documentation, memory files, plan updates, test fixture refreshes with no rendering-contract changes
+
+## Must-Test Paths
+<!-- governance:key=must_test_paths -->
+
+- `WeeklyDashboardView.swift` `admissibleLabel(for:)` — any change requires `WeeklyRenderingContractTests` to remain green
+- `TrainingState.progressionBarLabel` — changes require `testProgressionBarLabelSetContainsNoClinicalTerms` to remain green
+- `WeeklyCTAPresenter.render(...)` — changes require `testCTAWordingBoundedByAuthorityTier` to remain green
+- `WeeklyAdaptationSignal.from(...)` — changes require `testAdaptationResidualDefaultIsNoSignalNotMaintenance` to remain green
+- Rendering contract tests (`WeeklyRenderingContractTests`) must remain green before any merge touching weekly dashboard rendering
+
+## L1 → L2 Escalation Triggers
+<!-- governance:key=escalation_triggers -->
+
+- Any change to what counts as "admissible" rendering output (adding new positive direction labels to `.noSignal`, changing `admissibleLabel` output) — requires explicit evidence from code review that no existing test is weakened
+- Any change to `WeeklyRenderingContractTests` assertions to make them less strict — requires human approval; softening contract tests is a semantic regression
+- Any change that adds `localizedLabel` calls in place of `admissibleLabel` in view rendering — automatic escalation; this was the failure mode P3a was built to fix
+
+## Repo-Specific Forbidden Behaviors
+<!-- governance:key=forbidden_behaviors -->
+
+- Do NOT call `TrainingState.localizedLabel` directly in SwiftUI view rendering — use `admissibleLabel(for:)` or `progressionBarLabel`; direct `localizedLabel` use was the P3a failure mode
+- Do NOT attribute body composition changes (fat loss, muscle gain) to Zone 2 training in narrative text — `BodyCompositionLedger` comments explicitly forbid this causal claim
+- Do NOT weaken `WeeklyRenderingContractTests` assertions to fix a build failure — if a test fails, fix the production code, not the test
+- Do NOT expand the weekly dashboard rendering surface (new UI sections, new signal types) before the current rendering contract tests are green
+- Do NOT use `.maintenance` as a fallback direction when evidence is insufficient — `.noSignal` is the correct residual; this was an explicit fix documented in commit history
 
 ## Workspace vs Repo Governance
 

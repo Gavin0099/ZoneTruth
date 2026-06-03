@@ -53,6 +53,16 @@ tiers:
           Do NOT reclassify to recommended/exempt to escape the metric.
       - path: E:\BackUp\Git_EE\Kernel-Driver-Contract
         reason: kernel/driver security boundary, highest risk tier
+        agents_note: |
+          Known tension: this repo's AGENTS.md is a domain contract document
+          (KSTATE/IRQL/IRP/dispatch rules), not a governance calibration template.
+          Fleet governance calibration must NOT be written into AGENTS.md — doing
+          so would contaminate domain authority. The preferred resolution is a
+          separate governance/fleet.AGENTS.md referenced by contract.yaml, with
+          the agents_calibration checker reading the declared source rather than
+          defaulting to AGENTS.md. Until checker support is confirmed, agents=scaffold
+          for this repo is an expected and documented state, not a deficiency.
+          See: docs/fleet/plan_10of10_kernel_driver_contract.md
 
   recommended:
     meaning: tracked separately; not in required confidence denominator

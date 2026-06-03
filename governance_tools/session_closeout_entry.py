@@ -100,6 +100,22 @@ def _latest_receipt_checksum(project_root: Path) -> str:
             continue
     return ""
 
+def _resolve_head_commit(project_root: Path) -> str:
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
 
 def _write_closeout_receipt(
     project_root: Path,
@@ -119,6 +135,7 @@ def _write_closeout_receipt(
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     receipt_path = artifact_dir / f"closeout_receipt_{ts}.json"
     closeout_path_obj = Path(closeout_artifact_path).resolve() if closeout_artifact_path else None
+    linked_head = _resolve_head_commit(project_root)
     receipt = {
         "schema_version": CLOSEOUT_RECEIPT_SCHEMA_VERSION,
         "timestamp": _utc_now_iso(),
@@ -126,6 +143,7 @@ def _write_closeout_receipt(
         "trigger_mode": trigger_mode if trigger_mode in ALLOWED_TRIGGER_MODES else "unknown",
         "entrypoint": entrypoint,
         "exit_code": exit_code,
+        "linked_head_commit": linked_head,
         "closeout_artifact_path": str(closeout_path_obj) if closeout_path_obj else "",
         "checksum_of_cleaned_path": _checksum_of_path(closeout_path_obj),
         "memory_eligibility_evaluated": memory_eligibility_evaluated,
