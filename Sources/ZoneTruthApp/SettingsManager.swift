@@ -9,6 +9,7 @@ final class SettingsManager: ObservableObject {
     @Published var trainingGoal: UserTrainingGoal?
     @Published var defaultIntentOverrides: [WorkoutType: TrainingIntent]
     @Published var restingHeartRate: Double?
+    @Published private(set) var zoneBoundsSource: CalibrationSuggestionSource?
 
     private let userDefaults: UserDefaults
     private let policyKey = "com.zonetruth.analysisPolicy"
@@ -60,6 +61,7 @@ final class SettingsManager: ObservableObject {
         } else {
             self.restingHeartRate = nil
         }
+        self.zoneBoundsSource = nil
     }
 
     func updatePolicy(_ newPolicy: AnalysisPolicy) {
@@ -88,6 +90,7 @@ final class SettingsManager: ObservableObject {
         
         // Clear suggestion if manually updated
         pendingSuggestion = nil
+        zoneBoundsSource = nil
     }
 
     func resetZone2BoundsToDefault() {
@@ -126,6 +129,7 @@ final class SettingsManager: ObservableObject {
             zoneBounds: suggestion.suggestedBounds
         )
         updatePolicy(newPolicy)
+        zoneBoundsSource = suggestion.source
         pendingSuggestion = nil
     }
 

@@ -326,6 +326,21 @@ final class WorkoutListViewModel: ObservableObject {
         )
     }
 
+    func analysisZoneContextSummary(for workout: WorkoutInput) -> String {
+        let bounds = settingsManager.policy.zoneBounds
+        let sourceLabel: String
+        if settingsManager.zoneBoundsSource == .restingHeartRateHeuristic {
+            sourceLabel = "Resting HR 建議已套用"
+        } else if settingsManager.zoneBoundsSource == .driftTrend {
+            sourceLabel = "歷史飄移校正已套用"
+        } else if settingsManager.isUsingCustomZoneBounds {
+            sourceLabel = "自訂界線"
+        } else {
+            sourceLabel = "預設界線"
+        }
+        return "\(sourceLabel) · Zone 2 \(Int(bounds.zone2LowerBound.rounded()))-\(Int(bounds.zone2UpperBound.rounded())) bpm"
+    }
+
     private func apply(_ result: WorkoutLoadResult) {
         workouts = result.workouts.map { base in
             guard let overriddenIntent = intentOverrides[base.id] else { return base }

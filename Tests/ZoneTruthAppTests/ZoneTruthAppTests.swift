@@ -796,6 +796,7 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertEqual(manager.policy.zoneBounds.zone2LowerBound, 115)
         XCTAssertEqual(manager.policy.zoneBounds.zone2UpperBound, 130)
+        XCTAssertEqual(manager.zoneBoundsSource, .restingHeartRateHeuristic)
         XCTAssertNil(manager.pendingSuggestion)
     }
 
@@ -1251,6 +1252,37 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertEqual(settings.policy.zoneBounds, AnalysisPolicy.default.zoneBounds)
         XCTAssertEqual(viewModel.weeklySummary.zoneDistribution, baselineDistribution)
+    }
+
+    @MainActor
+    func testWorkoutDetailZoneContextSummaryTracksPolicySource() {
+        let suiteName = "test.detail.zone.context.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = SettingsManager(userDefaults: defaults)
+        let workout = SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        let repository = StaticWorkoutRepository(workouts: [workout])
+        let viewModel = WorkoutListViewModel(
+            repository: repository,
+            settingsManager: settings
+        )
+
+        let baselineSummary = viewModel.analysisZoneContextSummary(for: workout)
+        XCTAssertTrue(baselineSummary.contains("預設界線"))
+        XCTAssertTrue(baselineSummary.contains("110-125 bpm"))
+
+        settings.updateZone2Bounds(lower: 115, upper: 130)
+        let customSummary = viewModel.analysisZoneContextSummary(for: workout)
+        XCTAssertTrue(customSummary.contains("自訂界線"))
+        XCTAssertTrue(customSummary.contains("115-130 bpm"))
+
+        settings.updateRestingHeartRate(60)
+        settings.generateRestingHeartRateSuggestion()
+        settings.applySuggestion()
+        let suggestedSummary = viewModel.analysisZoneContextSummary(for: workout)
+        XCTAssertTrue(suggestedSummary.contains("Resting HR 建議已套用"))
+        XCTAssertTrue(suggestedSummary.contains("115-130 bpm"))
     }
 
     func testBodyCompositionSeedLedgerHasExpectedCoverage() {

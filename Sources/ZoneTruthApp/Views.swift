@@ -178,6 +178,7 @@ struct WorkoutListView: View {
                         onIntentChanged: viewModel.updateIntent,
                         onApplyToSameWorkoutType: viewModel.applySelectedIntentToSameWorkoutType(scope:),
                         impactedCountForScope: viewModel.impactedCountForSelectedIntent(scope:),
+                        zoneContextSummary: viewModel.analysisZoneContextSummary(for: workout),
                         settingsManager: settingsManager
                     )
                 } else {
@@ -432,6 +433,7 @@ struct WorkoutDetailView: View {
     let onIntentChanged: (TrainingIntent) -> Void
     let onApplyToSameWorkoutType: (IntentApplyScope) -> Void
     let impactedCountForScope: (IntentApplyScope) -> Int
+    let zoneContextSummary: String
     @ObservedObject var settingsManager: SettingsManager
     @State private var showDetailedData = false
 
@@ -439,6 +441,7 @@ struct WorkoutDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
+                AnalysisZoneContextCard(summary: zoneContextSummary)
 
                 IntentPickerView(
                     selectedIntent: selectedIntent,
@@ -616,6 +619,31 @@ struct HeroDecisionCardView: View {
         case 50..<75: return PremiumColor.gold
         default: return PremiumColor.redOrange
         }
+    }
+}
+
+struct AnalysisZoneContextCard: View {
+    let summary: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("本次分析界線", systemImage: "slider.horizontal.3")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.88))
+                .fixedSize(horizontal: false, vertical: true)
+            Text("此資訊用於說明本次分析實際採用的 Zone 2 範圍與來源，避免把結果誤解為固定預設。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.05), lineWidth: 1))
     }
 }
 
