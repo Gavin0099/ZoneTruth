@@ -223,20 +223,20 @@ private struct Zone2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationL
         let nextAction: String
 
         if zone3 >= 0.20 {
-            tendency = "偏混合有氧訓練"
+            tendency = "穩定有氧中夾帶較多變速"
             score = 42
-            findings = ["Zone 3 比例偏高，與 Zone 2 目標有偏離。", "心率飄移穩定性需搭配整體強度一起看。"]
-            nextAction = "若目標是 Zone 2，可考慮降低配速或阻力，減少長時間停留在 Zone 3。"
+            findings = ["中高強度停留偏多，和穩定有氧的目標有些距離。", "後段狀態仍要和整體強度一起看，先不用單看一個指標下結論。"]
+            nextAction = "如果這次想更偏穩定有氧，下次可先把配速或阻力再保守一些，減少長時間往上衝。"
         } else if zone3 >= 0.10 {
-            tendency = "偏 Zone 2 但強度略高"
+            tendency = "穩定有氧為主，但強度略高"
             score = 58
-            findings = ["Zone 3 比例偏高，Zone 2 純度不足。", drift < 0.05 ? "心率飄移低，耐力穩定性仍不錯。" : "心率飄移略高，後段有強度上浮。"]
-            nextAction = "前段先保守 5-10 分鐘，適度降低強度並將心率穩定控制在 Zone 2 上緣以下。"
+            findings = ["中高強度停留比預期稍多，純度還可以再拉回來。", drift < 0.05 ? "後段整體仍算穩，耐力節奏沒有明顯散掉。" : "後段心率有些上浮，代表強度可能慢慢墊高。"]
+            nextAction = "下次前段先保守一點，讓心率更早穩住，整體會更接近想要的有氧節奏。"
         } else {
-            tendency = "偏穩定有氧訓練"
+            tendency = "穩定有氧表現穩定"
             score = 82
-            findings = ["Zone 2 佔比為主，整體強度分布穩定。", "心率飄移與波動在可接受範圍。"]
-            nextAction = "維持目前節奏，下一次可小幅延長訓練時間。"
+            findings = ["整體大多維持在穩定有氧範圍內，節奏維持得不錯。", "心率波動與後段變化都在可接受範圍。"]
+            nextAction = "目前節奏可以延續；如果身體感受穩定，下次可再小幅拉長時間。"
         }
         return buildEvaluation(
             from: observation,
@@ -256,20 +256,20 @@ private struct VO2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationLog
         let findings: [String]
         let nextAction: String
         if highIntensity > 0.10 {
-            tendency = "偏高強度間歇訓練"
+            tendency = "高強度刺激明確"
             score = 84
-            findings = ["Zone 4/5 佔比足夠，符合高強度刺激需求。"]
-            nextAction = "可維持目前間歇結構，下一次優先觀察每組之間的恢復是否完整。"
+            findings = ["高強度停留時間足夠，這次確實有做到刺激。"]
+            nextAction = "這樣的結構可以延續；下次可以多觀察每組之間恢復是否有跟上。"
         } else if highIntensity >= 0.05 {
-            tendency = "偏中高強度有氧訓練"
+            tendency = "有高強度刺激，但密度還不高"
             score = 64
-            findings = ["有進入高強度區，但總量仍偏中等。", "與標準 VO2 間歇相比，刺激密度略不足。"]
-            nextAction = "若目標是 VO2，可考慮提高間歇段強度或延長高強度停留時間。"
+            findings = ["有進入高強度區，但總量仍偏中等。", "如果這次目標是強刺激，密度還有再往上調的空間。"]
+            nextAction = "若這次本來就想做高強度刺激，下次可考慮把工作段再做得更完整一些。"
         } else {
-            tendency = "偏穩態有氧訓練"
+            tendency = "整體更像穩定有氧"
             score = 45
-            findings = ["高強度區停留不足，較不像 VO2 間歇訓練。"]
-            nextAction = "若目標是 VO2，可考慮增加衝刺段刺激，觀察是否更容易進入 Zone 4/5。"
+            findings = ["高強度停留不多，整體更像穩定有氧而不是強刺激課。"]
+            nextAction = "若這次原本是想做高強度刺激，下次可考慮把工作段拉得更明確一些。"
         }
         return buildEvaluation(
             from: observation,
@@ -284,14 +284,14 @@ private struct VO2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationLog
 private struct StrengthEvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationLogic {
     func evaluate(_ observation: WorkoutObservation) -> WorkoutEvaluation {
         let highIntensity = observation.zoneDistribution.ratio(for: .zone4) + observation.zoneDistribution.ratio(for: .zone5)
-        let tendency = highIntensity > 0.20 ? "偏代謝循環訓練" : "偏傳統肌力訓練"
+        let tendency = highIntensity > 0.20 ? "較像代謝循環型肌力" : "肌力訓練節奏明確"
         let score = highIntensity > 0.20 ? 46 : 78
         let findings = highIntensity > 0.20
-            ? ["高強度停留較多，整體較偏代謝循環刺激。"]
-            : ["強度分布較接近傳統肌力訓練節奏。"]
+            ? ["高心率停留較多，整體更像連續循環式刺激。"]
+            : ["整體節奏較接近有休息分段的肌力訓練。"]
         let nextAction = highIntensity > 0.20
-            ? "若目標是純肌力，可考慮拉長組間休息，降低連續高心率時間。"
-            : "維持目前訓練節奏，並觀察組間恢復是否穩定。"
+            ? "如果你想更偏純肌力，下次可把組間休息再拉長一些。"
+            : "目前節奏可以延續，之後可再觀察組間恢復是否穩定。"
         return buildEvaluation(
             from: observation,
             trainingTendency: tendency,
@@ -309,7 +309,7 @@ private struct ActivityEvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluati
             trainingTendency: "偏一般活動訓練",
             goalFitScore: 72 + (observation.evaluationConfidence - 70) / 8,
             keyFindings: ["本次為一般活動型態，建議以描述性回顧為主。"],
-            nextAction: "若需要嚴格訓練品質評估，可改用明確訓練目標（Zone2/VO2/Strength）。"
+            nextAction: "若想做更明確的訓練判讀，可先指定這次更接近有氧、高強度或肌力。"
         )
     }
 }

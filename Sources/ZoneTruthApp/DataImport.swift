@@ -170,6 +170,9 @@ struct JSONWorkoutRepository: WorkoutRepository {
 
     func loadResult() -> WorkoutLoadResult {
         guard fileManager.fileExists(atPath: fileURL.path) else {
+            if bootstrapBundledSeedIfNeeded() {
+                return loadResult()
+            }
             return WorkoutLoadResult(
                 workouts: [],
                 source: .jsonImport,
@@ -192,6 +195,35 @@ struct JSONWorkoutRepository: WorkoutRepository {
                 statusMessage: "JSON 格式無法解析，已略過此來源。"
             )
         }
+    }
+
+    private func bootstrapBundledSeedIfNeeded() -> Bool {
+        guard let seedURL = bundledSeedURL(),
+              let data = try? Data(contentsOf: seedURL) else {
+            return false
+        }
+
+        let directoryURL = fileURL.deletingLastPathComponent()
+        try? fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        do {
+            try data.write(to: fileURL, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func bundledSeedURL() -> URL? {
+        let candidates = ["workouts.seed", "workouts"]
+        for name in candidates {
+            if let url = Bundle.module.url(forResource: name, withExtension: "json") {
+                return url
+            }
+            if let url = Bundle.main.url(forResource: name, withExtension: "json") {
+                return url
+            }
+        }
+        return nil
     }
 }
 

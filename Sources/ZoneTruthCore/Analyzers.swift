@@ -582,7 +582,12 @@ public enum WorkoutIntentAnalyzer {
             result = StrengthAnalyzer.analyze(workout: workout, policy: policy)
         }
         return result.appendingMetricMetadata(
-            TrainingMetricMetadataFactory.vo2MaxEstimate(workout.vo2MaxEstimate)
+            TrainingMetricMetadataFactory.vo2MaxEstimate(workout.vo2MaxEstimate) +
+                TrainingMetricMetadataFactory.heartRateRecovery(workout.heartRateRecoveryOneMinute) +
+                TrainingMetricMetadataFactory.runningPower(workout.runningPower) +
+                TrainingMetricMetadataFactory.cyclingPower(workout.cyclingPower) +
+                TrainingMetricMetadataFactory.workoutRoute(workout.workoutRoute) +
+                TrainingMetricMetadataFactory.externalLoadDecoupling(workout.externalLoadDecoupling)
         )
     }
 
@@ -621,6 +626,153 @@ private enum TrainingMetricMetadataFactory {
                 ),
                 dataQualityFlags: ["vo2max_value_imported"],
                 recommendedValidation: "CPET/GXT gas analysis if VO2 max precision matters."
+            )
+        ]
+    }
+
+    static func heartRateRecovery(_ observation: HeartRateRecoveryObservation?) -> [TrainingMetricMetadata] {
+        guard let observation else { return [] }
+        let method = TrainingMetricMethod(
+            tier: .productReference,
+            source: observation.source,
+            name: observation.sourceLabel ?? "Apple heart-rate recovery context",
+            referenceStandardDistance: .twoOrMoreLevelsBelow
+        )
+        return [
+            TrainingMetricMetadata(
+                metric: .heartRateRecovery,
+                method: method,
+                confidence: TrainingMetricConfidence(
+                    level: .mediumLow,
+                    basis: heartRateRecoveryBasis(for: observation),
+                    limitingFactors: ["Single recovery indicator", "No clinical recovery protocol"]
+                ),
+                claim: TrainingMetricClaim(
+                    ceiling: .estimateOnly,
+                    allowedTerms: ["recovery context", "post-workout recovery signal", "product reference"],
+                    forbiddenTerms: ["recovery diagnosis", "VO2 max measurement", "clinical recovery diagnosis"]
+                ),
+                dataQualityFlags: ["heart_rate_recovery_imported"],
+                recommendedValidation: "Use a standardized recovery protocol or broader lab/field testing if recovery precision matters."
+            )
+        ]
+    }
+
+    private static func heartRateRecoveryBasis(for observation: HeartRateRecoveryObservation) -> String {
+        if observation.sourceLabel?.localizedCaseInsensitiveContains("Derived from Apple Health post-workout heart rate") == true {
+            return "Derived post-workout heart-rate recovery context was computed from Apple Health heart-rate samples, not imported as a direct recovery sample."
+        }
+        return "Product heart-rate recovery context was imported, not a full recovery assessment."
+    }
+
+    static func runningPower(_ observation: RunningPowerObservation?) -> [TrainingMetricMetadata] {
+        guard let observation else { return [] }
+        let method = TrainingMetricMethod(
+            tier: .fieldEstimator,
+            source: observation.source,
+            name: observation.sourceLabel ?? "Running power field-estimator support",
+            referenceStandardDistance: .oneLevelBelow
+        )
+        return [
+            TrainingMetricMetadata(
+                metric: .runningPower,
+                method: method,
+                confidence: TrainingMetricConfidence(
+                    level: .medium,
+                    basis: "Running power context was imported as external-load support for field estimation.",
+                    limitingFactors: ["No direct metabolic threshold measurement", "Running power method depends on device/model"]
+                ),
+                claim: TrainingMetricClaim(
+                    ceiling: .estimateOnly,
+                    allowedTerms: ["running power context", "external-load support", "field-estimator support"],
+                    forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+                ),
+                dataQualityFlags: ["running_power_imported"],
+                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters."
+            )
+        ]
+    }
+
+    static func cyclingPower(_ observation: CyclingPowerObservation?) -> [TrainingMetricMetadata] {
+        guard let observation else { return [] }
+        let method = TrainingMetricMethod(
+            tier: .fieldEstimator,
+            source: .cyclingPowerHR,
+            name: observation.sourceLabel ?? "Cycling power field-estimator support",
+            referenceStandardDistance: .oneLevelBelow
+        )
+        return [
+            TrainingMetricMetadata(
+                metric: .cyclingPower,
+                method: method,
+                confidence: TrainingMetricConfidence(
+                    level: .medium,
+                    basis: "Cycling power context was imported as external-load support for field estimation.",
+                    limitingFactors: ["No direct metabolic threshold measurement", "Cycling power coverage depends on sensors and setup"]
+                ),
+                claim: TrainingMetricClaim(
+                    ceiling: .estimateOnly,
+                    allowedTerms: ["cycling power context", "external-load support", "field-estimator support"],
+                    forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+                ),
+                dataQualityFlags: ["cycling_power_imported"],
+                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters."
+            )
+        ]
+    }
+
+    static func workoutRoute(_ observation: WorkoutRouteObservation?) -> [TrainingMetricMetadata] {
+        guard let observation else { return [] }
+        let method = TrainingMetricMethod(
+            tier: .fieldEstimator,
+            source: observation.source,
+            name: observation.sourceLabel ?? "Workout route terrain context",
+            referenceStandardDistance: .twoOrMoreLevelsBelow
+        )
+        return [
+            TrainingMetricMetadata(
+                metric: .workoutRoute,
+                method: method,
+                confidence: TrainingMetricConfidence(
+                    level: .mediumLow,
+                    basis: "Workout route context was imported as terrain and outdoor-condition support.",
+                    limitingFactors: ["Route context does not directly measure threshold or fitness", "Elevation quality depends on recorded route samples"]
+                ),
+                claim: TrainingMetricClaim(
+                    ceiling: .estimateOnly,
+                    allowedTerms: ["route context", "terrain context", "outdoor-condition support"],
+                    forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+                ),
+                dataQualityFlags: ["workout_route_imported"],
+                recommendedValidation: "Use route context only as supporting evidence; pair with threshold or lab testing if metabolic precision matters."
+            )
+        ]
+    }
+
+    static func externalLoadDecoupling(_ observation: ExternalLoadDecouplingObservation?) -> [TrainingMetricMetadata] {
+        guard let observation else { return [] }
+        let method = TrainingMetricMethod(
+            tier: .fieldEstimator,
+            source: observation.source,
+            name: observation.sourceLabel ?? externalLoadDecouplingMethodName(for: observation.source),
+            referenceStandardDistance: .oneLevelBelow
+        )
+        return [
+            TrainingMetricMetadata(
+                metric: .externalLoadDecoupling,
+                method: method,
+                confidence: TrainingMetricConfidence(
+                    level: .mediumLow,
+                    basis: "External-load decoupling context was imported from first-half versus second-half heart-rate and power behavior.",
+                    limitingFactors: ["No direct metabolic threshold measurement", "Half-split field summary does not replace controlled threshold testing"]
+                ),
+                claim: TrainingMetricClaim(
+                    ceiling: .estimateOnly,
+                    allowedTerms: ["external-load consistency context", "decoupling context", "field-estimator support"],
+                    forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+                ),
+                dataQualityFlags: ["external_load_decoupling_imported"],
+                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters."
             )
         ]
     }
@@ -715,6 +867,17 @@ private enum TrainingMetricMetadataFactory {
             return "Firstbeat VO2 max product estimate"
         default:
             return "Imported VO2 max value"
+        }
+    }
+
+    private static func externalLoadDecouplingMethodName(for source: TrainingMetricMethodSource) -> String {
+        switch source {
+        case .runningHRSpeed:
+            return "Running power + HR decoupling context"
+        case .cyclingPowerHR:
+            return "Cycling power + HR decoupling context"
+        default:
+            return "External-load decoupling context"
         }
     }
 

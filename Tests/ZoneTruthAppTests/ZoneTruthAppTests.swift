@@ -121,6 +121,319 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 2)
     }
 
+    func testHealthKitWorkoutRepositoryMapsAppleVO2MaxEstimate() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.value, 47.3)
+        XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.source, .apple)
+        XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.sourceLabel, "Apple Health VO2 max")
+    }
+
+    func testHealthKitReadTypeIdentifiersIncludeVO2MaxAndRecovery() {
+        XCTAssertTrue(healthKitReadTypeIdentifiers.contains("vo2Max"))
+        XCTAssertTrue(healthKitReadTypeIdentifiers.contains("heartRateRecoveryOneMinute"))
+    }
+
+    func testHealthKitWorkoutRepositoryMapsAppleHeartRateRecoveryContext() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.heartRateRecoveryOneMinute?.value, 23)
+        XCTAssertEqual(result.workouts.first?.heartRateRecoveryOneMinute?.source, .apple)
+        XCTAssertEqual(result.workouts.first?.heartRateRecoveryOneMinute?.sourceLabel, "Apple Health 1-minute heart-rate recovery")
+    }
+
+    func testBestMatchingHeartRateRecoveryObservationAllowsPostWorkoutSample() {
+        let workoutEnd = Date(timeIntervalSince1970: 1_714_000_000)
+        let candidates = [
+            HeartRateRecoveryObservation(
+                value: 18,
+                source: .apple,
+                sourceLabel: "older sample",
+                measuredAt: workoutEnd.addingTimeInterval(-6 * 60)
+            ),
+            HeartRateRecoveryObservation(
+                value: 24,
+                source: .apple,
+                sourceLabel: "post-workout sample",
+                measuredAt: workoutEnd.addingTimeInterval(90)
+            ),
+        ]
+
+        let match = bestMatchingHeartRateRecoveryObservation(
+            near: workoutEnd,
+            candidates: candidates
+        )
+
+        XCTAssertEqual(match?.value, 24)
+        XCTAssertEqual(match?.sourceLabel, "post-workout sample")
+    }
+
+    func testBestMatchingHeartRateRecoveryObservationRejectsFarPostWorkoutSample() {
+        let workoutEnd = Date(timeIntervalSince1970: 1_714_000_000)
+        let candidates = [
+            HeartRateRecoveryObservation(
+                value: 22,
+                source: .apple,
+                sourceLabel: "too late",
+                measuredAt: workoutEnd.addingTimeInterval(15 * 60)
+            )
+        ]
+
+        let match = bestMatchingHeartRateRecoveryObservation(
+            near: workoutEnd,
+            candidates: candidates
+        )
+
+        XCTAssertNil(match)
+    }
+
+    func testDerivedHeartRateRecoveryObservationUsesPostWorkoutSamples() {
+        let workoutEnd = Date(timeIntervalSince1970: 1_714_000_000)
+        let inWorkoutSamples = [
+            HeartRateSample(timestamp: workoutEnd.addingTimeInterval(-20), bpm: 108)
+        ]
+        let postWorkoutSamples = [
+            HeartRateSample(timestamp: workoutEnd.addingTimeInterval(5), bpm: 104),
+            HeartRateSample(timestamp: workoutEnd.addingTimeInterval(62), bpm: 94),
+            HeartRateSample(timestamp: workoutEnd.addingTimeInterval(118), bpm: 93),
+        ]
+
+        let observation = derivedHeartRateRecoveryObservation(
+            workoutEndDate: workoutEnd,
+            inWorkoutSamples: inWorkoutSamples,
+            postWorkoutSamples: postWorkoutSamples
+        )
+
+        guard let observation else {
+            return XCTFail("Expected derived recovery observation")
+        }
+        XCTAssertEqual(observation.value, 10, accuracy: 0.001)
+        XCTAssertEqual(observation.source, .apple)
+        XCTAssertEqual(observation.sourceLabel, "Derived from Apple Health post-workout heart rate")
+    }
+
+    func testHealthKitWorkoutRepositoryMapsRunningPowerContext() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.runningPower?.averageWatts, 248)
+        XCTAssertEqual(result.workouts.first?.runningPower?.source, .runningHRSpeed)
+        XCTAssertEqual(result.workouts.first?.runningPower?.sourceLabel, "Apple Health running power")
+    }
+
+    func testHealthKitWorkoutRepositoryMapsCyclingPowerContext() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.cyclingPower?.averageWatts, 214)
+        XCTAssertEqual(result.workouts.first?.cyclingPower?.source, .cyclingPowerHR)
+        XCTAssertEqual(result.workouts.first?.cyclingPower?.sourceLabel, "Apple Health cycling power")
+    }
+
+    func testHealthKitWorkoutRepositoryMapsWorkoutRouteContext() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        XCTAssertEqual(result.workouts.first?.workoutRoute?.pointCount, 128)
+        XCTAssertEqual(result.workouts.first?.workoutRoute?.elevationGainMeters, 86)
+        XCTAssertEqual(result.workouts.first?.workoutRoute?.source, .workoutRoute)
+        XCTAssertEqual(result.workouts.first?.workoutRoute?.sourceLabel, "Apple Health workout route")
+    }
+
+    func testHealthKitWorkoutRepositoryMapsExternalLoadDecouplingContext() async {
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()]
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.workouts.count, 1)
+        guard let observation = result.workouts.first?.externalLoadDecoupling else {
+            return XCTFail("Expected external load decoupling observation")
+        }
+        XCTAssertEqual(observation.source, .cyclingPowerHR)
+        XCTAssertEqual(observation.sourceLabel, "Apple Health cycling power + HR decoupling")
+        XCTAssertEqual(observation.decouplingRatio, 0.0417, accuracy: 0.0001)
+    }
+
+    func testHealthKitRefreshResultLogsAuthorizationAndWorkoutSummary() async {
+        let logRecorder = DebugLogRecorder()
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()],
+                debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails(
+                    workout: .sharingAuthorized,
+                    heartRate: .sharingAuthorized,
+                    vo2Max: .sharingAuthorized,
+                    heartRateRecoveryOneMinute: .sharingDenied,
+                    runningPower: .sharingDenied,
+                    cyclingPower: .sharingDenied,
+                    workoutRoute: .sharingAuthorized
+                ),
+                debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary(
+                    count: 1,
+                    records: [
+                        HealthKitRecoveryProbeRecord(
+                            value: 24,
+                            measuredAt: Date(timeIntervalSince1970: 1_714_001_200),
+                            source: .apple,
+                            sourceLabel: "Apple Watch"
+                        )
+                    ]
+                )
+            ),
+            debugLogger: logRecorder.record(_:)
+        )
+
+        _ = await repository.refreshResult()
+        let combinedLog = logRecorder.combinedLog()
+
+        XCTAssertTrue(combinedLog.contains("[HealthKit] refreshResult authorization=sharing_authorized"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("type_authorization"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("recovery=sharing_denied"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("[HealthKit] refreshResult workout_count=1"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("vo2=ok"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("recovery=ok"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("runningPower=ok"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("cyclingPower=ok"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("route=ok"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("recovery_candidates=1"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("global_recovery_probe count=1"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("global_recovery_probe[0]"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("source=Apple Watch"), combinedLog)
+    }
+
+    func testHealthKitRefreshResultLogsMissingSignalsClearly() async {
+        let logRecorder = DebugLogRecorder()
+        let start = Date(timeIntervalSince1970: 1_714_000_000)
+        let sparseSnapshot = HealthKitWorkoutSnapshot(
+            workoutType: .running,
+            startDate: start,
+            endDate: start.addingTimeInterval(20 * 60),
+            heartRateSamples: [
+                HeartRateSample(timestamp: start, bpm: 118),
+                HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 121),
+            ],
+            debugSignalSnapshot: HealthKitWorkoutDebugSignalSnapshot(
+                recoveryCandidateCount: 0
+            )
+        )
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [sparseSnapshot],
+                debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails(
+                    workout: .sharingAuthorized,
+                    heartRate: .sharingAuthorized,
+                    vo2Max: .sharingDenied,
+                    heartRateRecoveryOneMinute: .sharingDenied,
+                    runningPower: .sharingDenied,
+                    cyclingPower: .sharingDenied,
+                    workoutRoute: .sharingDenied
+                ),
+                debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary(
+                    count: 0,
+                    records: []
+                )
+            ),
+            debugLogger: logRecorder.record(_:)
+        )
+
+        _ = await repository.refreshResult()
+        let combinedLog = logRecorder.combinedLog()
+
+        XCTAssertTrue(combinedLog.contains("vo2=missing"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("recovery=missing"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("runningPower=missing"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("cyclingPower=missing"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("route=missing"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("recovery_candidates=0"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("global_recovery_probe count=0"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("global_recovery_fallback"), combinedLog)
+    }
+
+    func testHealthKitRefreshResultTreatsReadableSnapshotsAsAuthorizedWhenRawStatusDenied() async {
+        let logRecorder = DebugLogRecorder()
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingDenied,
+                requestedAuthorizationStatus: .sharingDenied,
+                snapshots: [makeHealthSnapshot()]
+            ),
+            debugLogger: logRecorder.record(_:)
+        )
+
+        let result = await repository.refreshResult()
+        let combinedLog = logRecorder.combinedLog()
+
+        XCTAssertEqual(result.statusMessage, "已從 Apple Health 載入運動紀錄。")
+        XCTAssertTrue(combinedLog.contains("[HealthKit] refreshResult authorization=sharing_authorized raw_authorization=sharing_denied"), combinedLog)
+    }
+
     func testStravaOAuthConfigurationBuildsMobileAuthorizationURL() {
         let configuration = StravaOAuthConfiguration(
             clientID: 123,
@@ -396,13 +709,26 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.source, .healthKit)
         XCTAssertEqual(result.workouts.count, 1)
         XCTAssertEqual(result.workouts.first?.workoutType, .cycling)
-        XCTAssertEqual(result.workouts.first?.intent, .activityReview)
+        XCTAssertEqual(result.workouts.first?.intent, .zone2)
         XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 2)
         guard let hrv = result.workouts.first?.hrvSDNNMilliseconds else {
             XCTFail("Expected HRV SDNN value from HealthKit snapshot")
             return
         }
         XCTAssertEqual(hrv, 42.5, accuracy: 0.001)
+    }
+
+    func testWorkoutDefaultIntentsCollapseMixedAndOtherToThreeVisibleIntents() {
+        XCTAssertEqual(WorkoutInput.defaultIntent(for: .mixed), .vo2Interval)
+        XCTAssertEqual(WorkoutInput.defaultIntent(for: .other), .zone2)
+        XCTAssertEqual(WorkoutInput.defaultIntent(for: .strengthTraining), .strength)
+    }
+
+    func testWorkoutTypeLocalizedNamesDoNotExposeFourthCategoryLabels() {
+        XCTAssertEqual(WorkoutType.mixed.localizedName, "最大攝氧量 / 間歇型")
+        XCTAssertEqual(WorkoutType.other.localizedName, "Zone 2 / 一般有氧")
+        XCTAssertFalse(WorkoutType.mixed.localizedName.contains("混合"))
+        XCTAssertFalse(WorkoutType.other.localizedName.contains("其他"))
     }
 
     func testHealthKitWorkoutRepositoryRequestsAuthorizationWhenNeeded() async {
@@ -560,7 +886,7 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertEqual(evaluation.primaryIntent, .zone2)
         XCTAssertFalse(evaluation.legacyPassFail)
-        XCTAssertTrue(evaluation.trainingTendency.contains("Zone 2") || evaluation.trainingTendency.contains("混合有氧"))
+        XCTAssertTrue(evaluation.trainingTendency.contains("穩定有氧"))
         XCTAssertTrue(evaluation.nextAction.contains("降低") || evaluation.nextAction.contains("放慢") || evaluation.nextAction.contains("強度"))
     }
 
@@ -613,8 +939,9 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertLessThanOrEqual(evaluation.keyFindings.count, 2)
         XCTAssertTrue(
             evaluation.keyFindings.contains {
-                $0.localizedCaseInsensitiveContains("Zone 3") ||
-                $0.localizedCaseInsensitiveContains("飄移")
+                $0.localizedCaseInsensitiveContains("中高強度") ||
+                $0.localizedCaseInsensitiveContains("後段") ||
+                $0.localizedCaseInsensitiveContains("心率")
             }
         )
     }
@@ -1263,15 +1590,15 @@ final class ZoneTruthAppTests: XCTestCase {
             zone2.metricMetadata + vo2.metricMetadata + strength.metricMetadata
         )
         let text = items
-            .flatMap { [$0.title, $0.status, $0.method, $0.confidenceReason, $0.validationHint ?? ""] }
+            .flatMap { [$0.title, $0.status, $0.summary, $0.method, $0.confidenceReason, $0.validationHint ?? ""] }
             .joined(separator: " ")
 
         XCTAssertTrue(text.contains("Zone 2 心率範圍"))
-        XCTAssertTrue(text.contains("起始參考"))
+        XCTAssertTrue(text.contains("分析起點"))
         XCTAssertTrue(text.contains("VO2 間歇型態"))
-        XCTAssertTrue(text.contains("目前只描述間歇型態"))
+        XCTAssertTrue(text.contains("這裡描述的是高強度型態"))
         XCTAssertTrue(text.contains("肌力訓練型態"))
-        XCTAssertTrue(text.contains("目前只描述心率型態"))
+        XCTAssertTrue(text.contains("這裡描述的是肌力訓練節奏"))
         XCTAssertFalse(text.contains("VO2 max 實測"))
         XCTAssertFalse(text.contains("精準 Zone 2"))
         XCTAssertFalse(text.contains("1RM"))
@@ -1296,10 +1623,9 @@ final class ZoneTruthAppTests: XCTestCase {
         let vo2Text = text(for: items, title: "VO2 間歇型態")
         let strengthText = text(for: items, title: "肌力訓練型態")
 
-        XCTAssertTrue(zone2Text.contains("LT1"))
-        XCTAssertTrue(zone2Text.contains("VT1"))
-        XCTAssertTrue(vo2Text.contains("不代表已推估或測量最大攝氧量數值"))
-        XCTAssertTrue(strengthText.contains("不能代表最大肌力"))
+        XCTAssertTrue(zone2Text.contains("閾值測試"))
+        XCTAssertTrue(vo2Text.contains("不代表已直接量到最大攝氧量"))
+        XCTAssertTrue(strengthText.contains("不能直接代表最大肌力"))
         XCTAssertFalse(zone2Text.contains("最大攝氧量"), zone2Text)
         XCTAssertFalse(vo2Text.contains("精準 Zone 2"), vo2Text)
         XCTAssertFalse(strengthText.contains("VO2 max"), strengthText)
@@ -1335,7 +1661,7 @@ final class ZoneTruthAppTests: XCTestCase {
         )
         let text = text(for: items, title: "最大攝氧量估算")
 
-        XCTAssertTrue(text.contains("估算"), text)
+        XCTAssertTrue(text.contains("估算參考"), text)
         XCTAssertTrue(text.contains("Apple 產品估算"), text)
         XCTAssertTrue(text.contains("產品來源估算"), text)
         XCTAssertTrue(text.contains("實驗室氣體分析"), text)
@@ -1382,13 +1708,297 @@ final class ZoneTruthAppTests: XCTestCase {
         )
         let text = text(for: items, title: "肌力指標")
 
-        XCTAssertTrue(text.contains("估算"), text)
+        XCTAssertTrue(text.contains("估算參考"), text)
         XCTAssertTrue(text.contains("估算最大負重"), text)
         XCTAssertTrue(text.contains("e1RM 肌力估算"), text)
-        XCTAssertTrue(text.contains("測試協議脈絡"), text)
+        XCTAssertTrue(text.contains("動作、負重、次數"), text)
         XCTAssertFalse(text.contains("全身肌力診斷"), text)
         XCTAssertFalse(text.contains("clinical strength diagnosis"), text)
         XCTAssertFalse(text.contains("whole-body strength diagnosis"), text)
+    }
+
+    func testMetricDisclosurePresenterRendersHeartRateRecoveryAsBoundedContext() {
+        let base = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: HeartRateRecoveryObservation(
+                value: 21,
+                source: .apple,
+                sourceLabel: "Apple Health 1-minute heart-rate recovery"
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "恢復脈絡")
+
+        XCTAssertTrue(text.contains("估算參考"), text)
+        XCTAssertTrue(text.contains("Apple 產品估算"), text)
+        XCTAssertTrue(text.contains("運動後心率回落情況"), text)
+        XCTAssertTrue(text.contains("恢復觀察"), text)
+        XCTAssertFalse(text.contains("recovery diagnosis"), text)
+        XCTAssertFalse(text.contains("VO2 max measurement"), text)
+    }
+
+    func testMetricDisclosurePresenterRendersDerivedHeartRateRecoveryAsBoundedContext() {
+        let base = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: HeartRateRecoveryObservation(
+                value: 10,
+                source: .apple,
+                sourceLabel: "Derived from Apple Health post-workout heart rate"
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "恢復脈絡")
+
+        XCTAssertTrue(text.contains("估算參考"), text)
+        XCTAssertTrue(text.contains("Apple 產品估算"), text)
+        XCTAssertTrue(text.contains("運動結束後的心率點推得"), text)
+        XCTAssertFalse(text.contains("recovery diagnosis"), text)
+    }
+
+    func testMetricDisclosurePresenterRendersRunningPowerAsFieldEstimatorSupport() {
+        let base = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: base.heartRateRecoveryOneMinute,
+            runningPower: RunningPowerObservation(
+                averageWatts: 246,
+                source: .runningHRSpeed,
+                sourceLabel: "Apple Health running power"
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "跑步功率脈絡")
+
+        XCTAssertTrue(text.contains("估算參考"), text)
+        XCTAssertTrue(text.contains("跑步心率與速度估算"), text)
+        XCTAssertTrue(text.contains("補充跑步時的外部負荷"), text)
+        XCTAssertTrue(text.contains("外部負荷"), text)
+        XCTAssertFalse(text.contains("VO2 max measurement"), text)
+        XCTAssertFalse(text.contains("exact Zone 2"), text)
+    }
+
+    func testMetricDisclosurePresenterRendersCyclingPowerAsFieldEstimatorSupport() {
+        let base = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: .cycling,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: base.heartRateRecoveryOneMinute,
+            runningPower: base.runningPower,
+            cyclingPower: CyclingPowerObservation(
+                averageWatts: 212,
+                source: .cyclingPowerHR,
+                sourceLabel: "Apple Health cycling power"
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "自行車功率脈絡")
+
+        XCTAssertTrue(text.contains("估算參考"), text)
+        XCTAssertTrue(text.contains("自行車功率與心率估算"), text)
+        XCTAssertTrue(text.contains("補充騎乘時的外部負荷"), text)
+        XCTAssertTrue(text.contains("外部負荷"), text)
+        XCTAssertFalse(text.contains("VO2 max measurement"), text)
+        XCTAssertFalse(text.contains("exact Zone 2"), text)
+    }
+
+    func testMetricDisclosurePresenterRendersWorkoutRouteAsTerrainContext() {
+        let base = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: .running,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: base.heartRateRecoveryOneMinute,
+            runningPower: base.runningPower,
+            cyclingPower: base.cyclingPower,
+            workoutRoute: WorkoutRouteObservation(
+                pointCount: 128,
+                elevationGainMeters: 86,
+                source: .workoutRoute,
+                sourceLabel: "Apple Health workout route"
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "路線脈絡")
+
+        XCTAssertTrue(text.contains("估算參考"), text)
+        XCTAssertTrue(text.contains("Apple Health workout route"), text)
+        XCTAssertTrue(text.contains("路線與地形背景"), text)
+        XCTAssertTrue(text.contains("戶外訓練情境"), text)
+        XCTAssertFalse(text.contains("VO2 max measurement"), text)
+        XCTAssertFalse(text.contains("exact Zone 2"), text)
+    }
+
+    func testMetricDisclosurePresenterRendersExternalLoadDecouplingAsBoundedContext() {
+        let base = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: .running,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: base.heartRateRecoveryOneMinute,
+            runningPower: base.runningPower,
+            cyclingPower: base.cyclingPower,
+            workoutRoute: base.workoutRoute,
+            externalLoadDecoupling: ExternalLoadDecouplingObservation(
+                decouplingRatio: 0.043,
+                firstHalfAverageHeartRate: 132,
+                secondHalfAverageHeartRate: 138,
+                firstHalfAverageWatts: 241,
+                secondHalfAverageWatts: 242,
+                source: .runningHRSpeed,
+                sourceLabel: "Apple Health running power + HR decoupling",
+                measuredAt: base.endDate
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "負荷一致性脈絡")
+
+        XCTAssertTrue(text.contains("估算參考"), text)
+        XCTAssertTrue(text.contains("Apple Health running power + HR decoupling"), text)
+        XCTAssertTrue(text.contains("前後段心率和負荷是否大致一致"), text)
+        XCTAssertTrue(text.contains("前後段一致性線索"), text)
+        XCTAssertFalse(text.contains("VO2 max measurement"), text)
+        XCTAssertFalse(text.contains("exact Zone 2"), text)
+    }
+
+    func testExternalLoadDecouplingObservationComputesHalfSplitRatio() {
+        let start = Date(timeIntervalSince1970: 1_714_500_000)
+        let end = start.addingTimeInterval(20 * 60)
+        let heartRateSamples = [
+            HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 130),
+            HeartRateSample(timestamp: start.addingTimeInterval(240), bpm: 132),
+            HeartRateSample(timestamp: start.addingTimeInterval(720), bpm: 137),
+            HeartRateSample(timestamp: start.addingTimeInterval(960), bpm: 139),
+        ]
+        let runningPowerSamples = [
+            TimedPowerSample(timestamp: start.addingTimeInterval(90), watts: 240),
+            TimedPowerSample(timestamp: start.addingTimeInterval(300), watts: 242),
+            TimedPowerSample(timestamp: start.addingTimeInterval(780), watts: 243),
+            TimedPowerSample(timestamp: start.addingTimeInterval(1020), watts: 244),
+        ]
+
+        let observation = externalLoadDecouplingObservation(
+            workoutType: .running,
+            startDate: start,
+            endDate: end,
+            heartRateSamples: heartRateSamples,
+            runningPowerSamples: runningPowerSamples,
+            cyclingPowerSamples: []
+        )
+
+        guard let unwrappedObservation = observation else {
+            return XCTFail("Expected decoupling observation")
+        }
+        XCTAssertEqual(unwrappedObservation.source, .runningHRSpeed)
+        XCTAssertEqual(unwrappedObservation.firstHalfAverageHeartRate, 131, accuracy: 0.001)
+        XCTAssertEqual(unwrappedObservation.secondHalfAverageHeartRate, 138, accuracy: 0.001)
+        XCTAssertEqual(unwrappedObservation.firstHalfAverageWatts, 241, accuracy: 0.001)
+        XCTAssertEqual(unwrappedObservation.secondHalfAverageWatts, 243.5, accuracy: 0.001)
+        XCTAssertEqual(unwrappedObservation.decouplingRatio, 0.0426, accuracy: 0.0001)
     }
 
     @MainActor
@@ -1407,7 +2017,7 @@ final class ZoneTruthAppTests: XCTestCase {
             XCTFail("Expected disclosure item titled \(title)")
             return ""
         }
-        return [item.title, item.status, item.method, item.confidenceReason, item.validationHint ?? ""]
+        return [item.title, item.status, item.summary, item.method, item.confidenceReason, item.validationHint ?? ""]
             .joined(separator: " ")
     }
 
@@ -2191,7 +2801,50 @@ final class ZoneTruthAppTests: XCTestCase {
                 HeartRateSample(timestamp: start, bpm: 118),
                 HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 121),
             ],
-            hrvSDNNMilliseconds: 42.5
+            hrvSDNNMilliseconds: 42.5,
+            vo2MaxEstimate: VO2MaxEstimate(
+                value: 47.3,
+                source: .apple,
+                sourceLabel: "Apple Health VO2 max",
+                measuredAt: start.addingTimeInterval(-300)
+            ),
+            heartRateRecoveryOneMinute: HeartRateRecoveryObservation(
+                value: 23,
+                source: .apple,
+                sourceLabel: "Apple Health 1-minute heart-rate recovery",
+                measuredAt: start.addingTimeInterval(60)
+            ),
+            runningPower: RunningPowerObservation(
+                averageWatts: 248,
+                source: .runningHRSpeed,
+                sourceLabel: "Apple Health running power",
+                measuredAt: start.addingTimeInterval(20 * 60)
+            ),
+            cyclingPower: CyclingPowerObservation(
+                averageWatts: 214,
+                source: .cyclingPowerHR,
+                sourceLabel: "Apple Health cycling power",
+                measuredAt: start.addingTimeInterval(20 * 60)
+            ),
+            workoutRoute: WorkoutRouteObservation(
+                pointCount: 128,
+                elevationGainMeters: 86,
+                source: .workoutRoute,
+                sourceLabel: "Apple Health workout route"
+            ),
+            externalLoadDecoupling: ExternalLoadDecouplingObservation(
+                decouplingRatio: 0.0417,
+                firstHalfAverageHeartRate: 120,
+                secondHalfAverageHeartRate: 125,
+                firstHalfAverageWatts: 216,
+                secondHalfAverageWatts: 216,
+                source: .cyclingPowerHR,
+                sourceLabel: "Apple Health cycling power + HR decoupling",
+                measuredAt: start.addingTimeInterval(20 * 60)
+            ),
+            debugSignalSnapshot: HealthKitWorkoutDebugSignalSnapshot(
+                recoveryCandidateCount: 1
+            )
         )
     }
 
@@ -2303,6 +2956,9 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
     let authorizationStatus: HealthAuthorizationStatus
     let requestedAuthorizationStatus: HealthAuthorizationStatus
     let snapshots: [HealthKitWorkoutSnapshot]
+    var restingHeartRateBaseline: Double? = nil
+    var debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails? = nil
+    var debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary? = nil
 
     func requestAuthorization() async -> HealthAuthorizationStatus {
         requestedAuthorizationStatus
@@ -2311,6 +2967,36 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
     func fetchRecentWorkouts(limit: Int) async throws -> [HealthKitWorkoutSnapshot] {
         _ = limit
         return snapshots
+    }
+
+    func fetchRestingHeartRateBaseline() async throws -> Double? {
+        restingHeartRateBaseline
+    }
+
+    func debugAuthorizationDetails() async -> HealthKitAuthorizationDebugDetails? {
+        debugAuthorizationDetailsValue
+    }
+
+    func debugGlobalRecoveryProbe(limit: Int) async -> HealthKitRecoveryProbeSummary? {
+        _ = limit
+        return debugGlobalRecoveryProbeValue
+    }
+}
+
+private final class DebugLogRecorder {
+    private var messages: [String] = []
+    private let lock = NSLock()
+
+    func record(_ message: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        messages.append(message)
+    }
+
+    func combinedLog() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return messages.joined(separator: "\n")
     }
 }
 

@@ -30,6 +30,11 @@ public enum AnalysisVerdict: String, Codable, Sendable {
 
 public enum TrainingMetricKind: String, Codable, CaseIterable, Sendable {
     case vo2Max = "vo2max"
+    case heartRateRecovery = "heart_rate_recovery"
+    case runningPower = "running_power"
+    case cyclingPower = "cycling_power"
+    case workoutRoute = "workout_route"
+    case externalLoadDecoupling = "external_load_decoupling"
     case vo2IntervalQuality = "vo2_interval_quality"
     case zone2HeartRateRange = "zone2_hr_range"
     case strength
@@ -51,6 +56,7 @@ public enum TrainingMetricMethodSource: String, Codable, CaseIterable, Sendable 
     case firstbeat
     case runningHRSpeed = "running_hr_speed"
     case cyclingPowerHR = "cycling_power_hr"
+    case workoutRoute = "workout_route"
     case hrDrift = "hr_drift"
     case hrvThreshold = "hrv_threshold"
     case talkTest = "talk_test"
@@ -113,6 +119,113 @@ public struct StrengthMetric: Codable, Equatable, Hashable, Sendable {
         self.repetitions = repetitions
         self.loadValue = loadValue
         self.loadUnit = loadUnit
+        self.measuredAt = measuredAt
+    }
+}
+
+public struct HeartRateRecoveryObservation: Codable, Equatable, Hashable, Sendable {
+    public let value: Double
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+    public let measuredAt: Date?
+
+    public init(
+        value: Double,
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil,
+        measuredAt: Date? = nil
+    ) {
+        self.value = value
+        self.source = source
+        self.sourceLabel = sourceLabel
+        self.measuredAt = measuredAt
+    }
+}
+
+public struct RunningPowerObservation: Codable, Equatable, Hashable, Sendable {
+    public let averageWatts: Double
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+    public let measuredAt: Date?
+
+    public init(
+        averageWatts: Double,
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil,
+        measuredAt: Date? = nil
+    ) {
+        self.averageWatts = averageWatts
+        self.source = source
+        self.sourceLabel = sourceLabel
+        self.measuredAt = measuredAt
+    }
+}
+
+public struct CyclingPowerObservation: Codable, Equatable, Hashable, Sendable {
+    public let averageWatts: Double
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+    public let measuredAt: Date?
+
+    public init(
+        averageWatts: Double,
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil,
+        measuredAt: Date? = nil
+    ) {
+        self.averageWatts = averageWatts
+        self.source = source
+        self.sourceLabel = sourceLabel
+        self.measuredAt = measuredAt
+    }
+}
+
+public struct WorkoutRouteObservation: Codable, Equatable, Hashable, Sendable {
+    public let pointCount: Int
+    public let elevationGainMeters: Double?
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+
+    public init(
+        pointCount: Int,
+        elevationGainMeters: Double? = nil,
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil
+    ) {
+        self.pointCount = pointCount
+        self.elevationGainMeters = elevationGainMeters
+        self.source = source
+        self.sourceLabel = sourceLabel
+    }
+}
+
+public struct ExternalLoadDecouplingObservation: Codable, Equatable, Hashable, Sendable {
+    public let decouplingRatio: Double
+    public let firstHalfAverageHeartRate: Double
+    public let secondHalfAverageHeartRate: Double
+    public let firstHalfAverageWatts: Double
+    public let secondHalfAverageWatts: Double
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+    public let measuredAt: Date?
+
+    public init(
+        decouplingRatio: Double,
+        firstHalfAverageHeartRate: Double,
+        secondHalfAverageHeartRate: Double,
+        firstHalfAverageWatts: Double,
+        secondHalfAverageWatts: Double,
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil,
+        measuredAt: Date? = nil
+    ) {
+        self.decouplingRatio = decouplingRatio
+        self.firstHalfAverageHeartRate = firstHalfAverageHeartRate
+        self.secondHalfAverageHeartRate = secondHalfAverageHeartRate
+        self.firstHalfAverageWatts = firstHalfAverageWatts
+        self.secondHalfAverageWatts = secondHalfAverageWatts
+        self.source = source
+        self.sourceLabel = sourceLabel
         self.measuredAt = measuredAt
     }
 }
@@ -205,6 +318,11 @@ public struct TrainingMetricClaim: Codable, Equatable, Hashable, Sendable {
 
 public enum TrainingMetricClaimProfileKind: String, Codable, CaseIterable, Sendable {
     case vo2MaxEstimate = "vo2max_estimate"
+    case heartRateRecoveryContext = "heart_rate_recovery_context"
+    case runningPowerContext = "running_power_context"
+    case cyclingPowerContext = "cycling_power_context"
+    case workoutRouteContext = "workout_route_context"
+    case externalLoadDecouplingContext = "external_load_decoupling_context"
     case vo2IntervalPattern = "vo2_interval_pattern"
     case zone2ThresholdRange = "zone2_threshold_range"
     case strengthMeasurement = "strength_measurement"
@@ -238,6 +356,41 @@ public struct TrainingMetricClaimProfile: Codable, Equatable, Hashable, Sendable
                 displayName: "最大攝氧量估算",
                 disclosure: "VO2 max 需要 CPET / GXT 氣體分析才可視為直接測量；其他來源應維持估算或產品參考語氣。",
                 forbiddenTerms: ["true VO2 max", "lab-equivalent", "VO2 max 實測"]
+            )
+        case .heartRateRecovery:
+            return TrainingMetricClaimProfile(
+                kind: .heartRateRecoveryContext,
+                displayName: "恢復脈絡",
+                disclosure: "1 分鐘心率恢復可作為恢復脈絡觀察，但不能等同最大攝氧量、臨床恢復診斷或完整心肺評估。",
+                forbiddenTerms: ["recovery diagnosis", "VO2 max measurement", "clinical recovery diagnosis"]
+            )
+        case .runningPower:
+            return TrainingMetricClaimProfile(
+                kind: .runningPowerContext,
+                displayName: "跑步功率脈絡",
+                disclosure: "跑步功率可作為外部負荷與場地強度脈絡，但不能單獨視為閾值或 VO2 max 測量。",
+                forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+            )
+        case .cyclingPower:
+            return TrainingMetricClaimProfile(
+                kind: .cyclingPowerContext,
+                displayName: "自行車功率脈絡",
+                disclosure: "自行車功率可作為外部負荷與場地強度脈絡，但不能單獨視為閾值或 VO2 max 測量。",
+                forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+            )
+        case .workoutRoute:
+            return TrainingMetricClaimProfile(
+                kind: .workoutRouteContext,
+                displayName: "路線脈絡",
+                disclosure: "路線與地形資料可作為戶外訓練脈絡，但不能單獨視為閾值、VO2 max 或訓練品質結論。",
+                forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
+            )
+        case .externalLoadDecoupling:
+            return TrainingMetricClaimProfile(
+                kind: .externalLoadDecouplingContext,
+                displayName: "負荷一致性脈絡",
+                disclosure: "前後半段心率與功率比例變化可作為外部負荷一致性線索，但不能單獨視為閾值、VO2 max 或訓練品質結論。",
+                forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
             )
         case .vo2IntervalQuality:
             return TrainingMetricClaimProfile(
@@ -432,6 +585,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let activeCaloriesKcal: Double?
     public let totalDistanceMeters: Double?
     public let vo2MaxEstimate: VO2MaxEstimate?
+    public let heartRateRecoveryOneMinute: HeartRateRecoveryObservation?
+    public let runningPower: RunningPowerObservation?
+    public let cyclingPower: CyclingPowerObservation?
+    public let workoutRoute: WorkoutRouteObservation?
+    public let externalLoadDecoupling: ExternalLoadDecouplingObservation?
     public let strengthMetrics: [StrengthMetric]
 
     public init(
@@ -448,6 +606,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         activeCaloriesKcal: Double? = nil,
         totalDistanceMeters: Double? = nil,
         vo2MaxEstimate: VO2MaxEstimate? = nil,
+        heartRateRecoveryOneMinute: HeartRateRecoveryObservation? = nil,
+        runningPower: RunningPowerObservation? = nil,
+        cyclingPower: CyclingPowerObservation? = nil,
+        workoutRoute: WorkoutRouteObservation? = nil,
+        externalLoadDecoupling: ExternalLoadDecouplingObservation? = nil,
         strengthMetrics: [StrengthMetric] = []
     ) {
         let resolvedIntent = intent ?? Self.defaultIntent(for: workoutType)
@@ -465,6 +628,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         self.activeCaloriesKcal = activeCaloriesKcal
         self.totalDistanceMeters = totalDistanceMeters
         self.vo2MaxEstimate = vo2MaxEstimate
+        self.heartRateRecoveryOneMinute = heartRateRecoveryOneMinute
+        self.runningPower = runningPower
+        self.cyclingPower = cyclingPower
+        self.workoutRoute = workoutRoute
+        self.externalLoadDecoupling = externalLoadDecoupling
         self.strengthMetrics = strengthMetrics
     }
 
@@ -474,8 +642,10 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
             return .strength
         case .running, .cycling, .swimming, .walking:
             return .zone2
-        case .mixed, .other:
-            return .activityReview
+        case .mixed:
+            return .vo2Interval
+        case .other:
+            return .zone2
         }
     }
 
@@ -493,6 +663,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         case activeCaloriesKcal
         case totalDistanceMeters
         case vo2MaxEstimate
+        case heartRateRecoveryOneMinute
+        case runningPower
+        case cyclingPower
+        case workoutRoute
+        case externalLoadDecoupling
         case strengthMetrics
     }
 
@@ -511,6 +686,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         let activeCaloriesKcal = try container.decodeIfPresent(Double.self, forKey: .activeCaloriesKcal)
         let totalDistanceMeters = try container.decodeIfPresent(Double.self, forKey: .totalDistanceMeters)
         let vo2MaxEstimate = try container.decodeIfPresent(VO2MaxEstimate.self, forKey: .vo2MaxEstimate)
+        let heartRateRecoveryOneMinute = try container.decodeIfPresent(HeartRateRecoveryObservation.self, forKey: .heartRateRecoveryOneMinute)
+        let runningPower = try container.decodeIfPresent(RunningPowerObservation.self, forKey: .runningPower)
+        let cyclingPower = try container.decodeIfPresent(CyclingPowerObservation.self, forKey: .cyclingPower)
+        let workoutRoute = try container.decodeIfPresent(WorkoutRouteObservation.self, forKey: .workoutRoute)
+        let externalLoadDecoupling = try container.decodeIfPresent(ExternalLoadDecouplingObservation.self, forKey: .externalLoadDecoupling)
         let strengthMetrics = try container.decodeIfPresent([StrengthMetric].self, forKey: .strengthMetrics) ?? []
 
         self.init(
@@ -527,6 +707,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
             activeCaloriesKcal: activeCaloriesKcal,
             totalDistanceMeters: totalDistanceMeters,
             vo2MaxEstimate: vo2MaxEstimate,
+            heartRateRecoveryOneMinute: heartRateRecoveryOneMinute,
+            runningPower: runningPower,
+            cyclingPower: cyclingPower,
+            workoutRoute: workoutRoute,
+            externalLoadDecoupling: externalLoadDecoupling,
             strengthMetrics: strengthMetrics
         )
     }
@@ -546,6 +731,11 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         try container.encodeIfPresent(activeCaloriesKcal, forKey: .activeCaloriesKcal)
         try container.encodeIfPresent(totalDistanceMeters, forKey: .totalDistanceMeters)
         try container.encodeIfPresent(vo2MaxEstimate, forKey: .vo2MaxEstimate)
+        try container.encodeIfPresent(heartRateRecoveryOneMinute, forKey: .heartRateRecoveryOneMinute)
+        try container.encodeIfPresent(runningPower, forKey: .runningPower)
+        try container.encodeIfPresent(cyclingPower, forKey: .cyclingPower)
+        try container.encodeIfPresent(workoutRoute, forKey: .workoutRoute)
+        try container.encodeIfPresent(externalLoadDecoupling, forKey: .externalLoadDecoupling)
         if !strengthMetrics.isEmpty {
             try container.encode(strengthMetrics, forKey: .strengthMetrics)
         }

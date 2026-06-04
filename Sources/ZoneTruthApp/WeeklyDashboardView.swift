@@ -978,7 +978,7 @@ struct WeeklyAdvancedCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.white.opacity(0.8))
 
-                let intentsWithData = TrainingIntent.allCases.filter {
+                let intentsWithData = TrainingIntent.uiVisibleCases.filter {
                     summary.intentDistribution[$0, default: 0] > 0
                 }
                 if intentsWithData.isEmpty {

@@ -191,7 +191,7 @@ struct StravaActivitySnapshot: Equatable, Sendable {
         startDate: Date,
         endDate: Date,
         heartRateSamples: [HeartRateSample],
-        defaultIntent: TrainingIntent = .activityReview
+        defaultIntent: TrainingIntent? = nil
     ) {
         self.activityID = activityID
         self.name = name
@@ -199,7 +199,7 @@ struct StravaActivitySnapshot: Equatable, Sendable {
         self.startDate = startDate
         self.endDate = endDate
         self.heartRateSamples = heartRateSamples
-        self.defaultIntent = defaultIntent
+        self.defaultIntent = defaultIntent ?? WorkoutInput.defaultIntent(for: workoutType)
     }
 
     var toDomainWorkout: WorkoutInput {
@@ -754,7 +754,7 @@ private struct StravaActivitySummary: Decodable {
         case "WeightTraining", "Crossfit", "Workout":
             return .strength
         default:
-            return .activityReview
+            return .zone2
         }
     }
 }

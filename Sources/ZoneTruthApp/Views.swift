@@ -12,8 +12,8 @@ extension WorkoutType {
         case .swimming: return "游泳"
         case .walking: return "步行/健走"
         case .strengthTraining: return "肌力訓練"
-        case .mixed: return "混合訓練"
-        case .other: return "其他 (如羽球等)"
+        case .mixed: return "最大攝氧量 / 間歇型"
+        case .other: return "Zone 2 / 一般有氧"
         }
     }
     
@@ -24,17 +24,21 @@ extension WorkoutType {
         case .swimming: return "figure.pool.swim"
         case .walking: return "figure.walk"
         case .strengthTraining: return "figure.strengthtraining.functional"
-        case .mixed: return "figure.mixed.cardio"
-        case .other: return "sportscourt"
+        case .mixed: return "bolt.heart.fill"
+        case .other: return "figure.run"
         }
     }
 }
 
 extension TrainingIntent {
+    static var uiVisibleCases: [TrainingIntent] {
+        [.zone2, .vo2Interval, .strength]
+    }
+
     var localizedName: String {
         switch self {
         case .zone2: return "Zone 2"
-        case .activityReview: return "活動 / 技巧"
+        case .activityReview: return "Zone 2"
         case .vo2Interval: return "最大攝氧量 / 間歇"
         case .strength: return "肌力"
         }
@@ -427,6 +431,7 @@ struct WorkoutRowView: View {
 struct MetricDisclosureItem: Equatable {
     let title: String
     let status: String
+    let summary: String
     let method: String
     let confidenceReason: String
     let validationHint: String?
@@ -441,6 +446,7 @@ enum MetricDisclosurePresenter {
         MetricDisclosureItem(
             title: metadata.claimProfile.displayName,
             status: status(for: metadata.claim.ceiling),
+            summary: summary(for: metadata),
             method: "方法：\(methodLabel(for: metadata))",
             confidenceReason: confidenceReason(for: metadata),
             validationHint: metadata.recommendedValidation.map { "驗證方向：\(validationLabel($0))" }
@@ -450,17 +456,47 @@ enum MetricDisclosurePresenter {
     private static func status(for ceiling: TrainingMetricClaimCeiling) -> String {
         switch ceiling {
         case .measuredIfDirect:
-            return "直接測量資料"
+            return "直接資料"
         case .estimateOnly:
-            return "估算"
+            return "估算參考"
         case .startingPointOnly:
-            return "起始參考"
+            return "分析起點"
         case .unsupported:
-            return "僅顯示原始資料"
+            return "僅供參考"
+        }
+    }
+
+    private static func summary(for metadata: TrainingMetricMetadata) -> String {
+        switch metadata.claimProfile.kind {
+        case .vo2MaxEstimate:
+            return "這是裝置提供的最大攝氧量參考值，適合追蹤變化，不當成實驗室實測。"
+        case .heartRateRecoveryContext:
+            return "這裡用來看運動後心率回落情況，能幫助理解恢復，但不單獨下結論。"
+        case .runningPowerContext:
+            return "這裡補充跑步時的外部負荷，幫助判讀強度是否穩定。"
+        case .cyclingPowerContext:
+            return "這裡補充騎乘時的外部負荷，幫助判讀強度是否穩定。"
+        case .workoutRouteContext:
+            return "這裡補充路線與地形背景，避免把環境影響誤認成身體狀態變化。"
+        case .externalLoadDecouplingContext:
+            return "這裡看前後段心率和負荷是否大致一致，可作為穩定度的輔助線索。"
+        case .vo2IntervalPattern:
+            return "這裡描述的是高強度型態，不代表已直接量到最大攝氧量。"
+        case .zone2ThresholdRange:
+            return "這裡是本次分析採用的心率範圍，適合當起點，不代表已做閾值測試。"
+        case .strengthMeasurement:
+            return "這裡是帶有動作脈絡的肌力數值，較適合拿來追蹤同動作變化。"
+        case .strengthSessionPattern:
+            return "這裡描述的是肌力訓練節奏，不把心率型態直接當成最大肌力。"
+        case .genericObservation:
+            return "這裡只整理目前看得到的資料，不延伸成過度確定的結論。"
         }
     }
 
     private static func methodLabel(for metadata: TrainingMetricMetadata) -> String {
+        if metadata.metric == .externalLoadDecoupling {
+            return metadata.method.name
+        }
         switch metadata.method.source {
         case .policyZoneBounds:
             return "目前設定的心率界線"
@@ -482,6 +518,8 @@ enum MetricDisclosurePresenter {
             return "跑步心率與速度估算"
         case .cyclingPowerHR:
             return "自行車功率與心率估算"
+        case .workoutRoute:
+            return metadata.method.name
         case .hrDrift:
             return "心率飄移觀察"
         case .hrvThreshold:
@@ -506,7 +544,7 @@ enum MetricDisclosurePresenter {
     private static func confidenceReason(for metadata: TrainingMetricMetadata) -> String {
         let level = confidenceLabel(for: metadata.confidence.level)
         let basis = basisLabel(metadata.confidence.basis)
-        return "信心：\(level)。\(basis) \(profileDisclosureLabel(for: metadata.claimProfile.kind))"
+        return "可靠度：\(level)。\(basis) \(profileDisclosureLabel(for: metadata.claimProfile.kind))"
     }
 
     private static func confidenceLabel(for level: TrainingMetricConfidenceLevel) -> String {
@@ -542,10 +580,28 @@ enum MetricDisclosurePresenter {
             return "來源標示為實驗室氣體分析資料。"
         }
         if basis.localizedCaseInsensitiveContains("Structured field VO2 max estimate") {
-            return "這是結構化 field estimate，尚未使用實驗室氣體交換資料確認。"
+            return "這是依運動資料推得的參考值，還沒有用實驗室氣體交換資料確認。"
         }
         if basis.localizedCaseInsensitiveContains("Product VO2 max estimate") {
             return "這是產品來源估算，未直接使用氣體交換資料。"
+        }
+        if basis.localizedCaseInsensitiveContains("Product heart-rate recovery context") {
+            return "這是產品來源的 1 分鐘心率恢復脈絡，僅作為恢復觀察。"
+        }
+        if basis.localizedCaseInsensitiveContains("Derived post-workout heart-rate recovery context") {
+            return "這是由運動結束後的心率點推得的 1 分鐘回復脈絡，僅作為恢復觀察。"
+        }
+        if basis.localizedCaseInsensitiveContains("Running power context was imported") {
+            return "這是匯入的跑步功率資料，可補充外部負荷變化。"
+        }
+        if basis.localizedCaseInsensitiveContains("Cycling power context was imported") {
+            return "這是匯入的自行車功率資料，可補充外部負荷變化。"
+        }
+        if basis.localizedCaseInsensitiveContains("Workout route context was imported") {
+            return "這是匯入的路線與地形脈絡，可作為戶外訓練情境輔助。"
+        }
+        if basis.localizedCaseInsensitiveContains("External-load decoupling context was imported") {
+            return "這是前後半段心率與功率比例變化摘要，可作為外部負荷是否穩定一致的輔助線索。"
         }
         if basis.localizedCaseInsensitiveContains("limited method provenance") {
             return "來源方法資訊有限，僅能作為低信心估算。"
@@ -556,11 +612,11 @@ enum MetricDisclosurePresenter {
         }
         if basis.localizedCaseInsensitiveContains("not LT1") ||
             basis.localizedCaseInsensitiveContains("not LT1 or VT1") {
-            return "目前使用設定界線作為分析起點，尚未以 LT1 或 VT1 測試確認。"
+            return "目前使用設定界線作為分析起點，還沒有用閾值測試確認。"
         }
         if basis.localizedCaseInsensitiveContains("does not measure force") ||
             basis.localizedCaseInsensitiveContains("1RM") {
-            return "目前只描述心率型態，尚未使用負重、次數或力輸出資料。"
+            return "目前主要描述訓練節奏，還沒有完整負重或力輸出資料。"
         }
         return basis
     }
@@ -568,14 +624,21 @@ enum MetricDisclosurePresenter {
     private static func validationLabel(_ value: String) -> String {
         if value.localizedCaseInsensitiveContains("LT1") ||
             value.localizedCaseInsensitiveContains("VT1") {
-            return "若需要更精準的 Zone 2 界線，可用乳酸或換氣閾值測試確認。"
+            return "若想把有氧範圍抓得更準，可再做乳酸或換氣閾值測試。"
         }
         if value.localizedCaseInsensitiveContains("CPET") {
-            return "若需要更精準的最大攝氧量資訊，可用實驗室氣體分析測試確認。"
+            return "若想更精準了解最大攝氧量，可再做實驗室氣體分析測試。"
         }
         if value.localizedCaseInsensitiveContains("1RM") ||
             value.localizedCaseInsensitiveContains("force") {
-            return "若需要肌力數值，可用標準化負重、次數或力/速度測試確認。"
+            return "若想更準確追蹤肌力，可補上標準化負重、次數或力/速度測試。"
+        }
+        if value.localizedCaseInsensitiveContains("recovery") {
+            return "若想更完整看恢復狀態，還需要搭配固定流程或更完整測試。"
+        }
+        if value.localizedCaseInsensitiveContains("metabolic precision") ||
+            value.localizedCaseInsensitiveContains("threshold") {
+            return "若想更精準看代謝或閾值，仍需搭配標準化閾值或實驗室測試。"
         }
         return value
     }
@@ -583,17 +646,27 @@ enum MetricDisclosurePresenter {
     private static func profileDisclosureLabel(for kind: TrainingMetricClaimProfileKind) -> String {
         switch kind {
         case .vo2MaxEstimate:
-            return "若不是實驗室氣體分析，最大攝氧量應維持估算或產品參考語氣。"
+            return "這個數值適合看趨勢，不直接當成實驗室真值。"
+        case .heartRateRecoveryContext:
+            return "這裡只補充恢復線索，不延伸成完整恢復診斷。"
+        case .runningPowerContext:
+            return "這裡只補充跑步外部負荷，不等同閾值或最大攝氧量測量。"
+        case .cyclingPowerContext:
+            return "這裡只補充騎乘外部負荷，不等同閾值或最大攝氧量測量。"
+        case .workoutRouteContext:
+            return "這裡只補充路線與地形背景，不等同閾值或最大攝氧量測量。"
+        case .externalLoadDecouplingContext:
+            return "這裡只補充前後段一致性線索，不等同閾值或最大攝氧量測量。"
         case .vo2IntervalPattern:
-            return "目前只描述間歇型態，不代表已推估或測量最大攝氧量數值。"
+            return "這裡只描述高強度型態，不代表已直接量到最大攝氧量。"
         case .zone2ThresholdRange:
-            return "Zone 2 界線若要更精準，需由 LT1 / VT1 / GET 等閾值測試確認；未驗證來源只能作為估算或起始參考。"
+            return "這裡先用可得資料設定有氧範圍，若想更準仍需閾值測試。"
         case .strengthMeasurement:
-            return "肌力數值需要保留動作、負重、次數、活動範圍與測試協議脈絡。"
+            return "肌力數值要和動作、負重、次數一起看，才比較有比較價值。"
         case .strengthSessionPattern:
-            return "目前只描述心率型態，不能代表最大肌力或力輸出測量。"
+            return "這裡只描述訓練節奏，不能直接代表最大肌力或力輸出。"
         case .genericObservation:
-            return "目前只呈現可觀測資料，不延伸成未驗證結論。"
+            return "這裡只整理可觀測資料，不延伸成未驗證結論。"
         }
     }
 }
@@ -608,7 +681,7 @@ struct MetricDisclosureCardView: View {
     var body: some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Label("分析依據揭露", systemImage: "checklist.checked")
+                Label("這次判讀怎麼來", systemImage: "checklist.checked")
                     .font(.headline)
                     .foregroundStyle(.white)
                 ForEach(items, id: \.title) { item in
@@ -625,14 +698,24 @@ struct MetricDisclosureCardView: View {
                                 .foregroundStyle(PremiumColor.skyBlue)
                                 .clipShape(Capsule())
                         }
-                        Text(item.method)
-                        Text(item.confidenceReason)
-                        if let validationHint = item.validationHint {
-                            Text(validationHint)
+                        Text(item.summary)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.88))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        DisclosureGroup("查看詳細說明") {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(item.method)
+                                Text(item.confidenceReason)
+                                if let validationHint = item.validationHint {
+                                    Text(validationHint)
+                                }
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.78))
+                            .padding(.top, 6)
                         }
                     }
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.82))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 4)
                 }
@@ -664,6 +747,7 @@ struct WorkoutDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
                 AnalysisZoneContextCard(summary: zoneContextSummary)
+                KeyFindingsSectionView(evaluation: evaluation)
                 MetricDisclosureCardView(metadata: result.metricMetadata)
 
                 IntentPickerView(
@@ -673,8 +757,6 @@ struct WorkoutDetailView: View {
                     onApplyToSameWorkoutType: onApplyToSameWorkoutType,
                     impactedCountForScope: impactedCountForScope
                 )
-
-                KeyFindingsSectionView(evaluation: evaluation)
 
                 DisclosureGroup(isExpanded: $showDetailedData) {
                     VStack(alignment: .leading, spacing: 18) {
@@ -693,7 +775,7 @@ struct WorkoutDetailView: View {
 
                         if !result.reasons.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
-                                Label("判定理由說明", systemImage: "info.circle.fill")
+                                Label("分析觀察依據", systemImage: "info.circle.fill")
                                     .font(.headline)
                                     .foregroundStyle(PremiumColor.skyBlue)
                                 VStack(alignment: .leading, spacing: 8) {
@@ -714,7 +796,7 @@ struct WorkoutDetailView: View {
 
                         if !result.recommendations.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
-                                Label("教練建議回饋", systemImage: "sparkles")
+                                Label("可參考的下一步", systemImage: "sparkles")
                                     .font(.headline)
                                     .foregroundStyle(PremiumColor.emerald)
                                 VStack(alignment: .leading, spacing: 8) {
@@ -733,7 +815,7 @@ struct WorkoutDetailView: View {
                             .overlay(RoundedRectangle(cornerRadius: 14).stroke(PremiumColor.emerald.opacity(0.15), lineWidth: 1))
                         }
 
-                        DisclosureGroup("進階分析（技術細節）") {
+                        DisclosureGroup("原始數據與技術細節") {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("分類信心：\(evaluation.classificationConfidence)%")
                                 Text("評估信心：\(evaluation.evaluationConfidence)%")
@@ -752,7 +834,7 @@ struct WorkoutDetailView: View {
                     }
                     .padding(.top, 4)
                 } label: {
-                    Label("詳細數據", systemImage: "chart.bar.doc.horizontal")
+                    Label("更多內容與詳細數據", systemImage: "chart.bar.doc.horizontal")
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
                 }
@@ -796,35 +878,48 @@ struct HeroDecisionCardView: View {
 
             Divider().background(Color.white.opacity(0.12))
 
+            Text("目前狀態")
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.68))
+
             HStack(spacing: 8) {
                 Image(systemName: "figure.run.square.stack")
                     .font(.subheadline.bold())
                 Text(evaluation.trainingTendency)
-                    .font(.subheadline.bold())
+                    .font(.headline.bold())
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
+            .padding(12)
             .background(PremiumColor.skyBlue.opacity(0.15))
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(evaluation.goalFitScore)%")
-                    .font(.system(.title, design: .rounded).bold())
-                    .foregroundStyle(goalFitColor)
-                Text("目標符合度")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 8) {
+                summaryPill(
+                    title: "可靠度",
+                    value: reliabilitySummary,
+                    color: reliabilityColor
+                )
+                summaryPill(
+                    title: "符合度",
+                    value: "\(evaluation.goalFitScore)%",
+                    color: goalFitColor
+                )
             }
 
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "arrow.forward.circle.fill")
                     .foregroundStyle(PremiumColor.emerald)
                     .font(.subheadline)
-                Text(evaluation.nextAction)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .lineSpacing(3)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("接下來可以這樣看")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text(evaluation.nextAction)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineSpacing(3)
+                }
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -843,6 +938,41 @@ struct HeroDecisionCardView: View {
         default: return PremiumColor.redOrange
         }
     }
+
+    private var reliabilitySummary: String {
+        switch evaluation.evaluationConfidence {
+        case 80...:
+            return "資料足夠"
+        case 60..<80:
+            return "可作參考"
+        default:
+            return "資料有限"
+        }
+    }
+
+    private var reliabilityColor: Color {
+        switch evaluation.evaluationConfidence {
+        case 80...: return PremiumColor.emerald
+        case 60..<80: return PremiumColor.gold
+        default: return PremiumColor.redOrange
+        }
+    }
+
+    @ViewBuilder
+    private func summaryPill(title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.65))
+            Text(value)
+                .font(.subheadline.bold())
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
 }
 
 struct AnalysisZoneContextCard: View {
@@ -850,14 +980,14 @@ struct AnalysisZoneContextCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("本次分析界線", systemImage: "slider.horizontal.3")
+            Label("這次用的心率範圍", systemImage: "slider.horizontal.3")
                 .font(.headline)
                 .foregroundStyle(.white)
             Text(summary)
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.88))
                 .fixedSize(horizontal: false, vertical: true)
-            Text("此資訊用於說明本次分析實際採用的 Zone 2 範圍與來源，避免把結果誤解為固定預設。")
+            Text("這裡只說明這次分析實際用到的範圍與來源，避免把結果誤解成固定標準。")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -877,7 +1007,7 @@ struct KeyFindingsSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("主要發現", systemImage: "lightbulb.fill")
+            Label("先看重點", systemImage: "lightbulb.fill")
                 .font(.headline)
                 .foregroundStyle(PremiumColor.gold)
             ForEach(evaluation.keyFindings, id: \.self) { finding in
@@ -923,6 +1053,31 @@ struct MetricsGridSectionView: View {
                                title: "VO2 max 估算",
                                value: String(format: "%.1f ml/kg/min", vo2MaxEstimate.value))
             }
+            if let recovery = workout.heartRateRecoveryOneMinute {
+                MetricGridCell(icon: "heart.circle.fill", color: PremiumColor.skyBlue,
+                               title: "1 分鐘心率恢復",
+                               value: String(format: "%.0f bpm", recovery.value))
+            }
+            if let runningPower = workout.runningPower {
+                MetricGridCell(icon: "bolt.fill", color: PremiumColor.gold,
+                               title: "跑步功率",
+                               value: String(format: "%.0f W", runningPower.averageWatts))
+            }
+            if let cyclingPower = workout.cyclingPower {
+                MetricGridCell(icon: "bolt.badge.a.fill", color: PremiumColor.emerald,
+                               title: "自行車功率",
+                               value: String(format: "%.0f W", cyclingPower.averageWatts))
+            }
+            if let route = workout.workoutRoute {
+                MetricGridCell(icon: "map.fill", color: PremiumColor.neonPurple,
+                               title: "路線脈絡",
+                               value: routeValue(route))
+            }
+            if let decoupling = workout.externalLoadDecoupling {
+                MetricGridCell(icon: "link", color: PremiumColor.skyBlue,
+                               title: "負荷一致性",
+                               value: decouplingValue(decoupling))
+            }
             if let strengthMetric = workout.strengthMetrics.first {
                 MetricGridCell(icon: "dumbbell.fill", color: PremiumColor.gold,
                                title: strengthMetricTitle(strengthMetric),
@@ -944,6 +1099,19 @@ struct MetricsGridSectionView: View {
 
     private func strengthMetricValue(_ metric: StrengthMetric) -> String {
         String(format: "%.1f %@", metric.value, metric.unit)
+    }
+
+    private func routeValue(_ route: WorkoutRouteObservation) -> String {
+        if let elevationGain = route.elevationGainMeters {
+            return "\(route.pointCount) 點 / +\(Int(elevationGain.rounded())) m"
+        }
+        return "\(route.pointCount) 點"
+    }
+
+    private func decouplingValue(_ observation: ExternalLoadDecouplingObservation) -> String {
+        let ratio = observation.decouplingRatio * 100
+        let prefix = abs(ratio) < 5 ? "穩定" : abs(ratio) <= 8 ? "輕微變化" : "變化明顯"
+        return "\(prefix) \(String(format: "%+.1f%%", ratio))"
     }
 }
 
@@ -1082,6 +1250,51 @@ struct SummaryCardView: View {
                     )
                 }
 
+                if let recovery = workout.heartRateRecoveryOneMinute {
+                    MetricGridCell(
+                        icon: "heart.circle.fill",
+                        color: PremiumColor.skyBlue,
+                        title: "1 分鐘心率恢復",
+                        value: String(format: "%.0f bpm", recovery.value)
+                    )
+                }
+
+                if let runningPower = workout.runningPower {
+                    MetricGridCell(
+                        icon: "bolt.fill",
+                        color: PremiumColor.gold,
+                        title: "跑步功率",
+                        value: String(format: "%.0f W", runningPower.averageWatts)
+                    )
+                }
+
+                if let cyclingPower = workout.cyclingPower {
+                    MetricGridCell(
+                        icon: "bolt.badge.a.fill",
+                        color: PremiumColor.emerald,
+                        title: "自行車功率",
+                        value: String(format: "%.0f W", cyclingPower.averageWatts)
+                    )
+                }
+
+                if let route = workout.workoutRoute {
+                    MetricGridCell(
+                        icon: "map.fill",
+                        color: PremiumColor.neonPurple,
+                        title: "路線脈絡",
+                        value: routeValue(route)
+                    )
+                }
+
+                if let decoupling = workout.externalLoadDecoupling {
+                    MetricGridCell(
+                        icon: "link",
+                        color: PremiumColor.skyBlue,
+                        title: "負荷一致性",
+                        value: decouplingValue(decoupling)
+                    )
+                }
+
                 if let strengthMetric = workout.strengthMetrics.first {
                     MetricGridCell(
                         icon: "dumbbell.fill",
@@ -1125,7 +1338,19 @@ struct SummaryCardView: View {
     private func strengthMetricValue(_ metric: StrengthMetric) -> String {
         String(format: "%.1f %@", metric.value, metric.unit)
     }
-    
+
+    private func routeValue(_ route: WorkoutRouteObservation) -> String {
+        if let elevationGain = route.elevationGainMeters {
+            return "\(route.pointCount) 點 / +\(Int(elevationGain.rounded())) m"
+        }
+        return "\(route.pointCount) 點"
+    }
+
+    private func decouplingValue(_ observation: ExternalLoadDecouplingObservation) -> String {
+        let ratio = observation.decouplingRatio * 100
+        let prefix = abs(ratio) < 5 ? "穩定" : abs(ratio) <= 8 ? "輕微變化" : "變化明顯"
+        return "\(prefix) \(String(format: "%+.1f%%", ratio))"
+    }
 }
 
 struct MetricGridCell: View {
@@ -1192,11 +1417,13 @@ struct IntentPickerView: View {
             Picker(
                 "目標",
                 selection: Binding(
-                    get: { selectedIntent },
+                    get: {
+                        TrainingIntent.uiVisibleCases.contains(selectedIntent) ? selectedIntent : .zone2
+                    },
                     set: { onIntentChanged($0) }
                 )
             ) {
-                ForEach(TrainingIntent.allCases, id: \.self) { intent in
+                ForEach(TrainingIntent.uiVisibleCases, id: \.self) { intent in
                     Text(intent.localizedName).tag(intent)
                 }
             }
@@ -1538,8 +1765,19 @@ struct CalibrationSuggestionView: View {
 struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
     private let configurableWorkoutTypes: [WorkoutType] = [
-        .running, .cycling, .swimming, .walking, .strengthTraining, .mixed, .other
+        .running, .cycling, .swimming, .walking, .strengthTraining
     ]
+    private let restingHeartRateStore: any HealthKitWorkoutStore
+    @State private var isImportingRestingHeartRate = false
+    @State private var restingHeartRateImportMessage: String?
+
+    init(
+        settingsManager: SettingsManager,
+        restingHeartRateStore: any HealthKitWorkoutStore = SystemHealthKitWorkoutStore()
+    ) {
+        self.settingsManager = settingsManager
+        self.restingHeartRateStore = restingHeartRateStore
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -1572,11 +1810,14 @@ struct SettingsView: View {
                         Picker(
                             type.localizedName,
                             selection: Binding(
-                                get: { settingsManager.defaultIntent(for: type) },
+                                get: {
+                                    let intent = settingsManager.defaultIntent(for: type)
+                                    return TrainingIntent.uiVisibleCases.contains(intent) ? intent : .zone2
+                                },
                                 set: { settingsManager.setDefaultIntent($0, for: type) }
                             )
                         ) {
-                            ForEach(TrainingIntent.allCases, id: \.self) { intent in
+                            ForEach(TrainingIntent.uiVisibleCases, id: \.self) { intent in
                                 Text(intent.localizedName).tag(intent)
                             }
                         }
@@ -1688,19 +1929,52 @@ struct SettingsView: View {
                 Text("Resting HR")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                TextField("例如 55", value: restingHeartRateBinding, format: .number)
-                    .textFieldStyle(.plain)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(Color.white.opacity(0.04))
-                    .cornerRadius(8)
-                    .foregroundColor(.white)
-                    .font(.system(.body, design: .rounded).bold())
-                    .frame(width: 120)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
+                HStack(alignment: .center, spacing: 12) {
+                    TextField("例如 55", value: restingHeartRateBinding, format: .number)
+                        .textFieldStyle(.plain)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color.white.opacity(0.04))
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                        .font(.system(.body, design: .rounded).bold())
+                        .frame(width: 120)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+
+                    Button {
+                        Task { await importRestingHeartRateFromAppleHealth() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isImportingRestingHeartRate {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "heart.text.square")
+                            }
+                            Text(isImportingRestingHeartRate ? "匯入中..." : "從 Apple Health 匯入")
+                        }
+                        .font(.caption.bold())
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color.white.opacity(0.1))
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isImportingRestingHeartRate || !restingHeartRateStore.isAvailable)
+                }
+            }
+
+            if let restingHeartRateImportMessage {
+                Text(restingHeartRateImportMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -1865,6 +2139,35 @@ struct SettingsView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
+        }
+    }
+
+    private func importRestingHeartRateFromAppleHealth() async {
+        guard restingHeartRateStore.isAvailable else {
+            restingHeartRateImportMessage = "此裝置目前無法使用 Apple Health Resting HR。"
+            return
+        }
+
+        isImportingRestingHeartRate = true
+        defer { isImportingRestingHeartRate = false }
+
+        let status = await restingHeartRateStore.requestAuthorization()
+        guard status == .sharingAuthorized else {
+            restingHeartRateImportMessage = "尚未取得 Apple Health 讀取權限。"
+            return
+        }
+
+        do {
+            guard let imported = try await restingHeartRateStore.fetchRestingHeartRateBaseline() else {
+                restingHeartRateImportMessage = "Apple Health 最近 7 天沒有可用的 Resting HR 資料。"
+                return
+            }
+
+            settingsManager.updateRestingHeartRate(imported)
+            settingsManager.generateRestingHeartRateSuggestion()
+            restingHeartRateImportMessage = "已匯入 Apple Health 最近 7 天平均 Resting HR \(Int(imported.rounded())) bpm，並產生 Zone 2 建議。"
+        } catch {
+            restingHeartRateImportMessage = "Apple Health Resting HR 匯入失敗，請稍後再試。"
         }
     }
 }
