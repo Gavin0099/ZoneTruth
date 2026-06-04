@@ -75,6 +75,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Slice 3「UI Disclosure」最小切片：在單筆分析結果揭露 estimate / measured 狀態與 confidence reason；不改 weekly rendering contract
 - [x] Slice 4「Metric-specific Claim Profiles + Guard Tests」：新增 VO2 / Zone 2 / Strength claim profiles，並驗證 UI disclosure 不混淆 metric-specific claim ceiling
 - [x] Weekly disclosure preflight guard：新增 weekly rendering contract guard，禁止 weekly UI / presenter 出現 metric measurement overclaim
+- [x] Test Candidate 2026-06-04：整理可測範圍、不可宣稱範圍、local smoke commands 與 manual test checklist
 - [ ] 下一步：評估是否需要將 disclosure 延伸到 weekly UI；若要做，只能在 weekly rendering guard 綠燈下做最小 disclosure
 
 已完成（Phase D）：
@@ -177,6 +178,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Training Analysis UI Disclosure | 已完成最小切片（單筆分析揭露 estimate / measured 與 confidence reason；不改 weekly rendering） | Done |
 | Training Analysis Claim Profiles / Guards | 已完成（metric-specific claim profiles；guard tests 防止 UI disclosure 混淆 VO2 / Zone 2 / Strength） | Done |
 | Weekly disclosure preflight guard | 已完成（weekly rendering contract 禁止 metric measurement overclaim；未改 weekly UI） | Done |
+| Test Candidate 2026-06-04 | 已完成（local/developer testing checklist；尚非 TestFlight/App Store release candidate） | Done |
 | Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
@@ -200,6 +202,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 建立 Test Candidate 2026-06-04：整理目前可本機測試範圍、claim ceiling、local smoke command 與 manual checklist |
 | 2026-06-04 | 完成 weekly disclosure preflight guard：新增 WeeklyRenderingContractTests，禁止 weekly rendering 出現 VO2 max 實測、精準 Zone 2、1RM/肌力測量等過度宣稱 |
 | 2026-06-04 | 完成 Training Analysis Slice 4 Claim Profiles / Guard Tests：新增 metric-specific claim profiles，修正 Zone 2 驗證提示誤判 CPET 的 UI 文案風險 |
 | 2026-06-04 | 完成 Training Analysis Slice 3 UI Disclosure 最小切片：單筆分析結果顯示 estimate / measured 與 confidence reason，targeted tests 驗證不含過度宣稱 |
