@@ -571,16 +571,20 @@ public enum WorkoutIntentAnalyzer {
         _ workout: WorkoutInput,
         policy: AnalysisPolicy = .default
     ) -> AnalysisResult {
+        let result: AnalysisResult
         switch workout.intent {
         case .zone2:
-            return Zone2QualityAnalyzer.analyze(workout: workout, policy: policy)
+            result = Zone2QualityAnalyzer.analyze(workout: workout, policy: policy)
         case .activityReview:
-            return basicActivityReview(workout: workout, policy: policy)
+            result = basicActivityReview(workout: workout, policy: policy)
         case .vo2Interval:
-            return VO2IntervalAnalyzer.analyze(workout: workout, policy: policy)
+            result = VO2IntervalAnalyzer.analyze(workout: workout, policy: policy)
         case .strength:
-            return StrengthAnalyzer.analyze(workout: workout, policy: policy)
+            result = StrengthAnalyzer.analyze(workout: workout, policy: policy)
         }
+        return result.appendingMetricMetadata(
+            TrainingMetricMetadataFactory.vo2MaxEstimate(workout.vo2MaxEstimate)
+        )
     }
 
     private static func basicActivityReview(
@@ -602,6 +606,26 @@ public enum WorkoutIntentAnalyzer {
 }
 
 private enum TrainingMetricMetadataFactory {
+    static func vo2MaxEstimate(_ estimate: VO2MaxEstimate?) -> [TrainingMetricMetadata] {
+        guard let estimate else { return [] }
+        let method = vo2MaxMethod(for: estimate)
+        let confidence = vo2MaxConfidence(for: estimate)
+        return [
+            TrainingMetricMetadata(
+                metric: .vo2Max,
+                method: method,
+                confidence: confidence,
+                claim: TrainingMetricClaim(
+                    ceiling: TrainingMetricClaimCeiling.defaultCeiling(for: method),
+                    allowedTerms: ["VO2 max estimate", "trend estimate", "product reference"],
+                    forbiddenTerms: ["true VO2 max", "lab-equivalent", "clinical fitness diagnosis"]
+                ),
+                dataQualityFlags: ["vo2max_value_imported"],
+                recommendedValidation: "CPET/GXT gas analysis if VO2 max precision matters."
+            )
+        ]
+    }
+
     static func sampleQuality(
         rawSampleCount: Int,
         preparedSampleCount: Int,
@@ -610,6 +634,89 @@ private enum TrainingMetricMetadataFactory {
         if rawSampleCount < policy.minimumSampleCount { return .sparse }
         if preparedSampleCount < policy.minimumSampleCount { return .heavilyFiltered }
         return .sufficient
+    }
+
+    private static func vo2MaxMethod(for estimate: VO2MaxEstimate) -> TrainingMetricMethod {
+        TrainingMetricMethod(
+            tier: vo2MaxTier(for: estimate.source),
+            source: estimate.source,
+            name: estimate.sourceLabel ?? vo2MaxMethodName(for: estimate.source),
+            referenceStandardDistance: vo2MaxReferenceDistance(for: estimate.source)
+        )
+    }
+
+    private static func vo2MaxTier(for source: TrainingMetricMethodSource) -> TrainingMetricMethodTier {
+        switch source {
+        case .cpet:
+            return .goldStandardAnchor
+        case .runningHRSpeed, .cyclingPowerHR:
+            return .fieldEstimator
+        case .apple, .garmin, .firstbeat:
+            return .productReference
+        default:
+            return .weakHeuristic
+        }
+    }
+
+    private static func vo2MaxReferenceDistance(for source: TrainingMetricMethodSource) -> ReferenceStandardDistance {
+        switch source {
+        case .cpet:
+            return .direct
+        case .runningHRSpeed, .cyclingPowerHR:
+            return .oneLevelBelow
+        case .apple, .garmin, .firstbeat:
+            return .twoOrMoreLevelsBelow
+        default:
+            return .unknown
+        }
+    }
+
+    private static func vo2MaxConfidence(for estimate: VO2MaxEstimate) -> TrainingMetricConfidence {
+        switch estimate.source {
+        case .cpet:
+            return TrainingMetricConfidence(
+                level: .high,
+                basis: "Direct lab VO2 max source was imported.",
+                limitingFactors: []
+            )
+        case .runningHRSpeed, .cyclingPowerHR:
+            return TrainingMetricConfidence(
+                level: .medium,
+                basis: "Structured field VO2 max estimate was imported, not lab CPET.",
+                limitingFactors: ["No direct gas exchange data"]
+            )
+        case .apple, .garmin, .firstbeat:
+            return TrainingMetricConfidence(
+                level: .mediumLow,
+                basis: "Product VO2 max estimate was imported, not lab CPET.",
+                limitingFactors: ["Opaque product algorithm", "No direct gas exchange data"]
+            )
+        default:
+            return TrainingMetricConfidence(
+                level: .low,
+                basis: "VO2 max value was imported with limited method provenance.",
+                limitingFactors: ["Unknown VO2 max method"]
+            )
+        }
+    }
+
+    private static func vo2MaxMethodName(for source: TrainingMetricMethodSource) -> String {
+        switch source {
+        case .cpet:
+            return "CPET/GXT gas analysis"
+        case .runningHRSpeed:
+            return "Running HR-speed VO2 max estimate"
+        case .cyclingPowerHR:
+            return "Cycling power-HR VO2 max estimate"
+        case .apple:
+            return "Apple VO2 max product estimate"
+        case .garmin:
+            return "Garmin VO2 max product estimate"
+        case .firstbeat:
+            return "Firstbeat VO2 max product estimate"
+        default:
+            return "Imported VO2 max value"
+        }
     }
 
     static func zone2Range(sampleQuality: SampleQuality) -> TrainingMetricMetadata {

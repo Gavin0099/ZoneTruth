@@ -206,6 +206,7 @@ private struct ImportedWorkoutRecord: Decodable {
     let intent: TrainingIntent?
     let intentSource: IntentSource?
     let heartRateSamples: [ImportedHeartRateSample]
+    let vo2MaxEstimate: VO2MaxEstimate?
 
     var toDomainWorkout: WorkoutInput {
         WorkoutInput(
@@ -214,7 +215,8 @@ private struct ImportedWorkoutRecord: Decodable {
             endDate: endDate,
             heartRateSamples: heartRateSamples.map(\.toDomainSample),
             intent: intent,
-            intentSource: intentSource
+            intentSource: intentSource,
+            vo2MaxEstimate: vo2MaxEstimate
         )
     }
 }

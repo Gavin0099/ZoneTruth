@@ -220,6 +220,47 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertNotEqual(vo2.claimProfile.disclosure, strength.claimProfile.disclosure)
     }
 
+    func testImportedVO2MaxEstimateAddsScalarMetadataWithoutReplacingIntervalQuality() {
+        let base = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: VO2MaxEstimate(
+                value: 48.2,
+                source: .apple,
+                sourceLabel: "Apple Health VO2 max"
+            )
+        )
+
+        let result = WorkoutIntentAnalyzer.analyze(workout)
+        let scalarVO2 = result.metricMetadata.first { $0.metric == .vo2Max }
+        let intervalQuality = result.metricMetadata.first { $0.metric == .vo2IntervalQuality }
+
+        XCTAssertEqual(result.verdict, .pass)
+        XCTAssertNotNil(intervalQuality)
+        XCTAssertEqual(scalarVO2?.claimProfile.kind, .vo2MaxEstimate)
+        XCTAssertEqual(scalarVO2?.method.tier, .productReference)
+        XCTAssertEqual(scalarVO2?.method.source, .apple)
+        XCTAssertEqual(scalarVO2?.method.referenceStandardDistance, .twoOrMoreLevelsBelow)
+        XCTAssertEqual(scalarVO2?.claim.ceiling, .estimateOnly)
+        XCTAssertEqual(scalarVO2?.confidence.level, .mediumLow)
+        XCTAssertEqual(scalarVO2?.isClaimCeilingAdmissible, true)
+        XCTAssertFalse(scalarVO2?.claim.allowedTerms.contains("lab-equivalent") == true)
+    }
+
     func testZone2AnalyzerAttachesStartingPointMetadataWithoutChangingVerdict() {
         let workout = SampleWorkoutCases
             .zone2ValidationCases()

@@ -32,6 +32,9 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.workouts.first?.workoutType, .running)
         XCTAssertEqual(result.workouts.first?.intent, .zone2)
         XCTAssertEqual(result.workouts.first?.heartRateSamples.count, 3)
+        XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.value, 48.2)
+        XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.source, .apple)
+        XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.sourceLabel, "Apple Health VO2 max")
     }
 
     func testJSONWorkoutRepositoryReturnsEmptyForInvalidJSON() throws {
@@ -1299,6 +1302,45 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(strengthText.contains("VO2 max"), strengthText)
     }
 
+    func testMetricDisclosurePresenterRendersVO2MaxEstimateAsEstimate() {
+        let base = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: VO2MaxEstimate(
+                value: 48.2,
+                source: .apple,
+                sourceLabel: "Apple Health VO2 max"
+            )
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "最大攝氧量估算")
+
+        XCTAssertTrue(text.contains("估算"), text)
+        XCTAssertTrue(text.contains("Apple 產品估算"), text)
+        XCTAssertTrue(text.contains("產品來源估算"), text)
+        XCTAssertTrue(text.contains("實驗室氣體分析"), text)
+        XCTAssertFalse(text.contains("VO2 max 實測"), text)
+        XCTAssertFalse(text.contains("lab-equivalent"), text)
+        XCTAssertFalse(text.contains("true VO2 max"), text)
+    }
+
     @MainActor
     func testMetricDisclosureCardViewSmokeCompiles() {
         let result = WorkoutIntentAnalyzer.analyze(
@@ -2059,6 +2101,12 @@ final class ZoneTruthAppTests: XCTestCase {
               "startDate": "2026-04-24T06:00:00Z",
               "endDate": "2026-04-24T06:20:00Z",
               "intent": "Zone 2",
+              "vo2MaxEstimate": {
+                "value": 48.2,
+                "source": "apple",
+                "sourceLabel": "Apple Health VO2 max",
+                "measuredAt": "2026-04-24T05:55:00Z"
+              },
               "heartRateSamples": [
                 { "timestamp": "2026-04-24T06:00:00Z", "bpm": 112 },
                 { "timestamp": "2026-04-24T06:01:00Z", "bpm": 118 },

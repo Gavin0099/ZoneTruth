@@ -28,6 +28,11 @@ This section is for developer smoke only, not formal tester rollout.
   - method label
   - confidence reason
   - recommended validation direction
+- Scalar VO2 max estimate display when an imported workout includes a VO2 max
+  value:
+  - source labeling
+  - estimate-only disclosure for product / field estimates
+  - no lab-equivalent claim unless source is direct CPET/GXT gas analysis
 - Personalized Zone 2 settings:
   - manual Zone 2 bounds
   - Resting HR suggestion
@@ -55,8 +60,14 @@ Required before formal testing:
 
 Current status:
 
-- Not feature-complete.
-- Existing VO2 path is `vo2_interval_quality`, not scalar VO2 max.
+- Feature-complete for the minimum imported scalar estimate slice.
+- JSON import can carry `vo2MaxEstimate`.
+- Single-workout UI can show the imported VO2 max estimate and claim-bounded
+  disclosure.
+- Existing VO2 interval path remains `vo2_interval_quality`; it is not reused as
+  scalar VO2 max.
+- Trend rendering is still intentionally minimal; formal testing remains
+  blocked by the Strength pillar.
 
 ### Zone 2
 
@@ -93,7 +104,7 @@ Current status:
 
 - No TestFlight build has been produced by this checkpoint.
 - No App Store release readiness claim.
-- No scalar VO2 max estimate or import flow.
+- No VO2 max lab-equivalent claim for product / field / unknown estimates.
 - No exact Zone 2 threshold measurement.
 - No 1RM, e1RM, force output, or validated strength measurement.
 - No weekly metadata disclosure UI yet.
@@ -105,7 +116,9 @@ The current app can say:
 
 - "This workout analysis used these metric metadata assumptions."
 - "This output is an estimate / starting point / observation depending on method."
-- "Current VO2 path describes interval quality, not VO2 max."
+- "Imported VO2 max values are estimates unless the source is direct CPET/GXT
+  gas analysis."
+- "Current VO2 interval path describes interval quality, not VO2 max."
 - "Current Strength path describes heart-rate session pattern, not strength output."
 
 The current app must not say:
@@ -122,7 +135,7 @@ The current app must not say:
 Run:
 
 ```bash
-swift test --filter 'testMetricDisclosurePresenterRendersBoundedEstimateLanguage|testMetricDisclosurePresenterUsesMetricSpecificClaimProfiles|testMetricDisclosureCardViewSmokeCompiles|testWeeklyRenderingContainsNoMetricMeasurementClaims|testWeeklyDashboardViewSmokeCompiles|testValidationDatasetMatchesExpectedVerdicts'
+swift test --filter 'testJSONWorkoutRepositoryLoadsImportedWorkouts|testImportedVO2MaxEstimateAddsScalarMetadataWithoutReplacingIntervalQuality|testMetricDisclosurePresenterRendersVO2MaxEstimateAsEstimate|testMetricDisclosurePresenterRendersBoundedEstimateLanguage|testValidationDatasetMatchesExpectedVerdicts'
 ```
 
 Optional broader guard:
@@ -137,13 +150,17 @@ bash scripts/meta_closeout.sh
 2. Open a Zone 2 workout.
 3. Confirm the detail view shows "分析依據揭露".
 4. Confirm Zone 2 disclosure says it is a starting reference / estimate, not exact.
-5. Open a VO2 interval workout.
-6. Confirm disclosure says "VO2 間歇型態", not VO2 max measurement.
-7. Open a Strength workout.
-8. Confirm disclosure describes heart-rate pattern, not 1RM or strength measurement.
-9. Change Zone 2 bounds manually and verify single-workout analysis uses the updated bounds.
-10. Generate/apply/reset Resting HR suggestion and confirm the policy source text updates.
-11. Open weekly dashboard and confirm existing weekly rendering still loads.
+5. Open a workout with imported VO2 max estimate data and confirm the metrics
+   grid says "VO2 max 估算".
+6. Confirm disclosure says "最大攝氧量估算" with source and estimate wording,
+   not VO2 max measurement.
+7. Open a VO2 interval workout without scalar VO2 max data.
+8. Confirm disclosure says "VO2 間歇型態", not VO2 max measurement.
+9. Open a Strength workout.
+10. Confirm disclosure describes heart-rate pattern, not 1RM or strength measurement.
+11. Change Zone 2 bounds manually and verify single-workout analysis uses the updated bounds.
+12. Generate/apply/reset Resting HR suggestion and confirm the policy source text updates.
+13. Open weekly dashboard and confirm existing weekly rendering still loads.
 
 ## Exit Criteria For First Tester Feedback
 
@@ -157,11 +174,7 @@ This candidate is useful if the tester can answer:
 
 ## Next Candidate
 
-The next test candidate should be one of:
+The next test candidate should be:
 
-- `TC-2 VO2 max vertical slice`: add scalar VO2 max estimate/import surface with
-  claim-bounded disclosure.
 - `TC-2 Strength vertical slice`: add structured strength metric input/display
   with claim-bounded disclosure.
-- `TC-2 Zone 2 completion polish`: only if Zone 2 needs final wording or weekly
-  disclosure before formal testing.

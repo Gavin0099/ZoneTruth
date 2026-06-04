@@ -77,8 +77,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Weekly disclosure preflight guard：新增 weekly rendering contract guard，禁止 weekly UI / presenter 出現 metric measurement overclaim
 - [x] Test Candidate 2026-06-04：整理可測範圍、不可宣稱範圍、local smoke commands 與 manual test checklist
 - [x] 測試策略調整：正式產品測試延後到 VO2 max / Zone 2 / Strength 三類功能完整；目前 checkpoint 僅作 developer verification
-- [ ] 下一步：補齊 VO2 max scalar estimate/import vertical slice（不把現有 VO2 interval quality 誤當 VO2 max）
-- [ ] 之後：補齊 Strength metric vertical slice（direct 1RM / e1RM / structured strength log，保留 claim ceiling）
+- [x] VO2 max scalar estimate/import vertical slice：JSON / domain model 可攜帶 VO2 max estimate，單筆 UI 顯示估算值與 source / claim-bounded disclosure；現有 VO2 interval quality 不被誤當 VO2 max
+- [ ] 下一步：補齊 Strength metric vertical slice（direct 1RM / e1RM / structured strength log，保留 claim ceiling）
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
@@ -181,7 +181,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Training Analysis Claim Profiles / Guards | 已完成（metric-specific claim profiles；guard tests 防止 UI disclosure 混淆 VO2 / Zone 2 / Strength） | Done |
 | Weekly disclosure preflight guard | 已完成（weekly rendering contract 禁止 metric measurement overclaim；未改 weekly UI） | Done |
 | Test Candidate 2026-06-04 | 已降級為 developer checkpoint（正式測試延後到 VO2 max / Zone 2 / Strength feature-complete） | Done |
-| VO2 max feature-complete slice | 待做（scalar estimate/import + source labeling + claim-bounded disclosure） | P1 |
+| VO2 max feature-complete slice | 已完成最小切片（scalar estimate/import + source labeling + claim-bounded disclosure；不做 lab-equivalent claim） | Done |
 | Strength feature-complete slice | 待做（direct 1RM / e1RM / structured strength log + claim-bounded disclosure） | P1 |
 | Zone 2 feature-complete gate | 大致完成（manual bounds / Resting HR / reset / single + weekly policy；需維持非 exact threshold claim） | P1 |
 | Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
@@ -207,6 +207,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 完成 VO2 max scalar estimate/import 最小切片：JSON / domain model / metadata / 單筆 UI disclosure 支援 VO2 max estimate，並保留 estimate-only claim ceiling |
 | 2026-06-04 | 調整測試策略：正式產品測試延後到 VO2 max / Zone 2 / Strength 三類 feature-complete；目前 Test Candidate 僅作 developer checkpoint |
 | 2026-06-04 | 建立 Test Candidate 2026-06-04：整理目前可本機測試範圍、claim ceiling、local smoke command 與 manual checklist |
 | 2026-06-04 | 完成 weekly disclosure preflight guard：新增 WeeklyRenderingContractTests，禁止 weekly rendering 出現 VO2 max 實測、精準 Zone 2、1RM/肌力測量等過度宣稱 |

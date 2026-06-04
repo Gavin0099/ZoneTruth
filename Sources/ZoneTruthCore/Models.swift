@@ -64,6 +64,25 @@ public enum TrainingMetricMethodSource: String, Codable, CaseIterable, Sendable 
     case unknown
 }
 
+public struct VO2MaxEstimate: Codable, Equatable, Hashable, Sendable {
+    public let value: Double
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+    public let measuredAt: Date?
+
+    public init(
+        value: Double,
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil,
+        measuredAt: Date? = nil
+    ) {
+        self.value = value
+        self.source = source
+        self.sourceLabel = sourceLabel
+        self.measuredAt = measuredAt
+    }
+}
+
 public enum ReferenceStandardDistance: String, Codable, CaseIterable, Sendable {
     case direct
     case oneLevelBelow = "one_level_below"
@@ -378,6 +397,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let dataSource: String?
     public let activeCaloriesKcal: Double?
     public let totalDistanceMeters: Double?
+    public let vo2MaxEstimate: VO2MaxEstimate?
 
     public init(
         id: UUID = UUID(),
@@ -391,7 +411,8 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         intentSource: IntentSource? = nil,
         dataSource: String? = nil,
         activeCaloriesKcal: Double? = nil,
-        totalDistanceMeters: Double? = nil
+        totalDistanceMeters: Double? = nil,
+        vo2MaxEstimate: VO2MaxEstimate? = nil
     ) {
         let resolvedIntent = intent ?? Self.defaultIntent(for: workoutType)
         let resolvedIntentSource = intentSource ?? (intent == nil ? .auto : .userOverride)
@@ -407,6 +428,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         self.dataSource = dataSource
         self.activeCaloriesKcal = activeCaloriesKcal
         self.totalDistanceMeters = totalDistanceMeters
+        self.vo2MaxEstimate = vo2MaxEstimate
     }
 
     public static func defaultIntent(for workoutType: WorkoutType) -> TrainingIntent {
@@ -433,6 +455,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         case dataSource
         case activeCaloriesKcal
         case totalDistanceMeters
+        case vo2MaxEstimate
     }
 
     public init(from decoder: Decoder) throws {
@@ -449,6 +472,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         let dataSource = try container.decodeIfPresent(String.self, forKey: .dataSource)
         let activeCaloriesKcal = try container.decodeIfPresent(Double.self, forKey: .activeCaloriesKcal)
         let totalDistanceMeters = try container.decodeIfPresent(Double.self, forKey: .totalDistanceMeters)
+        let vo2MaxEstimate = try container.decodeIfPresent(VO2MaxEstimate.self, forKey: .vo2MaxEstimate)
 
         self.init(
             id: id,
@@ -462,7 +486,8 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
             intentSource: intentSource,
             dataSource: dataSource,
             activeCaloriesKcal: activeCaloriesKcal,
-            totalDistanceMeters: totalDistanceMeters
+            totalDistanceMeters: totalDistanceMeters,
+            vo2MaxEstimate: vo2MaxEstimate
         )
     }
 
@@ -480,6 +505,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         try container.encodeIfPresent(dataSource, forKey: .dataSource)
         try container.encodeIfPresent(activeCaloriesKcal, forKey: .activeCaloriesKcal)
         try container.encodeIfPresent(totalDistanceMeters, forKey: .totalDistanceMeters)
+        try container.encodeIfPresent(vo2MaxEstimate, forKey: .vo2MaxEstimate)
     }
 }
 
@@ -525,6 +551,20 @@ public struct AnalysisResult: Equatable, Sendable {
         self.stabilityStandardDeviation = stabilityStandardDeviation
         self.driftRatio = driftRatio
         self.metricMetadata = metricMetadata
+    }
+
+    public func appendingMetricMetadata(_ extraMetadata: [TrainingMetricMetadata]) -> AnalysisResult {
+        guard !extraMetadata.isEmpty else { return self }
+        return AnalysisResult(
+            verdict: verdict,
+            confidence: confidence,
+            reasons: reasons,
+            recommendations: recommendations,
+            zoneDistribution: zoneDistribution,
+            stabilityStandardDeviation: stabilityStandardDeviation,
+            driftRatio: driftRatio,
+            metricMetadata: metricMetadata + extraMetadata
+        )
     }
 }
 

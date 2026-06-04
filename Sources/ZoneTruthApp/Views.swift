@@ -525,6 +525,18 @@ enum MetricDisclosurePresenter {
     }
 
     private static func basisLabel(_ basis: String) -> String {
+        if basis.localizedCaseInsensitiveContains("Direct lab VO2 max source") {
+            return "來源標示為實驗室氣體分析資料。"
+        }
+        if basis.localizedCaseInsensitiveContains("Structured field VO2 max estimate") {
+            return "這是結構化 field estimate，尚未使用實驗室氣體交換資料確認。"
+        }
+        if basis.localizedCaseInsensitiveContains("Product VO2 max estimate") {
+            return "這是產品來源估算，未直接使用氣體交換資料。"
+        }
+        if basis.localizedCaseInsensitiveContains("limited method provenance") {
+            return "來源方法資訊有限，僅能作為低信心估算。"
+        }
         if basis.localizedCaseInsensitiveContains("not estimate VO2 max") ||
             basis.localizedCaseInsensitiveContains("does not estimate VO2 max") {
             return "目前只描述間歇型態，尚未推估最大攝氧量數值。"
@@ -893,6 +905,11 @@ struct MetricsGridSectionView: View {
                 MetricGridCell(icon: "chart.xyaxis.line", color: PremiumColor.neonPurple,
                                title: "心率飄移", value: String(format: "%.1f%%", drift * 100))
             }
+            if let vo2MaxEstimate = workout.vo2MaxEstimate {
+                MetricGridCell(icon: "speedometer", color: PremiumColor.emerald,
+                               title: "VO2 max 估算",
+                               value: String(format: "%.1f ml/kg/min", vo2MaxEstimate.value))
+            }
         }
     }
 }
@@ -1020,6 +1037,15 @@ struct SummaryCardView: View {
                         color: PremiumColor.neonPurple,
                         title: "心率飄移",
                         value: String(format: "%.1f%%", drift * 100)
+                    )
+                }
+
+                if let vo2MaxEstimate = workout.vo2MaxEstimate {
+                    MetricGridCell(
+                        icon: "speedometer",
+                        color: PremiumColor.emerald,
+                        title: "VO2 max 估算",
+                        value: String(format: "%.1f ml/kg/min", vo2MaxEstimate.value)
                     )
                 }
             }
