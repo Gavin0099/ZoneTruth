@@ -61,6 +61,10 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 支援 Resting HR 產生 Zone 2 起始建議、來源 / 非驗證閾值標示、套用建議、重設回預設界線
 - [x] 支援 Resting HR 建議公式上下偏移量調整，並在設定頁顯示目前 Zone 2 設定狀態摘要
 
+本次研究切片（2026-06-04）：
+- [x] 完成 Training Analysis Literature Review：VO2 max / Zone 2 / Strength 分層整理 gold standard anchor、field estimator、product reference、claim ceiling 與 confidence basis
+- [ ] 下一步：將 literature review 轉成 `TRAINING_ANALYSIS_META_SPEC.md`，再決定 analyzer metadata / confidence model 實作切片
+
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
 - [x] 邊界 guard 設定遷至 JSON 單一來源（`scripts/closeout_boundary_patterns.json`）
@@ -154,6 +158,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | P2 meta-closeout wrapper | 已完成（`bash scripts/meta_closeout.sh`） | Done |
 | P2 文字/UI 語氣精修 | 已完成（Zone 2 / VO2 / Strength user-facing reasons 與 recommendations 降低高宣稱 / 命令式語氣） | Done |
 | P2 CodeBurn P6 acquisition surface statistics display | 已完成（structural observation only；不做成本 / 跨 provider 比較 / efficiency / optimization） | Done |
+| Training Analysis Literature Review | 已完成（VO2 max / Zone 2 / Strength evidence hierarchy、claim ceiling、confidence basis） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
 | Garmin 整合尚未啟動 | 明確延後 | Deferred |
@@ -176,6 +181,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 完成 Training Analysis Literature Review：整理 VO2 max / Zone 2 / Strength 的學術/臨床標準、field estimator、產品對照與 ZoneTruth claim ceiling |
 | 2026-06-03 | 完成 P2 CodeBurn P6 acquisition surface statistics display：新增 fixture/demo CLI 與 targeted tests，輸出 surface record/source/quarantine 摘要並保留 A-1/T-1/C-1/R-1/O-1/V-1 約束 |
 | 2026-06-03 | 完成 P2 文字/UI 語氣精修：Zone 2 / VO2 / Strength 分析 reasons、recommendations 與 evaluation nextAction 改為觀測 / 建議語氣，新增 targeted tone tests |
 | 2026-06-03 | 完成 P2 meta-closeout wrapper：新增 `bash scripts/meta_closeout.sh` 一鍵跑 syntax、runtime governance smoke、boundary guard 與 weekly UI smoke |
