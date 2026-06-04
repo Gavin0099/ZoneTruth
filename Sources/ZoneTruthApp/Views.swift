@@ -424,6 +424,199 @@ struct WorkoutRowView: View {
     }
 }
 
+struct MetricDisclosureItem: Equatable {
+    let title: String
+    let status: String
+    let method: String
+    let confidenceReason: String
+    let validationHint: String?
+}
+
+enum MetricDisclosurePresenter {
+    static func render(_ metadata: [TrainingMetricMetadata]) -> [MetricDisclosureItem] {
+        metadata.map(render(_:))
+    }
+
+    static func render(_ metadata: TrainingMetricMetadata) -> MetricDisclosureItem {
+        MetricDisclosureItem(
+            title: title(for: metadata.metric),
+            status: status(for: metadata.claim.ceiling),
+            method: "方法：\(methodLabel(for: metadata))",
+            confidenceReason: confidenceReason(for: metadata),
+            validationHint: metadata.recommendedValidation.map { "驗證方向：\(validationLabel($0))" }
+        )
+    }
+
+    private static func title(for metric: TrainingMetricKind) -> String {
+        switch metric {
+        case .vo2Max:
+            return "最大攝氧量"
+        case .vo2IntervalQuality:
+            return "VO2 間歇型態"
+        case .zone2HeartRateRange:
+            return "Zone 2 心率範圍"
+        case .strength:
+            return "肌力訓練型態"
+        }
+    }
+
+    private static func status(for ceiling: TrainingMetricClaimCeiling) -> String {
+        switch ceiling {
+        case .measuredIfDirect:
+            return "直接測量資料"
+        case .estimateOnly:
+            return "估算"
+        case .startingPointOnly:
+            return "起始參考"
+        case .unsupported:
+            return "僅顯示原始資料"
+        }
+    }
+
+    private static func methodLabel(for metadata: TrainingMetricMetadata) -> String {
+        switch metadata.method.source {
+        case .policyZoneBounds:
+            return "目前設定的心率界線"
+        case .heartRatePattern:
+            return "心率區間與型態觀察"
+        case .cpet:
+            return "CPET / GXT 氣體分析"
+        case .lactateTest:
+            return "乳酸閾值測試"
+        case .ventilatoryThreshold:
+            return "換氣閾值測試"
+        case .apple:
+            return "Apple 產品估算"
+        case .garmin:
+            return "Garmin 產品估算"
+        case .firstbeat:
+            return "Firstbeat 方法參考"
+        case .runningHRSpeed:
+            return "跑步心率與速度估算"
+        case .cyclingPowerHR:
+            return "自行車功率與心率估算"
+        case .hrDrift:
+            return "心率飄移觀察"
+        case .hrvThreshold:
+            return "HRV 閾值估算"
+        case .talkTest:
+            return "Talk test / RPE 線索"
+        case .percentHRMax:
+            return "最大心率百分比公式"
+        case .e1RM:
+            return "估算最大負重"
+        case .direct1RM:
+            return "標準化最大負重測試"
+        case .gripStrength:
+            return "握力測試"
+        case .userInput:
+            return "使用者輸入"
+        case .unknown:
+            return metadata.method.name
+        }
+    }
+
+    private static func confidenceReason(for metadata: TrainingMetricMetadata) -> String {
+        let level = confidenceLabel(for: metadata.confidence.level)
+        let basis = basisLabel(metadata.confidence.basis)
+        return "信心：\(level)。\(basis)"
+    }
+
+    private static func confidenceLabel(for level: TrainingMetricConfidenceLevel) -> String {
+        switch level {
+        case .high:
+            return "高"
+        case .medium:
+            return "中"
+        case .mediumLow:
+            return "中低"
+        case .low:
+            return "低"
+        case .unknown:
+            return "未知"
+        }
+    }
+
+    private static func basisLabel(_ basis: String) -> String {
+        if basis.localizedCaseInsensitiveContains("not estimate VO2 max") ||
+            basis.localizedCaseInsensitiveContains("does not estimate VO2 max") {
+            return "目前只描述間歇型態，尚未推估最大攝氧量數值。"
+        }
+        if basis.localizedCaseInsensitiveContains("not LT1") ||
+            basis.localizedCaseInsensitiveContains("not LT1 or VT1") {
+            return "目前使用設定界線作為分析起點，尚未以 LT1 或 VT1 測試確認。"
+        }
+        if basis.localizedCaseInsensitiveContains("does not measure force") ||
+            basis.localizedCaseInsensitiveContains("1RM") {
+            return "目前只描述心率型態，尚未使用負重、次數或力輸出資料。"
+        }
+        return basis
+    }
+
+    private static func validationLabel(_ value: String) -> String {
+        if value.localizedCaseInsensitiveContains("CPET") {
+            return "若需要更精準的最大攝氧量資訊，可用實驗室氣體分析測試確認。"
+        }
+        if value.localizedCaseInsensitiveContains("LT1") ||
+            value.localizedCaseInsensitiveContains("VT1") {
+            return "若需要更精準的 Zone 2 界線，可用乳酸或換氣閾值測試確認。"
+        }
+        if value.localizedCaseInsensitiveContains("1RM") ||
+            value.localizedCaseInsensitiveContains("force") {
+            return "若需要肌力數值，可用標準化負重、次數或力/速度測試確認。"
+        }
+        return value
+    }
+}
+
+struct MetricDisclosureCardView: View {
+    let metadata: [TrainingMetricMetadata]
+
+    private var items: [MetricDisclosureItem] {
+        MetricDisclosurePresenter.render(metadata)
+    }
+
+    var body: some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("分析依據揭露", systemImage: "checklist.checked")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                ForEach(items, id: \.title) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text(item.title)
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                            Text(item.status)
+                                .font(.caption2.bold())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(PremiumColor.skyBlue.opacity(0.16))
+                                .foregroundStyle(PremiumColor.skyBlue)
+                                .clipShape(Capsule())
+                        }
+                        Text(item.method)
+                        Text(item.confidenceReason)
+                        if let validationHint = item.validationHint {
+                            Text(validationHint)
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.82))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.03))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        }
+    }
+}
+
 struct WorkoutDetailView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
@@ -442,6 +635,7 @@ struct WorkoutDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
                 AnalysisZoneContextCard(summary: zoneContextSummary)
+                MetricDisclosureCardView(metadata: result.metricMetadata)
 
                 IntentPickerView(
                     selectedIntent: selectedIntent,
@@ -1041,6 +1235,8 @@ struct AnalysisResultView: View {
             Text("核心分析報告")
                 .font(.title3.bold())
                 .foregroundStyle(.white)
+
+            MetricDisclosureCardView(metadata: result.metricMetadata)
 
             VStack(alignment: .leading, spacing: 8) {
                 Label("主要發現", systemImage: "lightbulb.fill")

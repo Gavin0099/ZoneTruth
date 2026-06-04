@@ -72,7 +72,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 將 literature review 轉成 `TRAINING_ANALYSIS_META_SPEC.md`：定義 shared metric metadata、confidence ladder、claim ceiling、UI wording rules 與 implementation sequence
 - [x] Slice 1「Core Metadata Types」：新增 method tier / source / reference-standard distance / confidence / claim ceiling metadata 型別，不改 analyzer verdict
 - [x] Slice 2「Analyzer Adapter Metadata」：讓 Zone 2 / VO2 / Strength analyzer result 產出 metadata，但不改既有 verdict threshold；現有 VO2 analyzer 標示為 `vo2_interval_quality`，不宣稱 VO2 max
-- [ ] 下一步：Slice 3「UI Disclosure」：在使用者可見摘要揭露 estimate vs measured / confidence reason，但仍保持 non-diagnostic claim ceiling
+- [x] Slice 3「UI Disclosure」最小切片：在單筆分析結果揭露 estimate / measured 狀態與 confidence reason；不改 weekly rendering contract
+- [ ] 下一步：補 metric-specific claim profiles / Slice 4 guard tests，避免 VO2 max、Zone 2、Strength 共用 ladder 被 UI 文案過度簡化
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
@@ -171,6 +172,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Training Analysis Meta-Spec | 已完成（shared metadata schema、confidence ladder、claim ceiling、UI wording rules、implementation sequence） | Done |
 | Training Analysis Core Metadata Types | 已完成（method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests） | Done |
 | Training Analysis Analyzer Adapter Metadata | 已完成（Zone 2 / VO2 interval quality / Strength result metadata；不改 verdict threshold） | Done |
+| Training Analysis UI Disclosure | 已完成最小切片（單筆分析揭露 estimate / measured 與 confidence reason；不改 weekly rendering） | Done |
 | Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
@@ -194,6 +196,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 完成 Training Analysis Slice 3 UI Disclosure 最小切片：單筆分析結果顯示 estimate / measured 與 confidence reason，targeted tests 驗證不含過度宣稱 |
 | 2026-06-04 | 標準化 daily memory closeout format：拆分 commit/push status，補 claim ceiling、not-claimed、workspace_state 與 remote_state |
 | 2026-06-04 | 完成 Training Analysis Slice 2 Analyzer Adapter Metadata：Zone 2 / VO2 interval quality / Strength 分析結果附帶 metadata，不改 verdict threshold 或 UI rendering |
 | 2026-06-04 | 完成 Training Analysis Slice 1 Core Metadata Types：新增 method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests，不改 analyzer verdict |

@@ -1242,6 +1242,47 @@ final class ZoneTruthAppTests: XCTestCase {
         _ = view.body
     }
 
+    func testMetricDisclosurePresenterRendersBoundedEstimateLanguage() {
+        let zone2 = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        )
+        let vo2 = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout
+        )
+        let strength = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.strengthValidationCases().first { $0.name == "traditional_strength_training" }!.workout
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            zone2.metricMetadata + vo2.metricMetadata + strength.metricMetadata
+        )
+        let text = items
+            .flatMap { [$0.title, $0.status, $0.method, $0.confidenceReason, $0.validationHint ?? ""] }
+            .joined(separator: " ")
+
+        XCTAssertTrue(text.contains("Zone 2 心率範圍"))
+        XCTAssertTrue(text.contains("起始參考"))
+        XCTAssertTrue(text.contains("VO2 間歇型態"))
+        XCTAssertTrue(text.contains("目前只描述間歇型態"))
+        XCTAssertTrue(text.contains("肌力訓練型態"))
+        XCTAssertTrue(text.contains("目前只描述心率型態"))
+        XCTAssertFalse(text.contains("VO2 max 實測"))
+        XCTAssertFalse(text.contains("精準 Zone 2"))
+        XCTAssertFalse(text.contains("1RM"))
+        XCTAssertFalse(text.contains("肌力測量"))
+    }
+
+    @MainActor
+    func testMetricDisclosureCardViewSmokeCompiles() {
+        let result = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        )
+        let view = MetricDisclosureCardView(metadata: result.metricMetadata)
+
+        XCTAssertFalse(result.metricMetadata.isEmpty)
+        _ = view.body
+    }
+
     @MainActor
     func testWeeklySummaryRecomputesZoneDistributionFromCustomPolicy() {
         let suiteName = "test.weekly.custom.policy.\(UUID().uuidString)"

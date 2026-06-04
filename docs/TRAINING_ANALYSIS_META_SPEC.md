@@ -318,12 +318,15 @@ Targeted tests:
 Goal:
 
 - Show estimate vs measured status and confidence reason in user-visible summaries.
+- Current minimum slice shows disclosure in single-workout analysis surfaces only;
+  weekly rendering remains unchanged.
 
 Targeted tests:
 
-- Wearable/product VO2 max renders as estimate.
-- Percent-HRmax Zone 2 renders as starting point.
-- Strength e1RM renders formula / protocol caveat.
+- Existing Zone 2 policy bounds render as starting point.
+- Existing VO2 analyzer renders interval-quality disclosure, not VO2 max measurement.
+- Existing Strength analyzer renders heart-rate-pattern disclosure, not strength measurement.
+- Disclosure wording avoids measured / exact-threshold / strength-measurement overclaims.
 
 ### Slice 4: Guard Tests
 
