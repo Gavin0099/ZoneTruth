@@ -71,14 +71,14 @@ Rule:
 Future analyzer outputs should converge on this shared metadata shape.
 
 ```yaml
-metric: vo2max | zone2_hr_range | strength
+metric: vo2max | vo2_interval_quality | zone2_hr_range | strength
 value_kind: scalar | range | classification
 value: number | string | object
 unit: ml_per_kg_min | bpm | kg | x_bodyweight | none
 method:
   tier: gold_standard_anchor | field_estimator | product_reference | weak_heuristic
   name: string
-  source: cpet | lactate_test | apple | garmin | firstbeat | hr_drift | e1rm | user_input | unknown
+  source: cpet | lactate_test | apple | garmin | firstbeat | hr_drift | policy_zone_bounds | heart_rate_pattern | e1rm | user_input | unknown
   reference_standard_distance: direct | one_level_below | two_or_more_levels_below | unknown
 confidence:
   level: high | medium | medium_low | low | unknown
@@ -122,6 +122,13 @@ Confidence is not a generic model score. It is a combination of:
 ## Metric Specs
 
 ### VO2 Max
+
+Current implementation note:
+
+- Existing ZoneTruth VO2 analyzer classifies VO2 interval workout quality from
+  heart-rate zone and interval-pattern signals.
+- It must emit `vo2_interval_quality`, not `vo2max`, until a real VO2 max value
+  source or estimator is introduced.
 
 Reference standard:
 
@@ -298,6 +305,8 @@ Goal:
 
 - Attach metadata to existing Zone 2 / VO2 / Strength outputs without changing
   verdict thresholds.
+- Current VO2 analyzer metadata should use `vo2_interval_quality`; reserve
+  `vo2max` for future scalar VO2 max estimates or imports.
 
 Targeted tests:
 

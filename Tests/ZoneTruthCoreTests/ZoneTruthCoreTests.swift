@@ -199,6 +199,60 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(TrainingMetricClaimCeiling.defaultCeiling(for: weakHeuristic), .startingPointOnly)
     }
 
+    func testZone2AnalyzerAttachesStartingPointMetadataWithoutChangingVerdict() {
+        let workout = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+
+        let result = Zone2QualityAnalyzer.analyze(workout: workout)
+        let metadata = result.metricMetadata.first { $0.metric == .zone2HeartRateRange }
+
+        XCTAssertEqual(result.verdict, .pass)
+        XCTAssertEqual(metadata?.method.tier, .weakHeuristic)
+        XCTAssertEqual(metadata?.method.source, .policyZoneBounds)
+        XCTAssertEqual(metadata?.method.referenceStandardDistance, .twoOrMoreLevelsBelow)
+        XCTAssertEqual(metadata?.claim.ceiling, .startingPointOnly)
+        XCTAssertEqual(metadata?.confidence.level, .low)
+        XCTAssertEqual(metadata?.isClaimCeilingAdmissible, true)
+    }
+
+    func testVO2AnalyzerAttachesIntervalQualityMetadataNotVO2MaxClaim() {
+        let workout = SampleWorkoutCases
+            .vo2IntervalValidationCases()
+            .first { $0.name == "solid_vo2_max_intervals" }!
+            .workout
+
+        let result = VO2IntervalAnalyzer.analyze(workout: workout)
+        let metadata = result.metricMetadata.first { $0.metric == .vo2IntervalQuality }
+
+        XCTAssertEqual(result.verdict, .pass)
+        XCTAssertFalse(result.metricMetadata.contains { $0.metric == .vo2Max })
+        XCTAssertEqual(metadata?.method.source, .heartRatePattern)
+        XCTAssertEqual(metadata?.claim.ceiling, .estimateOnly)
+        XCTAssertTrue(metadata?.confidence.basis.contains("does not estimate VO2 max") == true)
+        XCTAssertTrue(metadata?.claim.forbiddenTerms.contains("true VO2 max") == true)
+        XCTAssertEqual(metadata?.isClaimCeilingAdmissible, true)
+    }
+
+    func testStrengthAnalyzerAttachesHeartRatePatternMetadataAsStartingPoint() {
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+
+        let result = StrengthAnalyzer.analyze(workout: workout)
+        let metadata = result.metricMetadata.first { $0.metric == .strength }
+
+        XCTAssertEqual(result.verdict, .pass)
+        XCTAssertEqual(metadata?.method.tier, .weakHeuristic)
+        XCTAssertEqual(metadata?.method.source, .heartRatePattern)
+        XCTAssertEqual(metadata?.claim.ceiling, .startingPointOnly)
+        XCTAssertEqual(metadata?.confidence.level, .low)
+        XCTAssertTrue(metadata?.claim.forbiddenTerms.contains("1RM") == true)
+        XCTAssertEqual(metadata?.isClaimCeilingAdmissible, true)
+    }
+
     func testZoneDistributionCountsSamplesIntoExpectedZones() {
         let distribution = ZoneDistributionAnalyzer.analyze(
             samples: makeSamples([100, 115, 130, 145, 160]),

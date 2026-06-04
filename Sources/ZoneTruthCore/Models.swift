@@ -30,6 +30,7 @@ public enum AnalysisVerdict: String, Codable, Sendable {
 
 public enum TrainingMetricKind: String, Codable, CaseIterable, Sendable {
     case vo2Max = "vo2max"
+    case vo2IntervalQuality = "vo2_interval_quality"
     case zone2HeartRateRange = "zone2_hr_range"
     case strength
 }
@@ -54,6 +55,8 @@ public enum TrainingMetricMethodSource: String, Codable, CaseIterable, Sendable 
     case hrvThreshold = "hrv_threshold"
     case talkTest = "talk_test"
     case percentHRMax = "percent_hrmax"
+    case policyZoneBounds = "policy_zone_bounds"
+    case heartRatePattern = "heart_rate_pattern"
     case e1RM = "e1rm"
     case direct1RM = "direct_1rm"
     case gripStrength = "grip_strength"
@@ -429,6 +432,7 @@ public struct AnalysisResult: Equatable, Sendable {
     public let zoneDistribution: ZoneDistribution
     public let stabilityStandardDeviation: Double?
     public let driftRatio: Double?
+    public let metricMetadata: [TrainingMetricMetadata]
 
     public init(
         verdict: AnalysisVerdict,
@@ -437,7 +441,8 @@ public struct AnalysisResult: Equatable, Sendable {
         recommendations: [String],
         zoneDistribution: ZoneDistribution,
         stabilityStandardDeviation: Double? = nil,
-        driftRatio: Double? = nil
+        driftRatio: Double? = nil,
+        metricMetadata: [TrainingMetricMetadata] = []
     ) {
         self.verdict = verdict
         self.confidence = confidence
@@ -446,6 +451,7 @@ public struct AnalysisResult: Equatable, Sendable {
         self.zoneDistribution = zoneDistribution
         self.stabilityStandardDeviation = stabilityStandardDeviation
         self.driftRatio = driftRatio
+        self.metricMetadata = metricMetadata
     }
 }
 

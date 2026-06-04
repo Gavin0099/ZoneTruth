@@ -169,6 +169,11 @@ public enum Zone2QualityAnalyzer {
         if preparedSamples.count < policy.minimumSampleCount {
             let thinDistribution = ZoneDistributionAnalyzer.analyze(samples: preparedSamples, zoneBounds: policy.zoneBounds)
             let rawCount = workout.heartRateSamples.count
+            let sampleQuality = TrainingMetricMetadataFactory.sampleQuality(
+                rawSampleCount: rawCount,
+                preparedSampleCount: preparedSamples.count,
+                policy: policy
+            )
             let message = rawCount < policy.minimumSampleCount 
                 ? "心率樣本數過低（僅 \(rawCount) 筆）。您的裝置可能沒有完整記錄整個運動過程的心率。"
                 : "原本的心率樣本數足夠（\(rawCount) 筆），但過多異常的心率突波被過濾掉，僅剩 \(preparedSamples.count) 筆有效樣本，無法分析。"
@@ -182,7 +187,10 @@ public enum Zone2QualityAnalyzer {
                 ),
                 zoneDistribution: thinDistribution,
                 stabilityStandardDeviation: nil,
-                driftRatio: nil
+                driftRatio: nil,
+                metricMetadata: [
+                    TrainingMetricMetadataFactory.zone2Range(sampleQuality: sampleQuality)
+                ]
             )
         }
 
@@ -248,7 +256,10 @@ public enum Zone2QualityAnalyzer {
             ),
             zoneDistribution: distribution,
             stabilityStandardDeviation: stabilityValue,
-            driftRatio: driftValue
+            driftRatio: driftValue,
+            metricMetadata: [
+                TrainingMetricMetadataFactory.zone2Range(sampleQuality: .sufficient)
+            ]
         )
     }
 }
@@ -321,7 +332,10 @@ public enum VO2IntervalAnalyzer {
             ),
             zoneDistribution: distribution,
             stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples),
-            driftRatio: nil
+            driftRatio: nil,
+            metricMetadata: [
+                TrainingMetricMetadataFactory.vo2IntervalQuality(sampleQuality: observation.sampleQuality)
+            ]
         )
     }
 }
@@ -544,7 +558,10 @@ public enum StrengthAnalyzer {
             ),
             zoneDistribution: distribution,
             stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples),
-            driftRatio: nil
+            driftRatio: nil,
+            metricMetadata: [
+                TrainingMetricMetadataFactory.strengthPattern(sampleQuality: observation.sampleQuality)
+            ]
         )
     }
 }
@@ -581,6 +598,117 @@ public enum WorkoutIntentAnalyzer {
             stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: samples),
             driftRatio: HeartRateDriftAnalyzer.driftRatio(for: samples)
         )
+    }
+}
+
+private enum TrainingMetricMetadataFactory {
+    static func sampleQuality(
+        rawSampleCount: Int,
+        preparedSampleCount: Int,
+        policy: AnalysisPolicy
+    ) -> SampleQuality {
+        if rawSampleCount < policy.minimumSampleCount { return .sparse }
+        if preparedSampleCount < policy.minimumSampleCount { return .heavilyFiltered }
+        return .sufficient
+    }
+
+    static func zone2Range(sampleQuality: SampleQuality) -> TrainingMetricMetadata {
+        TrainingMetricMetadata(
+            metric: .zone2HeartRateRange,
+            method: TrainingMetricMethod(
+                tier: .weakHeuristic,
+                source: .policyZoneBounds,
+                name: "Policy Zone 2 heart-rate bounds",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .low,
+                basis: "Current analysis uses configured heart-rate bounds, not LT1 or VT1 validation.",
+                limitingFactors: limitingFactors(
+                    for: sampleQuality,
+                    baseline: ["No lactate or ventilatory threshold measurement"]
+                )
+            ),
+            claim: TrainingMetricClaim(
+                ceiling: .startingPointOnly,
+                allowedTerms: ["estimated Zone 2 range", "usable starting point"],
+                forbiddenTerms: ["exact Zone 2", "optimal Zone 2", "validated threshold"]
+            ),
+            dataQualityFlags: dataQualityFlags(for: sampleQuality),
+            recommendedValidation: "Use lactate LT1 or CPET VT1/GET testing if threshold precision matters."
+        )
+    }
+
+    static func vo2IntervalQuality(sampleQuality: SampleQuality) -> TrainingMetricMetadata {
+        TrainingMetricMetadata(
+            metric: .vo2IntervalQuality,
+            method: TrainingMetricMethod(
+                tier: .fieldEstimator,
+                source: .heartRatePattern,
+                name: "Heart-rate zone and interval-pattern classification",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: sampleQuality == .sufficient ? .mediumLow : .low,
+                basis: "Classifies interval-like workout pattern from heart-rate zones; it does not estimate VO2 max.",
+                limitingFactors: limitingFactors(
+                    for: sampleQuality,
+                    baseline: ["No gas exchange data", "No direct VO2 max value"]
+                )
+            ),
+            claim: TrainingMetricClaim(
+                ceiling: .estimateOnly,
+                allowedTerms: ["interval pattern estimate", "consistent with VO2 interval structure"],
+                forbiddenTerms: ["VO2 max measured", "true VO2 max", "lab-equivalent"]
+            ),
+            dataQualityFlags: dataQualityFlags(for: sampleQuality),
+            recommendedValidation: "Use CPET/GXT gas analysis for VO2 max measurement."
+        )
+    }
+
+    static func strengthPattern(sampleQuality: SampleQuality) -> TrainingMetricMetadata {
+        TrainingMetricMetadata(
+            metric: .strength,
+            method: TrainingMetricMethod(
+                tier: .weakHeuristic,
+                source: .heartRatePattern,
+                name: "Heart-rate pattern strength-session classification",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .low,
+                basis: "Classifies strength-session pattern from heart-rate behavior; it does not measure force or 1RM.",
+                limitingFactors: limitingFactors(
+                    for: sampleQuality,
+                    baseline: ["No load, reps, ROM, velocity, or direct 1RM measurement"]
+                )
+            ),
+            claim: TrainingMetricClaim(
+                ceiling: .startingPointOnly,
+                allowedTerms: ["strength-session pattern", "heart-rate-based training pattern"],
+                forbiddenTerms: ["measured strength", "1RM", "force output"]
+            ),
+            dataQualityFlags: dataQualityFlags(for: sampleQuality),
+            recommendedValidation: "Use standardized 1RM, 3RM-5RM e1RM, or force/velocity testing for strength metrics."
+        )
+    }
+
+    private static func dataQualityFlags(for sampleQuality: SampleQuality) -> [String] {
+        switch sampleQuality {
+        case .sufficient:
+            return ["heart_rate_samples_sufficient"]
+        case .sparse:
+            return ["heart_rate_samples_sparse"]
+        case .heavilyFiltered:
+            return ["heart_rate_samples_heavily_filtered"]
+        }
+    }
+
+    private static func limitingFactors(
+        for sampleQuality: SampleQuality,
+        baseline: [String]
+    ) -> [String] {
+        baseline + (sampleQuality == .sufficient ? [] : dataQualityFlags(for: sampleQuality))
     }
 }
 
