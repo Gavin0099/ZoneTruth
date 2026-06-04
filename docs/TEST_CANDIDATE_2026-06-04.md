@@ -155,25 +155,28 @@ bash scripts/meta_closeout.sh
 ## Manual Test Checklist
 
 1. Launch the app from Xcode or SwiftPM-supported host target.
-2. Open a Zone 2 workout.
-3. Confirm the detail view shows "分析依據揭露".
-4. Confirm Zone 2 disclosure says it is a starting reference / estimate, not exact.
-5. Open a workout with imported VO2 max estimate data and confirm the metrics
+2. For JSON-import testing, place `SampleData/workouts.example.json` into the
+   app container Documents path as `workouts.json`; it contains Zone 2, VO2 max
+   estimate, and Strength e1RM sample workouts.
+3. Open a Zone 2 workout.
+4. Confirm the detail view shows "分析依據揭露".
+5. Confirm Zone 2 disclosure says it is a starting reference / estimate, not exact.
+6. Open a workout with imported VO2 max estimate data and confirm the metrics
    grid says "VO2 max 估算".
-6. Confirm disclosure says "最大攝氧量估算" with source and estimate wording,
+7. Confirm disclosure says "最大攝氧量估算" with source and estimate wording,
    not VO2 max measurement.
-7. Open a VO2 interval workout without scalar VO2 max data.
-8. Confirm disclosure says "VO2 間歇型態", not VO2 max measurement.
-9. Open a Strength workout.
-10. Confirm a workout with imported strength metric data shows an
+8. Open a VO2 interval workout without scalar VO2 max data.
+9. Confirm disclosure says "VO2 間歇型態", not VO2 max measurement.
+10. Open a Strength workout.
+11. Confirm a workout with imported strength metric data shows an
     exercise-specific value such as "Back Squat e1RM".
-11. Confirm disclosure says "肌力指標" and uses estimate / measured wording by
+12. Confirm disclosure says "肌力指標" and uses estimate / measured wording by
     source.
-12. Confirm a heart-rate-only Strength workout still says "肌力訓練型態" rather
+13. Confirm a heart-rate-only Strength workout still says "肌力訓練型態" rather
     than strength measurement.
-13. Change Zone 2 bounds manually and verify single-workout analysis uses the updated bounds.
-14. Generate/apply/reset Resting HR suggestion and confirm the policy source text updates.
-15. Open weekly dashboard and confirm existing weekly rendering still loads.
+14. Change Zone 2 bounds manually and verify single-workout analysis uses the updated bounds.
+15. Generate/apply/reset Resting HR suggestion and confirm the policy source text updates.
+16. Open weekly dashboard and confirm existing weekly rendering still loads.
 
 ## Exit Criteria For First Tester Feedback
 
