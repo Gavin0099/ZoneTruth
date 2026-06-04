@@ -171,6 +171,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Training Analysis Meta-Spec | 已完成（shared metadata schema、confidence ladder、claim ceiling、UI wording rules、implementation sequence） | Done |
 | Training Analysis Core Metadata Types | 已完成（method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests） | Done |
 | Training Analysis Analyzer Adapter Metadata | 已完成（Zone 2 / VO2 interval quality / Strength result metadata；不改 verdict threshold） | Done |
+| Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
 | Garmin 整合尚未啟動 | 明確延後 | Deferred |
@@ -193,6 +194,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 標準化 daily memory closeout format：拆分 commit/push status，補 claim ceiling、not-claimed、workspace_state 與 remote_state |
 | 2026-06-04 | 完成 Training Analysis Slice 2 Analyzer Adapter Metadata：Zone 2 / VO2 interval quality / Strength 分析結果附帶 metadata，不改 verdict threshold 或 UI rendering |
 | 2026-06-04 | 完成 Training Analysis Slice 1 Core Metadata Types：新增 method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests，不改 analyzer verdict |
 | 2026-06-04 | 完成 Training Analysis Meta-Spec：將 literature review 轉成 shared metric metadata、confidence ladder、claim ceiling、UI wording rules 與四段 implementation sequence |
