@@ -28,6 +28,175 @@ public enum AnalysisVerdict: String, Codable, Sendable {
     case fail
 }
 
+public enum TrainingMetricKind: String, Codable, CaseIterable, Sendable {
+    case vo2Max = "vo2max"
+    case zone2HeartRateRange = "zone2_hr_range"
+    case strength
+}
+
+public enum TrainingMetricMethodTier: String, Codable, CaseIterable, Sendable {
+    case goldStandardAnchor = "gold_standard_anchor"
+    case fieldEstimator = "field_estimator"
+    case productReference = "product_reference"
+    case weakHeuristic = "weak_heuristic"
+}
+
+public enum TrainingMetricMethodSource: String, Codable, CaseIterable, Sendable {
+    case cpet
+    case lactateTest = "lactate_test"
+    case ventilatoryThreshold = "ventilatory_threshold"
+    case apple
+    case garmin
+    case firstbeat
+    case runningHRSpeed = "running_hr_speed"
+    case cyclingPowerHR = "cycling_power_hr"
+    case hrDrift = "hr_drift"
+    case hrvThreshold = "hrv_threshold"
+    case talkTest = "talk_test"
+    case percentHRMax = "percent_hrmax"
+    case e1RM = "e1rm"
+    case direct1RM = "direct_1rm"
+    case gripStrength = "grip_strength"
+    case userInput = "user_input"
+    case unknown
+}
+
+public enum ReferenceStandardDistance: String, Codable, CaseIterable, Sendable {
+    case direct
+    case oneLevelBelow = "one_level_below"
+    case twoOrMoreLevelsBelow = "two_or_more_levels_below"
+    case unknown
+}
+
+public enum TrainingMetricConfidenceLevel: String, Codable, CaseIterable, Sendable {
+    case high
+    case medium
+    case mediumLow = "medium_low"
+    case low
+    case unknown
+}
+
+public enum TrainingMetricClaimCeiling: String, Codable, CaseIterable, Sendable {
+    case measuredIfDirect = "measured_if_direct"
+    case estimateOnly = "estimate_only"
+    case startingPointOnly = "starting_point_only"
+    case unsupported
+
+    public static func defaultCeiling(for method: TrainingMetricMethod) -> TrainingMetricClaimCeiling {
+        if method.tier == .goldStandardAnchor && method.referenceStandardDistance == .direct {
+            return .measuredIfDirect
+        }
+
+        switch method.tier {
+        case .goldStandardAnchor, .fieldEstimator, .productReference:
+            return .estimateOnly
+        case .weakHeuristic:
+            return .startingPointOnly
+        }
+    }
+}
+
+public struct TrainingMetricMethod: Codable, Equatable, Hashable, Sendable {
+    public let tier: TrainingMetricMethodTier
+    public let source: TrainingMetricMethodSource
+    public let name: String
+    public let referenceStandardDistance: ReferenceStandardDistance
+
+    public init(
+        tier: TrainingMetricMethodTier,
+        source: TrainingMetricMethodSource,
+        name: String,
+        referenceStandardDistance: ReferenceStandardDistance
+    ) {
+        self.tier = tier
+        self.source = source
+        self.name = name
+        self.referenceStandardDistance = referenceStandardDistance
+    }
+}
+
+public struct TrainingMetricConfidence: Codable, Equatable, Hashable, Sendable {
+    public let level: TrainingMetricConfidenceLevel
+    public let basis: String
+    public let limitingFactors: [String]
+
+    public init(
+        level: TrainingMetricConfidenceLevel,
+        basis: String,
+        limitingFactors: [String] = []
+    ) {
+        self.level = level
+        self.basis = basis
+        self.limitingFactors = limitingFactors
+    }
+}
+
+public struct TrainingMetricClaim: Codable, Equatable, Hashable, Sendable {
+    public let ceiling: TrainingMetricClaimCeiling
+    public let allowedTerms: [String]
+    public let forbiddenTerms: [String]
+
+    public init(
+        ceiling: TrainingMetricClaimCeiling,
+        allowedTerms: [String] = [],
+        forbiddenTerms: [String] = []
+    ) {
+        self.ceiling = ceiling
+        self.allowedTerms = allowedTerms
+        self.forbiddenTerms = forbiddenTerms
+    }
+}
+
+public struct TrainingMetricMetadata: Codable, Equatable, Hashable, Sendable {
+    public let metric: TrainingMetricKind
+    public let method: TrainingMetricMethod
+    public let confidence: TrainingMetricConfidence
+    public let claim: TrainingMetricClaim
+    public let dataQualityFlags: [String]
+    public let recommendedValidation: String?
+
+    public init(
+        metric: TrainingMetricKind,
+        method: TrainingMetricMethod,
+        confidence: TrainingMetricConfidence,
+        claim: TrainingMetricClaim? = nil,
+        dataQualityFlags: [String] = [],
+        recommendedValidation: String? = nil
+    ) {
+        self.metric = metric
+        self.method = method
+        self.confidence = confidence
+        self.claim = claim ?? TrainingMetricClaim(
+            ceiling: TrainingMetricClaimCeiling.defaultCeiling(for: method)
+        )
+        self.dataQualityFlags = dataQualityFlags
+        self.recommendedValidation = recommendedValidation
+    }
+
+    public var isClaimCeilingAdmissible: Bool {
+        switch claim.ceiling {
+        case .measuredIfDirect:
+            guard method.tier == .goldStandardAnchor,
+                  method.referenceStandardDistance == .direct
+            else {
+                return false
+            }
+        case .estimateOnly:
+            guard method.tier != .weakHeuristic else { return false }
+        case .startingPointOnly, .unsupported:
+            break
+        }
+
+        if metric == .zone2HeartRateRange && method.source == .percentHRMax {
+            let allowedConfidence = confidence.level == .low || confidence.level == .unknown
+            let allowedClaim = claim.ceiling == .startingPointOnly || claim.ceiling == .unsupported
+            return allowedConfidence && allowedClaim
+        }
+
+        return true
+    }
+}
+
 public enum TrainingZone: Int, CaseIterable, Codable, Sendable {
     case zone1 = 1
     case zone2

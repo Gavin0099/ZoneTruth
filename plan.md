@@ -70,7 +70,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 本次研究切片（2026-06-04）：
 - [x] 完成 Training Analysis Literature Review：VO2 max / Zone 2 / Strength 分層整理 gold standard anchor、field estimator、product reference、claim ceiling 與 confidence basis
 - [x] 將 literature review 轉成 `TRAINING_ANALYSIS_META_SPEC.md`：定義 shared metric metadata、confidence ladder、claim ceiling、UI wording rules 與 implementation sequence
-- [ ] 下一步：Slice 1「Core Metadata Types」：新增 method tier / reference-standard distance / confidence / claim ceiling 型別，不改 analyzer verdict
+- [x] Slice 1「Core Metadata Types」：新增 method tier / source / reference-standard distance / confidence / claim ceiling metadata 型別，不改 analyzer verdict
+- [ ] 下一步：Slice 2「Analyzer Adapter Metadata」：讓 Zone 2 / VO2 / Strength adapter 產出 metadata，但不改既有 verdict threshold
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
@@ -167,6 +168,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | P2 CodeBurn P6 acquisition surface statistics display | 已完成（structural observation only；不做成本 / 跨 provider 比較 / efficiency / optimization） | Done |
 | Training Analysis Literature Review | 已完成（VO2 max / Zone 2 / Strength evidence hierarchy、claim ceiling、confidence basis） | Done |
 | Training Analysis Meta-Spec | 已完成（shared metadata schema、confidence ladder、claim ceiling、UI wording rules、implementation sequence） | Done |
+| Training Analysis Core Metadata Types | 已完成（method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
 | Garmin 整合尚未啟動 | 明確延後 | Deferred |
@@ -189,6 +191,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 完成 Training Analysis Slice 1 Core Metadata Types：新增 method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests，不改 analyzer verdict |
 | 2026-06-04 | 完成 Training Analysis Meta-Spec：將 literature review 轉成 shared metric metadata、confidence ladder、claim ceiling、UI wording rules 與四段 implementation sequence |
 | 2026-06-04 | 同步 ai-governance-framework 最新 upstream（0ae039e）：導入 response envelope contract、刷新 baseline / framework lock，readiness、drift、version audit 通過 |
 | 2026-06-04 | 完成 Training Analysis Literature Review：整理 VO2 max / Zone 2 / Strength 的學術/臨床標準、field estimator、產品對照與 ZoneTruth claim ceiling |

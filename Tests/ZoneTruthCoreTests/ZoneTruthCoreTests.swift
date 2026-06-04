@@ -64,6 +64,141 @@ final class ZoneTruthCoreTests: XCTestCase {
         let updateFlag: String
     }
 
+    func testTrainingMetricMetadataCodableRoundTripsSpecValues() throws {
+        let metadata = TrainingMetricMetadata(
+            metric: .vo2Max,
+            method: TrainingMetricMethod(
+                tier: .productReference,
+                source: .garmin,
+                name: "Garmin VO2 max estimate",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .mediumLow,
+                basis: "Exercise-based wearable estimate, not lab CPET.",
+                limitingFactors: ["No gas exchange data"]
+            ),
+            dataQualityFlags: ["outdoor_run", "stable_hr"],
+            recommendedValidation: "CPET if used for clinical or high-performance decisions."
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(metadata)
+        let json = String(decoding: data, as: UTF8.self)
+        let decoded = try JSONDecoder().decode(TrainingMetricMetadata.self, from: data)
+
+        XCTAssertEqual(decoded, metadata)
+        XCTAssertTrue(json.contains("product_reference"))
+        XCTAssertTrue(json.contains("two_or_more_levels_below"))
+        XCTAssertTrue(json.contains("estimate_only"))
+    }
+
+    func testProductReferenceMetricCannotClaimMeasured() {
+        let garminEstimate = TrainingMetricMetadata(
+            metric: .vo2Max,
+            method: TrainingMetricMethod(
+                tier: .productReference,
+                source: .garmin,
+                name: "Garmin VO2 max estimate",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .medium,
+                basis: "Product estimate."
+            ),
+            claim: TrainingMetricClaim(ceiling: .measuredIfDirect)
+        )
+        let cpetMeasurement = TrainingMetricMetadata(
+            metric: .vo2Max,
+            method: TrainingMetricMethod(
+                tier: .goldStandardAnchor,
+                source: .cpet,
+                name: "CPET with gas exchange",
+                referenceStandardDistance: .direct
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .high,
+                basis: "Direct lab measurement with gas exchange."
+            ),
+            claim: TrainingMetricClaim(ceiling: .measuredIfDirect)
+        )
+
+        XCTAssertFalse(garminEstimate.isClaimCeilingAdmissible)
+        XCTAssertTrue(cpetMeasurement.isClaimCeilingAdmissible)
+    }
+
+    func testPercentHRMaxZone2IsStartingPointOnlyLowConfidence() {
+        let overclaimedPercentHRMax = TrainingMetricMetadata(
+            metric: .zone2HeartRateRange,
+            method: TrainingMetricMethod(
+                tier: .weakHeuristic,
+                source: .percentHRMax,
+                name: "Percent HRmax zone heuristic",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .medium,
+                basis: "Formula-based threshold estimate."
+            ),
+            claim: TrainingMetricClaim(ceiling: .estimateOnly)
+        )
+        let boundedPercentHRMax = TrainingMetricMetadata(
+            metric: .zone2HeartRateRange,
+            method: TrainingMetricMethod(
+                tier: .weakHeuristic,
+                source: .percentHRMax,
+                name: "Percent HRmax zone heuristic",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .low,
+                basis: "Formula-based starting point only.",
+                limitingFactors: ["No LT1 or VT1 validation"]
+            ),
+            claim: TrainingMetricClaim(
+                ceiling: .startingPointOnly,
+                allowedTerms: ["starting range"],
+                forbiddenTerms: ["validated threshold"]
+            )
+        )
+
+        XCTAssertFalse(overclaimedPercentHRMax.isClaimCeilingAdmissible)
+        XCTAssertTrue(boundedPercentHRMax.isClaimCeilingAdmissible)
+    }
+
+    func testTrainingMetricMetadataDefaultClaimCeilingMatchesMethodDistance() {
+        let directCPET = TrainingMetricMethod(
+            tier: .goldStandardAnchor,
+            source: .cpet,
+            name: "CPET with gas exchange",
+            referenceStandardDistance: .direct
+        )
+        let runningEstimator = TrainingMetricMethod(
+            tier: .fieldEstimator,
+            source: .runningHRSpeed,
+            name: "Running HR-speed model",
+            referenceStandardDistance: .oneLevelBelow
+        )
+        let productReference = TrainingMetricMethod(
+            tier: .productReference,
+            source: .firstbeat,
+            name: "Firstbeat public method reference",
+            referenceStandardDistance: .twoOrMoreLevelsBelow
+        )
+        let weakHeuristic = TrainingMetricMethod(
+            tier: .weakHeuristic,
+            source: .percentHRMax,
+            name: "Percent HRmax zone heuristic",
+            referenceStandardDistance: .twoOrMoreLevelsBelow
+        )
+
+        XCTAssertEqual(TrainingMetricClaimCeiling.defaultCeiling(for: directCPET), .measuredIfDirect)
+        XCTAssertEqual(TrainingMetricClaimCeiling.defaultCeiling(for: runningEstimator), .estimateOnly)
+        XCTAssertEqual(TrainingMetricClaimCeiling.defaultCeiling(for: productReference), .estimateOnly)
+        XCTAssertEqual(TrainingMetricClaimCeiling.defaultCeiling(for: weakHeuristic), .startingPointOnly)
+    }
+
     func testZoneDistributionCountsSamplesIntoExpectedZones() {
         let distribution = ZoneDistributionAnalyzer.analyze(
             samples: makeSamples([100, 115, 130, 145, 160]),
