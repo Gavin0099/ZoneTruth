@@ -50,7 +50,13 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 ## 當前 Sprint / 當前工作
 
-本次治理同步（2026-06-03）：
+本次治理同步（2026-06-04）：
+- [x] pull `ai-governance-framework` 最新 upstream 到 `0ae039e`
+- [x] 正式 adopt 最新 baseline，新增 `governance/RESPONSE_ENVELOPE_CONTRACT.md`，刷新 `.governance/baseline.yaml`
+- [x] 更新 `governance/framework.lock.json` adopted commit 到 `0ae039e`
+- [x] readiness / drift / version audit 全部通過；response envelope validator valid fixtures 通過
+
+前次治理同步（2026-06-03）：
 - [x] 確認 `ai-governance-framework` upstream 最新快照為 `70a54b3`
 - [x] dry-run adopt / readiness 分析，確認安全導入不會覆寫既有 repo-local 治理檔
 - [x] 補齊缺漏 governance 文件並修正 `contract.yaml` repo identity
@@ -181,6 +187,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 同步 ai-governance-framework 最新 upstream（0ae039e）：導入 response envelope contract、刷新 baseline / framework lock，readiness、drift、version audit 通過 |
 | 2026-06-04 | 完成 Training Analysis Literature Review：整理 VO2 max / Zone 2 / Strength 的學術/臨床標準、field estimator、產品對照與 ZoneTruth claim ceiling |
 | 2026-06-03 | 完成 P2 CodeBurn P6 acquisition surface statistics display：新增 fixture/demo CLI 與 targeted tests，輸出 surface record/source/quarantine 摘要並保留 A-1/T-1/C-1/R-1/O-1/V-1 約束 |
 | 2026-06-03 | 完成 P2 文字/UI 語氣精修：Zone 2 / VO2 / Strength 分析 reasons、recommendations 與 evaluation nextAction 改為觀測 / 建議語氣，新增 targeted tone tests |
