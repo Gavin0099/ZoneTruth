@@ -1,18 +1,25 @@
 # Test Candidate 2026-06-04
 
-Status: ready for developer/local testing
+Status: developer checkpoint only; formal testing deferred until feature-complete
 Base commit: `2843372`
 Audience: owner / local tester
 
 ## Short Answer
 
-You can start testing the current `main` now for single-workout analysis,
-personalized Zone 2 settings, and metadata disclosure.
+Do not start formal product testing from this checkpoint.
 
-This is not yet a TestFlight/App Store release candidate. It is a local test
-candidate for validating user-visible behavior and claim boundaries.
+This checkpoint is useful for developer verification only. Formal testing should
+start after the three product pillars are feature-complete:
+
+- VO2 max
+- Zone 2
+- Strength
+
+This is not a TestFlight/App Store release candidate.
 
 ## What Is Testable Now
+
+This section is for developer smoke only, not formal tester rollout.
 
 - Single-workout analysis detail view.
 - Zone 2 / VO2 interval / Strength reasons and recommendations.
@@ -29,6 +36,58 @@ candidate for validating user-visible behavior and claim boundaries.
   - policy source shown in single-workout and weekly summary context
 - Weekly dashboard existing behavior.
 - HealthKit / Strava / JSON import paths already validated earlier in Phase E.
+
+## Feature-Complete Test Gate
+
+Formal product testing should start only after all three pillars below have a
+user-visible vertical slice.
+
+### VO2 Max
+
+Required before formal testing:
+
+- A user-visible VO2 max estimate/import surface.
+- Clear source labeling: lab-measured, product estimate, field estimate, or
+  unknown provenance.
+- Metadata disclosure showing method tier, confidence, and claim ceiling.
+- Trend or latest-value rendering that never claims lab-equivalent truth unless
+  the source is direct CPET/GXT gas analysis.
+
+Current status:
+
+- Not feature-complete.
+- Existing VO2 path is `vo2_interval_quality`, not scalar VO2 max.
+
+### Zone 2
+
+Required before formal testing:
+
+- Manual Zone 2 bounds.
+- Resting HR suggestion / apply / reset.
+- Single-workout analysis uses the selected policy.
+- Weekly summary uses the selected policy.
+- User-visible disclosure explains estimate / starting-point status.
+
+Current status:
+
+- Mostly feature-complete for heuristic / personalized bounds.
+- Still must not claim exact LT1/VT1 threshold unless validated by a threshold
+  source.
+
+### Strength
+
+Required before formal testing:
+
+- A user-visible strength metric surface beyond heart-rate session pattern.
+- At minimum, support direct 1RM, e1RM, or structured strength-log input with
+  exercise/protocol context.
+- Metadata disclosure showing method, confidence, and claim ceiling.
+- UI must distinguish strength-session pattern from measured strength.
+
+Current status:
+
+- Not feature-complete.
+- Existing Strength path describes heart-rate-based session pattern only.
 
 ## What Is Not Claimed Yet
 
@@ -100,7 +159,9 @@ This candidate is useful if the tester can answer:
 
 The next test candidate should be one of:
 
-- `TC-2 weekly disclosure`: add minimal weekly metadata disclosure under the
-  existing weekly rendering guard.
-- `TC-2 release packaging`: prepare an installable device/TestFlight build
-  checklist and version bump.
+- `TC-2 VO2 max vertical slice`: add scalar VO2 max estimate/import surface with
+  claim-bounded disclosure.
+- `TC-2 Strength vertical slice`: add structured strength metric input/display
+  with claim-bounded disclosure.
+- `TC-2 Zone 2 completion polish`: only if Zone 2 needs final wording or weekly
+  disclosure before formal testing.
