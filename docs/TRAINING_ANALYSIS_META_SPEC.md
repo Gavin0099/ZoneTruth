@@ -344,9 +344,21 @@ Targeted tests:
 - Metric disclosure presenter uses metric-specific profile wording and does not
   leak forbidden terms into user-visible disclosure text.
 
+### Weekly Disclosure Preflight Guard
+
+Before extending metric disclosure into weekly UI:
+
+- Weekly rendering contract tests must forbid metric measurement overclaims:
+  `VO2 max 實測`, `true VO2 max`, `lab-equivalent`, `精準 Zone 2`,
+  `exact Zone 2`, `optimal Zone 2`, `1RM`, `肌力測量`, `force output`.
+- Weekly dashboard source and presenter outputs must remain free of those terms.
+- Weekly UI must not claim scalar VO2 max, exact Zone 2 threshold, or strength
+  measurement unless the underlying metric source supports that claim ceiling.
+
 ## Current Decision
 
-The next code-bearing task should be Slice 1 only.
+The next code-bearing task may evaluate weekly disclosure only if the weekly
+rendering contract guard remains green.
 
 Do not change Zone 2 thresholds, VO2 verdict rules, or Strength verdict rules until
 metadata exists and current behavior is locked by tests.

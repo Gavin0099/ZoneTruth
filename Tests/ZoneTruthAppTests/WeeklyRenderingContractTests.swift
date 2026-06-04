@@ -76,4 +76,57 @@ final class WeeklyRenderingContractTests: XCTestCase {
             )
         }
     }
+
+    // Contract 4: weekly rendering must not absorb single-workout metric disclosure
+    // into stronger measured/precise claims. Weekly summaries aggregate observation
+    // signals; they do not measure VO2 max, exact Zone 2 thresholds, or strength.
+    func testWeeklyRenderingContainsNoMetricMeasurementClaims() throws {
+        let sourceText = try weeklyDashboardSourceText()
+        let presenterText = weeklyPresenterSurfaceText()
+        let combinedText = sourceText + "\n" + presenterText
+        let forbiddenTerms = [
+            "VO2 max 實測",
+            "true VO2 max",
+            "lab-equivalent",
+            "精準 Zone 2",
+            "exact Zone 2",
+            "optimal Zone 2",
+            "1RM",
+            "肌力測量",
+            "force output"
+        ]
+
+        for term in forbiddenTerms {
+            XCTAssertFalse(
+                combinedText.localizedCaseInsensitiveContains(term),
+                "Weekly rendering must not contain metric measurement overclaim term '\(term)'."
+            )
+        }
+    }
+
+    private func weeklyPresenterSurfaceText() -> String {
+        var labels: [String] = []
+        for authority in [WeeklyDecisionAuthority.observational, .boundedInference, .weakInference] {
+            labels.append(WeeklyCTAPresenter.render(
+                base: "本週訓練節奏尚可，下週視體感微調強度。",
+                for: authority,
+                goal: nil,
+                goalSignal: nil
+            ))
+            labels.append(WeeklyAdaptationDirection.noSignal.admissibleLabel(for: authority))
+            labels.append(TrainingState.functionalFatigue.admissibleLabel(for: authority))
+        }
+        labels.append(contentsOf: TrainingState.progression.map(\.progressionBarLabel))
+        return labels.joined(separator: "\n")
+    }
+
+    private func weeklyDashboardSourceText() throws -> String {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repoRoot = testFile
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = repoRoot.appendingPathComponent("Sources/ZoneTruthApp/WeeklyDashboardView.swift")
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
 }
