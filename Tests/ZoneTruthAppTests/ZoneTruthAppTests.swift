@@ -1272,6 +1272,33 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(text.contains("肌力測量"))
     }
 
+    func testMetricDisclosurePresenterUsesMetricSpecificClaimProfiles() {
+        let zone2 = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        )
+        let vo2 = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout
+        )
+        let strength = WorkoutIntentAnalyzer.analyze(
+            SampleWorkoutCases.strengthValidationCases().first { $0.name == "traditional_strength_training" }!.workout
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            zone2.metricMetadata + vo2.metricMetadata + strength.metricMetadata
+        )
+        let zone2Text = text(for: items, title: "Zone 2 心率範圍")
+        let vo2Text = text(for: items, title: "VO2 間歇型態")
+        let strengthText = text(for: items, title: "肌力訓練型態")
+
+        XCTAssertTrue(zone2Text.contains("LT1"))
+        XCTAssertTrue(zone2Text.contains("VT1"))
+        XCTAssertTrue(vo2Text.contains("不代表已推估或測量最大攝氧量數值"))
+        XCTAssertTrue(strengthText.contains("不能代表最大肌力"))
+        XCTAssertFalse(zone2Text.contains("最大攝氧量"), zone2Text)
+        XCTAssertFalse(vo2Text.contains("精準 Zone 2"), vo2Text)
+        XCTAssertFalse(strengthText.contains("VO2 max"), strengthText)
+    }
+
     @MainActor
     func testMetricDisclosureCardViewSmokeCompiles() {
         let result = WorkoutIntentAnalyzer.analyze(
@@ -1281,6 +1308,15 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertFalse(result.metricMetadata.isEmpty)
         _ = view.body
+    }
+
+    private func text(for items: [MetricDisclosureItem], title: String) -> String {
+        guard let item = items.first(where: { $0.title == title }) else {
+            XCTFail("Expected disclosure item titled \(title)")
+            return ""
+        }
+        return [item.title, item.status, item.method, item.confidenceReason, item.validationHint ?? ""]
+            .joined(separator: " ")
     }
 
     @MainActor

@@ -333,12 +333,16 @@ Targeted tests:
 Goal:
 
 - Enforce forbidden wording and metadata presence for ambiguous estimates.
+- Add metric-specific claim profiles so VO2 max, VO2 interval quality, Zone 2,
+  and Strength do not share one flattened claim ladder in UI rendering.
 
 Targeted tests:
 
 - No `true VO2 max`, `exact Zone 2`, `lab-equivalent`, or `optimal Zone 2`
   in user-visible analysis summaries.
 - Every VO2 max / Zone 2 / Strength metric has method tier and claim ceiling.
+- Metric disclosure presenter uses metric-specific profile wording and does not
+  leak forbidden terms into user-visible disclosure text.
 
 ## Current Decision
 

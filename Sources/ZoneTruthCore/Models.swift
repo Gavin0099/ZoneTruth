@@ -150,6 +150,75 @@ public struct TrainingMetricClaim: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+public enum TrainingMetricClaimProfileKind: String, Codable, CaseIterable, Sendable {
+    case vo2MaxEstimate = "vo2max_estimate"
+    case vo2IntervalPattern = "vo2_interval_pattern"
+    case zone2ThresholdRange = "zone2_threshold_range"
+    case strengthMeasurement = "strength_measurement"
+    case strengthSessionPattern = "strength_session_pattern"
+    case genericObservation = "generic_observation"
+}
+
+public struct TrainingMetricClaimProfile: Codable, Equatable, Hashable, Sendable {
+    public let kind: TrainingMetricClaimProfileKind
+    public let displayName: String
+    public let disclosure: String
+    public let forbiddenTerms: [String]
+
+    public init(
+        kind: TrainingMetricClaimProfileKind,
+        displayName: String,
+        disclosure: String,
+        forbiddenTerms: [String]
+    ) {
+        self.kind = kind
+        self.displayName = displayName
+        self.disclosure = disclosure
+        self.forbiddenTerms = forbiddenTerms
+    }
+
+    public static func resolve(for metadata: TrainingMetricMetadata) -> TrainingMetricClaimProfile {
+        switch metadata.metric {
+        case .vo2Max:
+            return TrainingMetricClaimProfile(
+                kind: .vo2MaxEstimate,
+                displayName: "最大攝氧量估算",
+                disclosure: "VO2 max 需要 CPET / GXT 氣體分析才可視為直接測量；其他來源應維持估算或產品參考語氣。",
+                forbiddenTerms: ["true VO2 max", "lab-equivalent", "VO2 max 實測"]
+            )
+        case .vo2IntervalQuality:
+            return TrainingMetricClaimProfile(
+                kind: .vo2IntervalPattern,
+                displayName: "VO2 間歇型態",
+                disclosure: "目前只描述間歇訓練型態，不代表已推估或測量最大攝氧量數值。",
+                forbiddenTerms: ["true VO2 max", "lab-equivalent", "VO2 max 實測"]
+            )
+        case .zone2HeartRateRange:
+            return TrainingMetricClaimProfile(
+                kind: .zone2ThresholdRange,
+                displayName: "Zone 2 心率範圍",
+                disclosure: "Zone 2 精準界線需由 LT1 / VT1 / GET 等閾值測試確認；未驗證來源只能作為估算或起始參考。",
+                forbiddenTerms: ["exact Zone 2", "optimal Zone 2", "精準 Zone 2"]
+            )
+        case .strength:
+            if metadata.method.source == .direct1RM || metadata.method.source == .e1RM || metadata.method.source == .gripStrength {
+                return TrainingMetricClaimProfile(
+                    kind: .strengthMeasurement,
+                    displayName: "肌力指標",
+                    disclosure: "肌力數值需保留動作、負重、次數、ROM 與測試協議脈絡。",
+                    forbiddenTerms: ["whole-body strength", "clinical strength diagnosis", "全身肌力診斷"]
+                )
+            }
+            return TrainingMetricClaimProfile(
+                kind: .strengthSessionPattern,
+                displayName: "肌力訓練型態",
+                disclosure: "目前只描述心率型態，不能代表最大肌力、1RM 或力輸出測量。",
+                forbiddenTerms: ["measured strength", "1RM", "force output", "肌力測量"]
+            )
+        }
+    }
+}
+
 public struct TrainingMetricMetadata: Codable, Equatable, Hashable, Sendable {
     public let metric: TrainingMetricKind
     public let method: TrainingMetricMethod
@@ -197,6 +266,10 @@ public struct TrainingMetricMetadata: Codable, Equatable, Hashable, Sendable {
         }
 
         return true
+    }
+
+    public var claimProfile: TrainingMetricClaimProfile {
+        TrainingMetricClaimProfile.resolve(for: self)
     }
 }
 

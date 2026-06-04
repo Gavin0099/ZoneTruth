@@ -73,7 +73,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Slice 1「Core Metadata Types」：新增 method tier / source / reference-standard distance / confidence / claim ceiling metadata 型別，不改 analyzer verdict
 - [x] Slice 2「Analyzer Adapter Metadata」：讓 Zone 2 / VO2 / Strength analyzer result 產出 metadata，但不改既有 verdict threshold；現有 VO2 analyzer 標示為 `vo2_interval_quality`，不宣稱 VO2 max
 - [x] Slice 3「UI Disclosure」最小切片：在單筆分析結果揭露 estimate / measured 狀態與 confidence reason；不改 weekly rendering contract
-- [ ] 下一步：補 metric-specific claim profiles / Slice 4 guard tests，避免 VO2 max、Zone 2、Strength 共用 ladder 被 UI 文案過度簡化
+- [x] Slice 4「Metric-specific Claim Profiles + Guard Tests」：新增 VO2 / Zone 2 / Strength claim profiles，並驗證 UI disclosure 不混淆 metric-specific claim ceiling
+- [ ] 下一步：評估是否需要將 disclosure 延伸到 weekly UI；若要做，先定義 weekly rendering contract guard
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
@@ -173,6 +174,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Training Analysis Core Metadata Types | 已完成（method tier / source / reference-standard distance / confidence / claim ceiling 型別與 targeted tests） | Done |
 | Training Analysis Analyzer Adapter Metadata | 已完成（Zone 2 / VO2 interval quality / Strength result metadata；不改 verdict threshold） | Done |
 | Training Analysis UI Disclosure | 已完成最小切片（單筆分析揭露 estimate / measured 與 confidence reason；不改 weekly rendering） | Done |
+| Training Analysis Claim Profiles / Guards | 已完成（metric-specific claim profiles；guard tests 防止 UI disclosure 混淆 VO2 / Zone 2 / Strength） | Done |
 | Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
@@ -196,6 +198,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-04 | 完成 Training Analysis Slice 4 Claim Profiles / Guard Tests：新增 metric-specific claim profiles，修正 Zone 2 驗證提示誤判 CPET 的 UI 文案風險 |
 | 2026-06-04 | 完成 Training Analysis Slice 3 UI Disclosure 最小切片：單筆分析結果顯示 estimate / measured 與 confidence reason，targeted tests 驗證不含過度宣稱 |
 | 2026-06-04 | 標準化 daily memory closeout format：拆分 commit/push status，補 claim ceiling、not-claimed、workspace_state 與 remote_state |
 | 2026-06-04 | 完成 Training Analysis Slice 2 Analyzer Adapter Metadata：Zone 2 / VO2 interval quality / Strength 分析結果附帶 metadata，不改 verdict threshold 或 UI rendering |

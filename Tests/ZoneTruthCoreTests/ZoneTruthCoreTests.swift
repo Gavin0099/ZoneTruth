@@ -199,6 +199,27 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(TrainingMetricClaimCeiling.defaultCeiling(for: weakHeuristic), .startingPointOnly)
     }
 
+    func testMetricSpecificClaimProfilesPreserveDifferentEvidenceBoundaries() {
+        let zone2 = Zone2QualityAnalyzer.analyze(
+            workout: SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
+        ).metricMetadata.first { $0.metric == .zone2HeartRateRange }!
+        let vo2 = VO2IntervalAnalyzer.analyze(
+            workout: SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout
+        ).metricMetadata.first { $0.metric == .vo2IntervalQuality }!
+        let strength = StrengthAnalyzer.analyze(
+            workout: SampleWorkoutCases.strengthValidationCases().first { $0.name == "traditional_strength_training" }!.workout
+        ).metricMetadata.first { $0.metric == .strength }!
+
+        XCTAssertEqual(zone2.claimProfile.kind, .zone2ThresholdRange)
+        XCTAssertEqual(vo2.claimProfile.kind, .vo2IntervalPattern)
+        XCTAssertEqual(strength.claimProfile.kind, .strengthSessionPattern)
+        XCTAssertTrue(zone2.claimProfile.forbiddenTerms.contains("精準 Zone 2"))
+        XCTAssertTrue(vo2.claimProfile.forbiddenTerms.contains("VO2 max 實測"))
+        XCTAssertTrue(strength.claimProfile.forbiddenTerms.contains("肌力測量"))
+        XCTAssertNotEqual(zone2.claimProfile.disclosure, vo2.claimProfile.disclosure)
+        XCTAssertNotEqual(vo2.claimProfile.disclosure, strength.claimProfile.disclosure)
+    }
+
     func testZone2AnalyzerAttachesStartingPointMetadataWithoutChangingVerdict() {
         let workout = SampleWorkoutCases
             .zone2ValidationCases()

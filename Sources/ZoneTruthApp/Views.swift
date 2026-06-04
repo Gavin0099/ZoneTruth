@@ -439,25 +439,12 @@ enum MetricDisclosurePresenter {
 
     static func render(_ metadata: TrainingMetricMetadata) -> MetricDisclosureItem {
         MetricDisclosureItem(
-            title: title(for: metadata.metric),
+            title: metadata.claimProfile.displayName,
             status: status(for: metadata.claim.ceiling),
             method: "方法：\(methodLabel(for: metadata))",
             confidenceReason: confidenceReason(for: metadata),
             validationHint: metadata.recommendedValidation.map { "驗證方向：\(validationLabel($0))" }
         )
-    }
-
-    private static func title(for metric: TrainingMetricKind) -> String {
-        switch metric {
-        case .vo2Max:
-            return "最大攝氧量"
-        case .vo2IntervalQuality:
-            return "VO2 間歇型態"
-        case .zone2HeartRateRange:
-            return "Zone 2 心率範圍"
-        case .strength:
-            return "肌力訓練型態"
-        }
     }
 
     private static func status(for ceiling: TrainingMetricClaimCeiling) -> String {
@@ -519,7 +506,7 @@ enum MetricDisclosurePresenter {
     private static func confidenceReason(for metadata: TrainingMetricMetadata) -> String {
         let level = confidenceLabel(for: metadata.confidence.level)
         let basis = basisLabel(metadata.confidence.basis)
-        return "信心：\(level)。\(basis)"
+        return "信心：\(level)。\(basis) \(profileDisclosureLabel(for: metadata.claimProfile.kind))"
     }
 
     private static func confidenceLabel(for level: TrainingMetricConfidenceLevel) -> String {
@@ -554,18 +541,35 @@ enum MetricDisclosurePresenter {
     }
 
     private static func validationLabel(_ value: String) -> String {
-        if value.localizedCaseInsensitiveContains("CPET") {
-            return "若需要更精準的最大攝氧量資訊，可用實驗室氣體分析測試確認。"
-        }
         if value.localizedCaseInsensitiveContains("LT1") ||
             value.localizedCaseInsensitiveContains("VT1") {
             return "若需要更精準的 Zone 2 界線，可用乳酸或換氣閾值測試確認。"
+        }
+        if value.localizedCaseInsensitiveContains("CPET") {
+            return "若需要更精準的最大攝氧量資訊，可用實驗室氣體分析測試確認。"
         }
         if value.localizedCaseInsensitiveContains("1RM") ||
             value.localizedCaseInsensitiveContains("force") {
             return "若需要肌力數值，可用標準化負重、次數或力/速度測試確認。"
         }
         return value
+    }
+
+    private static func profileDisclosureLabel(for kind: TrainingMetricClaimProfileKind) -> String {
+        switch kind {
+        case .vo2MaxEstimate:
+            return "若不是實驗室氣體分析，最大攝氧量應維持估算或產品參考語氣。"
+        case .vo2IntervalPattern:
+            return "目前只描述間歇型態，不代表已推估或測量最大攝氧量數值。"
+        case .zone2ThresholdRange:
+            return "Zone 2 界線若要更精準，需由 LT1 / VT1 / GET 等閾值測試確認；未驗證來源只能作為估算或起始參考。"
+        case .strengthMeasurement:
+            return "肌力數值需要保留動作、負重、次數、活動範圍與測試協議脈絡。"
+        case .strengthSessionPattern:
+            return "目前只描述心率型態，不能代表最大肌力或力輸出測量。"
+        case .genericObservation:
+            return "目前只呈現可觀測資料，不延伸成未驗證結論。"
+        }
     }
 }
 
