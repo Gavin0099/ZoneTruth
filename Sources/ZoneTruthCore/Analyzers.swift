@@ -559,9 +559,8 @@ public enum StrengthAnalyzer {
             zoneDistribution: distribution,
             stabilityStandardDeviation: HeartRateStabilityAnalyzer.standardDeviation(for: preparedSamples),
             driftRatio: nil,
-            metricMetadata: [
-                TrainingMetricMetadataFactory.strengthPattern(sampleQuality: observation.sampleQuality)
-            ]
+            metricMetadata: [TrainingMetricMetadataFactory.strengthPattern(sampleQuality: observation.sampleQuality)] +
+                TrainingMetricMetadataFactory.strengthMetrics(workout.strengthMetrics)
         )
     }
 }
@@ -798,6 +797,128 @@ private enum TrainingMetricMetadataFactory {
             dataQualityFlags: dataQualityFlags(for: sampleQuality),
             recommendedValidation: "Use standardized 1RM, 3RM-5RM e1RM, or force/velocity testing for strength metrics."
         )
+    }
+
+    static func strengthMetrics(_ metrics: [StrengthMetric]) -> [TrainingMetricMetadata] {
+        metrics.map { metric in
+            let method = strengthMethod(for: metric)
+            return TrainingMetricMetadata(
+                metric: .strength,
+                method: method,
+                confidence: strengthConfidence(for: metric),
+                claim: TrainingMetricClaim(
+                    ceiling: TrainingMetricClaimCeiling.defaultCeiling(for: method),
+                    allowedTerms: strengthAllowedTerms(for: metric),
+                    forbiddenTerms: ["whole-body strength diagnosis", "clinical strength diagnosis", "全身肌力診斷"]
+                ),
+                dataQualityFlags: strengthDataQualityFlags(for: metric),
+                recommendedValidation: "Use the same exercise, ROM, equipment, and rest protocol for comparable strength retests."
+            )
+        }
+    }
+
+    private static func strengthMethod(for metric: StrengthMetric) -> TrainingMetricMethod {
+        TrainingMetricMethod(
+            tier: strengthTier(for: metric.source),
+            source: metric.source,
+            name: metric.sourceLabel ?? strengthMethodName(for: metric),
+            referenceStandardDistance: strengthReferenceDistance(for: metric.source)
+        )
+    }
+
+    private static func strengthTier(for source: TrainingMetricMethodSource) -> TrainingMetricMethodTier {
+        switch source {
+        case .direct1RM:
+            return .goldStandardAnchor
+        case .e1RM, .gripStrength:
+            return .fieldEstimator
+        default:
+            return .weakHeuristic
+        }
+    }
+
+    private static func strengthReferenceDistance(for source: TrainingMetricMethodSource) -> ReferenceStandardDistance {
+        switch source {
+        case .direct1RM:
+            return .direct
+        case .e1RM, .gripStrength:
+            return .oneLevelBelow
+        default:
+            return .unknown
+        }
+    }
+
+    private static func strengthConfidence(for metric: StrengthMetric) -> TrainingMetricConfidence {
+        switch metric.source {
+        case .direct1RM:
+            return TrainingMetricConfidence(
+                level: .high,
+                basis: "Direct 1RM strength metric was imported with exercise context.",
+                limitingFactors: strengthLimitingFactors(for: metric)
+            )
+        case .e1RM:
+            return TrainingMetricConfidence(
+                level: .medium,
+                basis: "Estimated 1RM strength metric was imported from load and repetition context.",
+                limitingFactors: strengthLimitingFactors(for: metric)
+            )
+        case .gripStrength:
+            return TrainingMetricConfidence(
+                level: .medium,
+                basis: "Grip strength metric was imported as a health-related proxy, not whole-body strength.",
+                limitingFactors: ["Does not replace exercise-specific maximal strength testing"]
+            )
+        default:
+            return TrainingMetricConfidence(
+                level: .low,
+                basis: "Strength metric was imported with limited method provenance.",
+                limitingFactors: ["Unknown strength metric protocol"]
+            )
+        }
+    }
+
+    private static func strengthMethodName(for metric: StrengthMetric) -> String {
+        switch metric.source {
+        case .direct1RM:
+            return "\(metric.exerciseName) direct 1RM"
+        case .e1RM:
+            return "\(metric.exerciseName) estimated 1RM"
+        case .gripStrength:
+            return "\(metric.exerciseName) grip strength"
+        default:
+            return "\(metric.exerciseName) strength metric"
+        }
+    }
+
+    private static func strengthAllowedTerms(for metric: StrengthMetric) -> [String] {
+        switch metric.source {
+        case .direct1RM:
+            return ["exercise-specific 1RM", "standardized strength metric"]
+        case .e1RM:
+            return ["estimated 1RM", "exercise-specific strength estimate"]
+        case .gripStrength:
+            return ["grip strength", "health-related proxy"]
+        default:
+            return ["strength metric", "exercise-specific observation"]
+        }
+    }
+
+    private static func strengthDataQualityFlags(for metric: StrengthMetric) -> [String] {
+        var flags = ["strength_metric_imported", "exercise_context_present"]
+        if metric.repetitions != nil { flags.append("repetition_context_present") }
+        if metric.loadValue != nil { flags.append("load_context_present") }
+        return flags
+    }
+
+    private static func strengthLimitingFactors(for metric: StrengthMetric) -> [String] {
+        var factors = ["ROM and technique standardization not independently verified"]
+        if metric.source == .e1RM && metric.repetitions == nil {
+            factors.append("Missing repetition count for e1RM provenance")
+        }
+        if metric.loadValue == nil {
+            factors.append("Missing source load value")
+        }
+        return factors
     }
 
     private static func dataQualityFlags(for sampleQuality: SampleQuality) -> [String] {

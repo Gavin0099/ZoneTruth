@@ -525,6 +525,19 @@ enum MetricDisclosurePresenter {
     }
 
     private static func basisLabel(_ basis: String) -> String {
+        if basis.localizedCaseInsensitiveContains("Direct 1RM strength metric") {
+            return "這是帶有動作脈絡的直接 1RM 肌力資料。"
+        }
+        if basis.localizedCaseInsensitiveContains("Estimated 1RM strength metric") {
+            return "這是由負重與次數脈絡匯入的 e1RM 肌力估算。"
+        }
+        if basis.localizedCaseInsensitiveContains("Grip strength metric") {
+            return "這是握力指標，可作為健康相關 proxy，不等同全身肌力。"
+        }
+        if basis.localizedCaseInsensitiveContains("limited method provenance") &&
+            basis.localizedCaseInsensitiveContains("Strength metric") {
+            return "肌力來源方法資訊有限，僅能作為低信心觀察。"
+        }
         if basis.localizedCaseInsensitiveContains("Direct lab VO2 max source") {
             return "來源標示為實驗室氣體分析資料。"
         }
@@ -910,7 +923,27 @@ struct MetricsGridSectionView: View {
                                title: "VO2 max 估算",
                                value: String(format: "%.1f ml/kg/min", vo2MaxEstimate.value))
             }
+            if let strengthMetric = workout.strengthMetrics.first {
+                MetricGridCell(icon: "dumbbell.fill", color: PremiumColor.gold,
+                               title: strengthMetricTitle(strengthMetric),
+                               value: strengthMetricValue(strengthMetric))
+            }
         }
+    }
+
+    private func strengthMetricTitle(_ metric: StrengthMetric) -> String {
+        switch metric.source {
+        case .direct1RM:
+            return "\(metric.exerciseName) 1RM"
+        case .e1RM:
+            return "\(metric.exerciseName) e1RM"
+        default:
+            return "\(metric.exerciseName) 肌力"
+        }
+    }
+
+    private func strengthMetricValue(_ metric: StrengthMetric) -> String {
+        String(format: "%.1f %@", metric.value, metric.unit)
     }
 }
 
@@ -1048,6 +1081,15 @@ struct SummaryCardView: View {
                         value: String(format: "%.1f ml/kg/min", vo2MaxEstimate.value)
                     )
                 }
+
+                if let strengthMetric = workout.strengthMetrics.first {
+                    MetricGridCell(
+                        icon: "dumbbell.fill",
+                        color: PremiumColor.gold,
+                        title: strengthMetricTitle(strengthMetric),
+                        value: strengthMetricValue(strengthMetric)
+                    )
+                }
             }
         }
         .padding(18)
@@ -1067,6 +1109,21 @@ struct SummaryCardView: View {
         case .warning: return PremiumColor.gold
         case .fail: return PremiumColor.redOrange
         }
+    }
+
+    private func strengthMetricTitle(_ metric: StrengthMetric) -> String {
+        switch metric.source {
+        case .direct1RM:
+            return "\(metric.exerciseName) 1RM"
+        case .e1RM:
+            return "\(metric.exerciseName) e1RM"
+        default:
+            return "\(metric.exerciseName) 肌力"
+        }
+    }
+
+    private func strengthMetricValue(_ metric: StrengthMetric) -> String {
+        String(format: "%.1f %@", metric.value, metric.unit)
     }
     
 }

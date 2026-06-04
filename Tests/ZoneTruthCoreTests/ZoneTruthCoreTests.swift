@@ -261,6 +261,59 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertFalse(scalarVO2?.claim.allowedTerms.contains("lab-equivalent") == true)
     }
 
+    func testStructuredStrengthMetricAddsMeasurementMetadataWithoutReplacingHeartRatePattern() {
+        let base = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            strengthMetrics: [
+                StrengthMetric(
+                    exerciseName: "Back Squat",
+                    value: 120,
+                    unit: "kg",
+                    source: .e1RM,
+                    sourceLabel: "Back Squat 5RM e1RM",
+                    repetitions: 5,
+                    loadValue: 105,
+                    loadUnit: "kg"
+                )
+            ]
+        )
+
+        let result = StrengthAnalyzer.analyze(workout: workout)
+        let pattern = result.metricMetadata.first {
+            $0.metric == .strength && $0.method.source == .heartRatePattern
+        }
+        let structuredMetric = result.metricMetadata.first {
+            $0.metric == .strength && $0.method.source == .e1RM
+        }
+
+        XCTAssertEqual(result.verdict, .pass)
+        XCTAssertEqual(pattern?.claimProfile.kind, .strengthSessionPattern)
+        XCTAssertEqual(structuredMetric?.claimProfile.kind, .strengthMeasurement)
+        XCTAssertEqual(structuredMetric?.method.tier, .fieldEstimator)
+        XCTAssertEqual(structuredMetric?.method.referenceStandardDistance, .oneLevelBelow)
+        XCTAssertEqual(structuredMetric?.claim.ceiling, .estimateOnly)
+        XCTAssertEqual(structuredMetric?.confidence.level, .medium)
+        XCTAssertEqual(structuredMetric?.isClaimCeilingAdmissible, true)
+        XCTAssertFalse(structuredMetric?.claim.forbiddenTerms.contains("1RM") == true)
+        XCTAssertTrue(structuredMetric?.dataQualityFlags.contains("repetition_context_present") == true)
+    }
+
     func testZone2AnalyzerAttachesStartingPointMetadataWithoutChangingVerdict() {
         let workout = SampleWorkoutCases
             .zone2ValidationCases()

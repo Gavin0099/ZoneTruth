@@ -1,25 +1,22 @@
 # Test Candidate 2026-06-04
 
-Status: developer checkpoint only; formal testing deferred until feature-complete
-Base commit: `2843372`
+Status: local product acceptance candidate; no TestFlight build yet
+Base commit: pending current Strength slice commit
 Audience: owner / local tester
 
 ## Short Answer
 
-Do not start formal product testing from this checkpoint.
+The three scoped product pillars now have minimum user-visible vertical slices.
 
-This checkpoint is useful for developer verification only. Formal testing should
-start after the three product pillars are feature-complete:
+This checkpoint is suitable for local owner acceptance testing after the current
+Strength slice commit is pushed. It is still not a TestFlight/App Store release
+candidate.
 
 - VO2 max
 - Zone 2
 - Strength
 
-This is not a TestFlight/App Store release candidate.
-
 ## What Is Testable Now
-
-This section is for developer smoke only, not formal tester rollout.
 
 - Single-workout analysis detail view.
 - Zone 2 / VO2 interval / Strength reasons and recommendations.
@@ -39,6 +36,12 @@ This section is for developer smoke only, not formal tester rollout.
   - apply suggestion
   - reset to default bounds
   - policy source shown in single-workout and weekly summary context
+- Structured Strength metric display when an imported workout includes direct
+  1RM / e1RM style data:
+  - exercise-specific value display
+  - source labeling
+  - measured / estimate disclosure by method
+  - no whole-body or clinical strength diagnosis claim
 - Weekly dashboard existing behavior.
 - HealthKit / Strava / JSON import paths already validated earlier in Phase E.
 
@@ -66,8 +69,7 @@ Current status:
   disclosure.
 - Existing VO2 interval path remains `vo2_interval_quality`; it is not reused as
   scalar VO2 max.
-- Trend rendering is still intentionally minimal; formal testing remains
-  blocked by the Strength pillar.
+- Trend rendering is still intentionally minimal.
 
 ### Zone 2
 
@@ -81,7 +83,7 @@ Required before formal testing:
 
 Current status:
 
-- Mostly feature-complete for heuristic / personalized bounds.
+- Feature-complete for heuristic / personalized bounds.
 - Still must not claim exact LT1/VT1 threshold unless validated by a threshold
   source.
 
@@ -97,8 +99,11 @@ Required before formal testing:
 
 Current status:
 
-- Not feature-complete.
-- Existing Strength path describes heart-rate-based session pattern only.
+- Feature-complete for the minimum structured metric slice.
+- JSON import can carry `strengthMetrics`.
+- Single-workout UI can show an exercise-specific direct 1RM / e1RM style value.
+- Analysis disclosure distinguishes structured strength metrics from
+  heart-rate-based strength-session pattern.
 
 ## What Is Not Claimed Yet
 
@@ -106,7 +111,7 @@ Current status:
 - No App Store release readiness claim.
 - No VO2 max lab-equivalent claim for product / field / unknown estimates.
 - No exact Zone 2 threshold measurement.
-- No 1RM, e1RM, force output, or validated strength measurement.
+- No whole-body strength diagnosis or clinical strength interpretation.
 - No weekly metadata disclosure UI yet.
 - No Garmin integration.
 
@@ -119,7 +124,10 @@ The current app can say:
 - "Imported VO2 max values are estimates unless the source is direct CPET/GXT
   gas analysis."
 - "Current VO2 interval path describes interval quality, not VO2 max."
-- "Current Strength path describes heart-rate session pattern, not strength output."
+- "Imported Strength metrics are exercise-specific measurements or estimates,
+  depending on method."
+- "Current heart-rate-only Strength path describes session pattern, not strength
+  output."
 
 The current app must not say:
 
@@ -127,15 +135,15 @@ The current app must not say:
 - "Lab-equivalent."
 - "Exact Zone 2."
 - "Optimal Zone 2."
-- "1RM measured."
-- "Strength measured."
+- "Whole-body strength diagnosed."
+- "Clinical strength diagnosis."
 
 ## Recommended Local Smoke Test
 
 Run:
 
 ```bash
-swift test --filter 'testJSONWorkoutRepositoryLoadsImportedWorkouts|testImportedVO2MaxEstimateAddsScalarMetadataWithoutReplacingIntervalQuality|testMetricDisclosurePresenterRendersVO2MaxEstimateAsEstimate|testMetricDisclosurePresenterRendersBoundedEstimateLanguage|testValidationDatasetMatchesExpectedVerdicts'
+swift test --filter 'testJSONWorkoutRepositoryLoadsImportedWorkouts|testImportedVO2MaxEstimateAddsScalarMetadataWithoutReplacingIntervalQuality|testMetricDisclosurePresenterRendersVO2MaxEstimateAsEstimate|testStructuredStrengthMetricAddsMeasurementMetadataWithoutReplacingHeartRatePattern|testMetricDisclosurePresenterRendersStrengthMetricAsExerciseSpecificEstimate|testValidationDatasetMatchesExpectedVerdicts'
 ```
 
 Optional broader guard:
@@ -157,24 +165,27 @@ bash scripts/meta_closeout.sh
 7. Open a VO2 interval workout without scalar VO2 max data.
 8. Confirm disclosure says "VO2 間歇型態", not VO2 max measurement.
 9. Open a Strength workout.
-10. Confirm disclosure describes heart-rate pattern, not 1RM or strength measurement.
-11. Change Zone 2 bounds manually and verify single-workout analysis uses the updated bounds.
-12. Generate/apply/reset Resting HR suggestion and confirm the policy source text updates.
-13. Open weekly dashboard and confirm existing weekly rendering still loads.
+10. Confirm a workout with imported strength metric data shows an
+    exercise-specific value such as "Back Squat e1RM".
+11. Confirm disclosure says "肌力指標" and uses estimate / measured wording by
+    source.
+12. Confirm a heart-rate-only Strength workout still says "肌力訓練型態" rather
+    than strength measurement.
+13. Change Zone 2 bounds manually and verify single-workout analysis uses the updated bounds.
+14. Generate/apply/reset Resting HR suggestion and confirm the policy source text updates.
+15. Open weekly dashboard and confirm existing weekly rendering still loads.
 
 ## Exit Criteria For First Tester Feedback
 
 This candidate is useful if the tester can answer:
 
 - Are the disclosure labels understandable?
-- Does the app avoid sounding like it measured VO2 max / exact Zone 2 / strength?
+- Does the app avoid sounding like it measured VO2 max / exact Zone 2 / whole-body strength?
 - Does personalized Zone 2 setup feel discoverable?
 - Does the detail view feel too crowded after adding disclosure?
 - Does weekly dashboard still feel stable and unchanged?
 
-## Next Candidate
+## Next Step
 
-The next test candidate should be:
-
-- `TC-2 Strength vertical slice`: add structured strength metric input/display
-  with claim-bounded disclosure.
+- Run the recommended local smoke test and then decide whether to produce an
+  installable local/TestFlight candidate.

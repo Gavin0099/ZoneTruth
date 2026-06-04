@@ -198,7 +198,8 @@ final class WorkoutListViewModel: ObservableObject {
                 dataSource: current.dataSource,
                 activeCaloriesKcal: current.activeCaloriesKcal,
                 totalDistanceMeters: current.totalDistanceMeters,
-                vo2MaxEstimate: current.vo2MaxEstimate
+                vo2MaxEstimate: current.vo2MaxEstimate,
+                strengthMetrics: current.strengthMetrics
             )
         }
         apply(
@@ -305,7 +306,8 @@ final class WorkoutListViewModel: ObservableObject {
             dataSource: workout.dataSource,
             activeCaloriesKcal: workout.activeCaloriesKcal,
             totalDistanceMeters: workout.totalDistanceMeters,
-            vo2MaxEstimate: workout.vo2MaxEstimate
+            vo2MaxEstimate: workout.vo2MaxEstimate,
+            strengthMetrics: workout.strengthMetrics
         )
         return WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
     }
@@ -324,7 +326,8 @@ final class WorkoutListViewModel: ObservableObject {
             dataSource: workout.dataSource,
             activeCaloriesKcal: workout.activeCaloriesKcal,
             totalDistanceMeters: workout.totalDistanceMeters,
-            vo2MaxEstimate: workout.vo2MaxEstimate
+            vo2MaxEstimate: workout.vo2MaxEstimate,
+            strengthMetrics: workout.strengthMetrics
         )
         let legacy = WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
         return WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
@@ -364,7 +367,8 @@ final class WorkoutListViewModel: ObservableObject {
                 dataSource: base.dataSource,
                 activeCaloriesKcal: base.activeCaloriesKcal,
                 totalDistanceMeters: base.totalDistanceMeters,
-                vo2MaxEstimate: base.vo2MaxEstimate
+                vo2MaxEstimate: base.vo2MaxEstimate,
+                strengthMetrics: base.strengthMetrics
             )
         }.map { base in
             guard base.intentSource == .auto else { return base }
@@ -382,7 +386,8 @@ final class WorkoutListViewModel: ObservableObject {
                 dataSource: base.dataSource,
                 activeCaloriesKcal: base.activeCaloriesKcal,
                 totalDistanceMeters: base.totalDistanceMeters,
-                vo2MaxEstimate: base.vo2MaxEstimate
+                vo2MaxEstimate: base.vo2MaxEstimate,
+                strengthMetrics: base.strengthMetrics
             )
         }
         currentSource = result.source
@@ -473,7 +478,8 @@ final class WorkoutListViewModel: ObservableObject {
                     dataSource: workout.dataSource,
                     activeCaloriesKcal: workout.activeCaloriesKcal,
                     totalDistanceMeters: workout.totalDistanceMeters,
-                    vo2MaxEstimate: workout.vo2MaxEstimate
+                    vo2MaxEstimate: workout.vo2MaxEstimate,
+                    strengthMetrics: workout.strengthMetrics
                 )
             },
             policy: settingsManager.policy,

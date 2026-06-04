@@ -35,6 +35,9 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.value, 48.2)
         XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.source, .apple)
         XCTAssertEqual(result.workouts.first?.vo2MaxEstimate?.sourceLabel, "Apple Health VO2 max")
+        XCTAssertEqual(result.workouts.first?.strengthMetrics.first?.exerciseName, "Back Squat")
+        XCTAssertEqual(result.workouts.first?.strengthMetrics.first?.value, 120)
+        XCTAssertEqual(result.workouts.first?.strengthMetrics.first?.source, .e1RM)
     }
 
     func testJSONWorkoutRepositoryReturnsEmptyForInvalidJSON() throws {
@@ -1341,6 +1344,53 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(text.contains("true VO2 max"), text)
     }
 
+    func testMetricDisclosurePresenterRendersStrengthMetricAsExerciseSpecificEstimate() {
+        let base = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: base.workoutType,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: base.vo2MaxEstimate,
+            strengthMetrics: [
+                StrengthMetric(
+                    exerciseName: "Back Squat",
+                    value: 120,
+                    unit: "kg",
+                    source: .e1RM,
+                    sourceLabel: "Back Squat 5RM e1RM",
+                    repetitions: 5,
+                    loadValue: 105,
+                    loadUnit: "kg"
+                )
+            ]
+        )
+
+        let items = MetricDisclosurePresenter.render(
+            WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        )
+        let text = text(for: items, title: "肌力指標")
+
+        XCTAssertTrue(text.contains("估算"), text)
+        XCTAssertTrue(text.contains("估算最大負重"), text)
+        XCTAssertTrue(text.contains("e1RM 肌力估算"), text)
+        XCTAssertTrue(text.contains("測試協議脈絡"), text)
+        XCTAssertFalse(text.contains("全身肌力診斷"), text)
+        XCTAssertFalse(text.contains("clinical strength diagnosis"), text)
+        XCTAssertFalse(text.contains("whole-body strength diagnosis"), text)
+    }
+
     @MainActor
     func testMetricDisclosureCardViewSmokeCompiles() {
         let result = WorkoutIntentAnalyzer.analyze(
@@ -2107,6 +2157,19 @@ final class ZoneTruthAppTests: XCTestCase {
                 "sourceLabel": "Apple Health VO2 max",
                 "measuredAt": "2026-04-24T05:55:00Z"
               },
+              "strengthMetrics": [
+                {
+                  "exerciseName": "Back Squat",
+                  "value": 120,
+                  "unit": "kg",
+                  "source": "e1rm",
+                  "sourceLabel": "Back Squat 5RM e1RM",
+                  "repetitions": 5,
+                  "loadValue": 105,
+                  "loadUnit": "kg",
+                  "measuredAt": "2026-04-24T05:30:00Z"
+                }
+              ],
               "heartRateSamples": [
                 { "timestamp": "2026-04-24T06:00:00Z", "bpm": 112 },
                 { "timestamp": "2026-04-24T06:01:00Z", "bpm": 118 },

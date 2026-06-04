@@ -83,6 +83,40 @@ public struct VO2MaxEstimate: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+public struct StrengthMetric: Codable, Equatable, Hashable, Sendable {
+    public let exerciseName: String
+    public let value: Double
+    public let unit: String
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+    public let repetitions: Int?
+    public let loadValue: Double?
+    public let loadUnit: String?
+    public let measuredAt: Date?
+
+    public init(
+        exerciseName: String,
+        value: Double,
+        unit: String = "kg",
+        source: TrainingMetricMethodSource,
+        sourceLabel: String? = nil,
+        repetitions: Int? = nil,
+        loadValue: Double? = nil,
+        loadUnit: String? = nil,
+        measuredAt: Date? = nil
+    ) {
+        self.exerciseName = exerciseName
+        self.value = value
+        self.unit = unit
+        self.source = source
+        self.sourceLabel = sourceLabel
+        self.repetitions = repetitions
+        self.loadValue = loadValue
+        self.loadUnit = loadUnit
+        self.measuredAt = measuredAt
+    }
+}
+
 public enum ReferenceStandardDistance: String, Codable, CaseIterable, Sendable {
     case direct
     case oneLevelBelow = "one_level_below"
@@ -398,6 +432,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
     public let activeCaloriesKcal: Double?
     public let totalDistanceMeters: Double?
     public let vo2MaxEstimate: VO2MaxEstimate?
+    public let strengthMetrics: [StrengthMetric]
 
     public init(
         id: UUID = UUID(),
@@ -412,7 +447,8 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         dataSource: String? = nil,
         activeCaloriesKcal: Double? = nil,
         totalDistanceMeters: Double? = nil,
-        vo2MaxEstimate: VO2MaxEstimate? = nil
+        vo2MaxEstimate: VO2MaxEstimate? = nil,
+        strengthMetrics: [StrengthMetric] = []
     ) {
         let resolvedIntent = intent ?? Self.defaultIntent(for: workoutType)
         let resolvedIntentSource = intentSource ?? (intent == nil ? .auto : .userOverride)
@@ -429,6 +465,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         self.activeCaloriesKcal = activeCaloriesKcal
         self.totalDistanceMeters = totalDistanceMeters
         self.vo2MaxEstimate = vo2MaxEstimate
+        self.strengthMetrics = strengthMetrics
     }
 
     public static func defaultIntent(for workoutType: WorkoutType) -> TrainingIntent {
@@ -456,6 +493,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         case activeCaloriesKcal
         case totalDistanceMeters
         case vo2MaxEstimate
+        case strengthMetrics
     }
 
     public init(from decoder: Decoder) throws {
@@ -473,6 +511,7 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         let activeCaloriesKcal = try container.decodeIfPresent(Double.self, forKey: .activeCaloriesKcal)
         let totalDistanceMeters = try container.decodeIfPresent(Double.self, forKey: .totalDistanceMeters)
         let vo2MaxEstimate = try container.decodeIfPresent(VO2MaxEstimate.self, forKey: .vo2MaxEstimate)
+        let strengthMetrics = try container.decodeIfPresent([StrengthMetric].self, forKey: .strengthMetrics) ?? []
 
         self.init(
             id: id,
@@ -487,7 +526,8 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
             dataSource: dataSource,
             activeCaloriesKcal: activeCaloriesKcal,
             totalDistanceMeters: totalDistanceMeters,
-            vo2MaxEstimate: vo2MaxEstimate
+            vo2MaxEstimate: vo2MaxEstimate,
+            strengthMetrics: strengthMetrics
         )
     }
 
@@ -506,6 +546,9 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
         try container.encodeIfPresent(activeCaloriesKcal, forKey: .activeCaloriesKcal)
         try container.encodeIfPresent(totalDistanceMeters, forKey: .totalDistanceMeters)
         try container.encodeIfPresent(vo2MaxEstimate, forKey: .vo2MaxEstimate)
+        if !strengthMetrics.isEmpty {
+            try container.encode(strengthMetrics, forKey: .strengthMetrics)
+        }
     }
 }
 
