@@ -1,0 +1,19 @@
+# Local fleet path overlay for read-only submodule model verification.
+#
+# Copy this file to governance/fleet/governance_scope.local.yaml and adjust paths
+# for the current machine. The local overlay is intentionally ignored by git.
+#
+# Join key:
+# - name must match the repository directory basename from governance_scope.yaml.
+
+repositories:
+  - name: hp-firmware-stresstest-tool
+    local_path: "E:/BackUp/Git_EE/hp-firmware-stresstest-tool"
+  - name: cli
+    local_path: "E:/BackUp/Git_EE/cli"
+  - name: CFU
+    local_path: "E:/BackUp/Git_EE/CFU"
+  - name: gl_electron_tool
+    local_path: "E:/BackUp/Git_EE/gl_electron_tool"
+  - name: usb-if-hub-spec-reference
+    local_path: "E:/BackUp/Git_EE/usb-if-hub-spec-reference"

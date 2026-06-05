@@ -12,7 +12,7 @@ default_load: always
 > **Primary Language**: Swift (app core) / Python (governance tooling)
 > **Task Level**: L2
 > **Planning Window**: 2026-04-01 ~ 2026-06-30
-> **最後更新**: 2026-06-03
+> **最後更新**: 2026-06-05
 > **Owner**: Gavin Wu
 > **Freshness**: Sprint (7d)
 
@@ -50,7 +50,13 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 ## 當前 Sprint / 當前工作
 
-本次治理同步（2026-06-04）：
+本次治理同步（2026-06-05）：
+- [x] 對齊 `ai-governance-framework` upstream 到 `cae11be`（沿用 adopt + lock 模式，非 submodule pointer）
+- [x] 補入適用於非-submodule consuming repo 的新增治理 surface：`claim_enforcement_receipt_validator.py`、`external_governance_submodule_updater.py`、`update-governance-submodule.ps1`、`governance_scope.local.example.yaml`、F-7 updater docs
+- [x] 刷新 `AGENTS.base.md`、`.governance/baseline.yaml`、`governance/framework.lock.json`
+- [x] 修正 `expansion_boundary_checker.py` 與新版 governance surface 的相容性，確認 drift clean
+
+前次治理同步（2026-06-04）：
 - [x] pull `ai-governance-framework` 最新 upstream 到 `0ae039e`
 - [x] 正式 adopt 最新 baseline，新增 `governance/RESPONSE_ENVELOPE_CONTRACT.md`，刷新 `.governance/baseline.yaml`
 - [x] 更新 `governance/framework.lock.json` adopted commit 到 `0ae039e`
@@ -208,6 +214,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-05 | 同步 ai-governance-framework 最新 upstream（`cae11be`）導入分析；補入非-submodule consuming repo 適用的治理工具與 F-7 文件，刷新 baseline / framework lock，drift clean / readiness 通過 |
 | 2026-06-04 | 完成 Strength structured metric 最小切片：JSON / domain model / metadata / 單筆 UI disclosure 支援 direct 1RM / e1RM 類肌力指標，並保留 exercise-specific claim ceiling |
 | 2026-06-04 | 完成 VO2 max scalar estimate/import 最小切片：JSON / domain model / metadata / 單筆 UI disclosure 支援 VO2 max estimate，並保留 estimate-only claim ceiling |
 | 2026-06-04 | 調整測試策略：正式產品測試延後到 VO2 max / Zone 2 / Strength 三類 feature-complete；目前 Test Candidate 僅作 developer checkpoint |

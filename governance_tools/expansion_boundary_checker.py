@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 import sys
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import NamedTuple
@@ -173,10 +174,20 @@ _CORE_POST_TASK_KEYS: frozenset[str] = frozenset({
 })
 
 # assumption check + phase classification — admitted 154ad4d / governance-runtime-policy
+# consumption pattern visibility v0.1 — admitted 288521a / 2026-05-05
 _TRANSITIONAL_POST_TASK_KEYS: dict[str, dict] = {
-    "assumption_advisories": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
-    "assumption_check":      {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
-    "phase_classification":  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "assumption_advisories":                    {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "assumption_check":                         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    "phase_classification":                     {"status": "transitional", "expected": "core", "admitted_date": "2026-05-03", "source_commit": "154ad4d"},
+    # consumption pattern visibility (helper return dict keys)
+    "by_consumer":                              {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "by_field":                                 {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "by_type":                                  {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "contract_version":                         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "high_frequency_misuse_triggers_enforcement": {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "notice":                                   {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "total_violations":                         {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
+    "visibility_only":                          {"status": "transitional", "expected": "core", "admitted_date": "2026-05-05", "source_commit": "288521a"},
 }
 
 KNOWN_POST_TASK_KEYS = _CORE_POST_TASK_KEYS | frozenset(_TRANSITIONAL_POST_TASK_KEYS)
@@ -198,6 +209,28 @@ class Violation(NamedTuple):
     file: str
     kind: str
     detail: str
+
+
+@dataclass
+class ExpansionBoundaryResult:
+    ok: bool
+    violations: list[Violation] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    checked_files: list[str] = field(default_factory=list)
+
+    def __iter__(self):
+        # Backward compatibility: existing callers iterating over run_checks()
+        # still receive Violation entries.
+        return iter(self.violations)
+
+    def __len__(self) -> int:
+        # Backward compatibility for len(run_checks()) in older callers.
+        return len(self.violations)
+
+    def __bool__(self) -> bool:
+        # Preserve old truthiness contract:
+        # True means "there are violations".
+        return bool(self.violations)
 
 
 def _find_project_root() -> Path:
@@ -311,37 +344,61 @@ def check_transitional_key_staleness(max_days: int = 90) -> list[Violation]:
     return violations
 
 
-def run_checks(project_root: Path | None = None) -> list[Violation]:
+def run_checks(project_root: Path | None = None) -> ExpansionBoundaryResult:
     if project_root is None:
         project_root = _find_project_root()
 
     all_violations: list[Violation] = []
+    warnings: list[str] = []
+    checked_files: list[str] = []
 
     for rel_path in CORE_HOOKS:
         full_path = project_root / rel_path
         if not full_path.exists():
+            warnings.append(f"core hook file not found: {full_path}")
             continue
-        source = full_path.read_text(encoding="utf-8")
+        checked_files.append(str(full_path))
+        try:
+            source = full_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            warnings.append(f"failed to read {full_path}: {exc}")
+            continue
         all_violations.extend(_check_boundary_violating_imports(full_path, source))
         all_violations.extend(_check_new_return_keys(full_path, source))
 
     all_violations.extend(check_transitional_key_staleness())
 
-    return all_violations
+    return ExpansionBoundaryResult(
+        ok=(len(all_violations) == 0),
+        violations=all_violations,
+        warnings=warnings,
+        checked_files=checked_files,
+    )
 
 
 def main() -> int:
     project_root = _find_project_root()
-    violations = run_checks(project_root)
+    result = run_checks(project_root)
+    violations = result.violations
 
     if not violations:
         print("expansion_boundary_checker: no violations found")
+        if result.warnings:
+            print(f"expansion_boundary_checker: {len(result.warnings)} warning(s)")
+            for item in result.warnings:
+                print(f"  - {item}")
         return 0
 
     print(f"expansion_boundary_checker: {len(violations)} violation(s) found\n")
     for v in violations:
         print(f"  [{v.kind}] {v.file}")
         print(f"    {v.detail}")
+    print()
+
+    if result.warnings:
+        print(f"warnings ({len(result.warnings)}):")
+        for item in result.warnings:
+            print(f"  - {item}")
         print()
 
     print("These may indicate that a runtime expansion bypassed the Expansion Admission Gate.")
