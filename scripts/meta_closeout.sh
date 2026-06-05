@@ -37,6 +37,12 @@ run_check "syntax: closeout_p3_user_visible" \
 run_check "syntax: closeout_clean_pilot_enforce_smoke" \
   bash -n scripts/closeout_clean_pilot_enforce_smoke.sh
 
+run_check "syntax: validate_claim_enforcement_receipts" \
+  bash -n scripts/validate_claim_enforcement_receipts.sh
+
+run_check "governance: claim enforcement receipt validator" \
+  bash scripts/validate_claim_enforcement_receipts.sh
+
 run_check "governance: runtime smoke" \
   bash scripts/run-runtime-governance.sh --mode smoke
 
