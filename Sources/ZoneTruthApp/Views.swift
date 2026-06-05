@@ -729,6 +729,32 @@ struct MetricDisclosureCardView: View {
     }
 }
 
+enum WorkoutDetailInformationArchitecture {
+    static let header = "活動摘要"
+    static let primaryResult = "本次結論"
+    static let evidenceSummary = "判讀依據"
+    static let heartRateContext = "本次使用的心率範圍"
+    static let detailDisclosure = "更多內容與詳細數據"
+    static let methodSettings = "本次分析設定"
+
+    static let primaryVisibleLabels = [
+        header,
+        primaryResult,
+        evidenceSummary,
+        heartRateContext,
+        detailDisclosure
+    ]
+
+    static let settingsOnlyLabels = [
+        "Resting HR",
+        "靜息心率",
+        "偏移",
+        "依 Resting HR 產生建議",
+        "分析策略設定",
+        methodSettings
+    ]
+}
+
 struct WorkoutDetailView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
@@ -745,21 +771,23 @@ struct WorkoutDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                WorkoutDetailHeaderView(workout: workout, selectedIntent: selectedIntent)
                 HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
+                EvidenceSummarySectionView(result: result, evaluation: evaluation)
                 AnalysisZoneContextCard(summary: zoneContextSummary)
-                KeyFindingsSectionView(evaluation: evaluation)
-                MetricDisclosureCardView(metadata: result.metricMetadata)
-
-                IntentPickerView(
-                    selectedIntent: selectedIntent,
-                    selectedIntentSource: selectedIntentSource,
-                    onIntentChanged: onIntentChanged,
-                    onApplyToSameWorkoutType: onApplyToSameWorkoutType,
-                    impactedCountForScope: impactedCountForScope
-                )
 
                 DisclosureGroup(isExpanded: $showDetailedData) {
                     VStack(alignment: .leading, spacing: 18) {
+                        MetricDisclosureCardView(metadata: result.metricMetadata)
+
+                        IntentPickerView(
+                            selectedIntent: selectedIntent,
+                            selectedIntentSource: selectedIntentSource,
+                            onIntentChanged: onIntentChanged,
+                            onApplyToSameWorkoutType: onApplyToSameWorkoutType,
+                            impactedCountForScope: impactedCountForScope
+                        )
+
                         MetricsGridSectionView(workout: workout, result: result, evaluation: evaluation)
 
                         VStack(alignment: .leading, spacing: 10) {
@@ -831,10 +859,17 @@ struct WorkoutDetailView: View {
                         }
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
+
+                        DisclosureGroup(WorkoutDetailInformationArchitecture.methodSettings) {
+                            SettingsView(settingsManager: settingsManager)
+                                .padding(.top, 8)
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
                     }
                     .padding(.top, 4)
                 } label: {
-                    Label("更多內容與詳細數據", systemImage: "chart.bar.doc.horizontal")
+                    Label(WorkoutDetailInformationArchitecture.detailDisclosure, systemImage: "chart.bar.doc.horizontal")
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
                 }
@@ -844,13 +879,51 @@ struct WorkoutDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(PremiumColor.border, lineWidth: 1))
                 .tint(.white)
 
-                SettingsView(settingsManager: settingsManager)
             }
             .padding(20)
         }
         .background(PremiumColor.bgDark)
         .navigationTitle("運動紀錄詳情")
         .iosDetailNavigationBarStyling()
+    }
+}
+
+struct WorkoutDetailHeaderView: View {
+    let workout: WorkoutInput
+    let selectedIntent: TrainingIntent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(WorkoutDetailInformationArchitecture.header)
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.62))
+
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: workout.workoutType.iconName)
+                    .font(.title3)
+                    .foregroundStyle(PremiumColor.skyBlue)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(workout.workoutType.localizedName)
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    Text(workout.startDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("本次意圖：\(selectedIntent.localizedName)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+
+                Spacer()
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.025))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
     }
 }
 
@@ -863,22 +936,7 @@ struct HeroDecisionCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: workout.workoutType.iconName)
-                    .font(.headline)
-                    .foregroundStyle(PremiumColor.skyBlue)
-                Text(workout.workoutType.localizedName)
-                    .font(.title3.bold())
-                    .foregroundStyle(.white)
-                Spacer()
-                Text(workout.startDate.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Divider().background(Color.white.opacity(0.12))
-
-            Text("目前狀態")
+            Text(WorkoutDetailInformationArchitecture.primaryResult)
                 .font(.caption.bold())
                 .foregroundStyle(.white.opacity(0.68))
 
@@ -896,12 +954,12 @@ struct HeroDecisionCardView: View {
 
             HStack(spacing: 8) {
                 summaryPill(
-                    title: "可靠度",
+                    title: "判讀信心",
                     value: reliabilitySummary,
                     color: reliabilityColor
                 )
                 summaryPill(
-                    title: "符合度",
+                    title: "目的符合度",
                     value: "\(evaluation.goalFitScore)%",
                     color: goalFitColor
                 )
@@ -912,7 +970,7 @@ struct HeroDecisionCardView: View {
                     .foregroundStyle(PremiumColor.emerald)
                     .font(.subheadline)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("接下來可以這樣看")
+                    Text("後續觀察點")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.7))
                     Text(evaluation.nextAction)
@@ -980,7 +1038,7 @@ struct AnalysisZoneContextCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("這次用的心率範圍", systemImage: "slider.horizontal.3")
+            Label(WorkoutDetailInformationArchitecture.heartRateContext, systemImage: "slider.horizontal.3")
                 .font(.headline)
                 .foregroundStyle(.white)
             Text(summary)
@@ -1000,28 +1058,94 @@ struct AnalysisZoneContextCard: View {
     }
 }
 
-// MARK: - Key Findings Section (主要發現，永遠可見)
+// MARK: - Evidence Summary Section (主要依據，永遠可見)
 
-struct KeyFindingsSectionView: View {
+struct EvidenceSummarySectionView: View {
+    let result: AnalysisResult
     let evaluation: WorkoutEvaluation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("先看重點", systemImage: "lightbulb.fill")
+        VStack(alignment: .leading, spacing: 12) {
+            Label(WorkoutDetailInformationArchitecture.evidenceSummary, systemImage: "checklist")
                 .font(.headline)
-                .foregroundStyle(PremiumColor.gold)
-            ForEach(evaluation.keyFindings, id: \.self) { finding in
-                HStack(alignment: .top, spacing: 8) {
-                    Text("•").foregroundStyle(PremiumColor.gold)
-                    Text(finding).font(.caption).foregroundStyle(.white.opacity(0.9))
-                }
+                .foregroundStyle(.white)
+
+            VStack(spacing: 8) {
+                EvidenceSignalRow(title: "節奏", value: rhythmSummary, color: PremiumColor.emerald)
+                EvidenceSignalRow(title: "心率", value: heartRateSummary, color: PremiumColor.skyBlue)
+                EvidenceSignalRow(title: "資料品質", value: dataCoverageSummary, color: dataCoverageColor)
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PremiumColor.gold.opacity(0.08))
+        .background(Color.white.opacity(0.03))
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(PremiumColor.gold.opacity(0.2), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.05), lineWidth: 1))
+    }
+
+    private var rhythmSummary: String {
+        evaluation.keyFindings.first ?? evaluation.trainingTendency
+    }
+
+    private var heartRateSummary: String {
+        if let driftRatio = result.driftRatio {
+            let percentage = driftRatio * 100
+            if abs(percentage) < 5 {
+                return "前後段心率大致穩定"
+            }
+            return "前後段心率約 \(String(format: "%+.1f%%", percentage)) 變化"
+        }
+        if let stability = result.stabilityStandardDeviation {
+            return "心率標準差約 \(String(format: "%.1f bpm", stability))"
+        }
+        return "心率樣本已納入判讀"
+    }
+
+    private var dataCoverageSummary: String {
+        switch evaluation.evaluationConfidence {
+        case 80...:
+            return "資料足夠"
+        case 60..<80:
+            return "可參考"
+        default:
+            return "資料有限"
+        }
+    }
+
+    private var dataCoverageColor: Color {
+        switch evaluation.evaluationConfidence {
+        case 80...: return PremiumColor.emerald
+        case 60..<80: return PremiumColor.gold
+        default: return PremiumColor.redOrange
+        }
+    }
+}
+
+struct EvidenceSignalRow: View {
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption.bold())
+                    .foregroundStyle(.white.opacity(0.68))
+                Text(value)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.035))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 

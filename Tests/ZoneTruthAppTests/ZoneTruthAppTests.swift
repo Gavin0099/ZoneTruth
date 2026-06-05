@@ -1605,6 +1605,60 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(text.contains("肌力測量"))
     }
 
+    func testWorkoutDetailPrimaryInformationArchitectureHidesSettingsLanguage() {
+        let visibleLabels = WorkoutDetailInformationArchitecture.primaryVisibleLabels.joined(separator: " ")
+        let settingsLabels = WorkoutDetailInformationArchitecture.settingsOnlyLabels
+
+        XCTAssertTrue(visibleLabels.contains("活動摘要"))
+        XCTAssertTrue(visibleLabels.contains("本次結論"))
+        XCTAssertTrue(visibleLabels.contains("判讀依據"))
+        XCTAssertTrue(visibleLabels.contains("本次使用的心率範圍"))
+        XCTAssertTrue(visibleLabels.contains("更多內容與詳細數據"))
+
+        for label in settingsLabels {
+            XCTAssertFalse(
+                visibleLabels.contains(label),
+                "Primary detail hierarchy should not expose settings-only label: \(label)"
+            )
+        }
+    }
+
+    @MainActor
+    func testWorkoutDetailViewSmokeCompilesForThreePrimaryIntents() {
+        let suiteName = "test.workout.detail.architecture.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = SettingsManager(userDefaults: defaults)
+
+        let cases: [(TrainingIntent, WorkoutInput)] = [
+            (.zone2, SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout),
+            (.vo2Interval, SampleWorkoutCases.vo2IntervalValidationCases().first { $0.name == "solid_vo2_max_intervals" }!.workout),
+            (.strength, SampleWorkoutCases.strengthValidationCases().first { $0.name == "traditional_strength_training" }!.workout)
+        ]
+
+        for (intent, workout) in cases {
+            let result = WorkoutIntentAnalyzer.analyze(workout, policy: settings.policy)
+            let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+                primaryIntentBaseline: intent,
+                legacy: result
+            )
+            let view = WorkoutDetailView(
+                workout: workout,
+                selectedIntent: intent,
+                selectedIntentSource: .auto,
+                result: result,
+                evaluation: evaluation,
+                onIntentChanged: { _ in },
+                onApplyToSameWorkoutType: { _ in },
+                impactedCountForScope: { _ in 0 },
+                zoneContextSummary: "預設界線 110-125 bpm",
+                settingsManager: settings
+            )
+
+            _ = view.body
+        }
+    }
+
     func testMetricDisclosurePresenterUsesMetricSpecificClaimProfiles() {
         let zone2 = WorkoutIntentAnalyzer.analyze(
             SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout
