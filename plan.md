@@ -85,7 +85,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 測試策略調整：正式產品測試延後到 VO2 max / Zone 2 / Strength 三類功能完整；目前 checkpoint 僅作 developer verification
 - [x] VO2 max scalar estimate/import vertical slice：JSON / domain model 可攜帶 VO2 max estimate，單筆 UI 顯示估算值與 source / claim-bounded disclosure；現有 VO2 interval quality 不被誤當 VO2 max
 - [x] Strength metric vertical slice：JSON / domain model 可攜帶 structured strength metrics，單筆 UI 顯示 exercise-specific direct 1RM / e1RM 類值與 claim-bounded disclosure；heart-rate-only Strength 仍保留 session-pattern claim ceiling
-- [ ] 下一步：跑完整 local smoke / meta-closeout，準備第一個 owner acceptance 測試候選
+- [x] 下一步：跑完整 local smoke / meta-closeout，準備第一個 owner acceptance 測試候選
 
 已完成（Phase D）：
 - [x] App-test / App-source boundary guard 規則化（`app_test_boundary_rules` / `app_source_boundary_rules`）
