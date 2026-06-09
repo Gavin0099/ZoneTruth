@@ -1,7 +1,7 @@
 {
   "framework_repo": "https://github.com/Gavin0099/ai-governance-framework.git",
   "adopted_release": "1.2.0",
-  "adopted_commit": "cae11be",
+  "adopted_commit": "9eb793dbf6c6b339b113c63851dd462ddbaa8569",
   "framework_interface_version": "1",
   "framework_compatible": ">=1.0.0,<2.0.0",
   "_self_reference_note": "This lock records the framework version used by this repo to evaluate itself. It does not prove framework correctness; it only fixes the self-assessment baseline.",
@@ -16,7 +16,11 @@
     "timestamp_freshness",
     "claim_enforcement_receipt_validation",
     "external_governance_submodule_updater",
-    "governance_scope_local_example"
+    "governance_scope_local_example",
+    "ai_governance_update_protocol",
+    "f7_full_update_protocol",
+    "governance_surface_rules",
+    "memory_protocol"
   ],
-  "updated_at": "2026-06-05T16:30:00+08:00"
+  "updated_at": "2026-06-09T11:22:28+08:00"
 }
