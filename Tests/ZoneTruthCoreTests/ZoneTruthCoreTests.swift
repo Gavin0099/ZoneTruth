@@ -184,6 +184,68 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(classification.warnings.first?.visibility, .userVisible)
     }
 
+    func testTrainingModeClassifierReturnsInsufficientDataBeforeModeGuessing() {
+        let start = Date(timeIntervalSince1970: 31 * 86_400)
+        let workout = WorkoutInput(
+            workoutType: .strengthTraining,
+            startDate: start,
+            endDate: start.addingTimeInterval(30 * 60),
+            heartRateSamples: [
+                HeartRateSample(timestamp: start, bpm: 96),
+                HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 118)
+            ],
+            intent: .strength
+        )
+
+        let classification = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy(minimumSampleCount: 5)
+        )
+
+        XCTAssertEqual(classification.primaryMode, .insufficientData)
+        XCTAssertEqual(classification.confidence, .insufficient)
+        XCTAssertEqual(classification.dataQuality, .insufficient)
+        XCTAssertEqual(classification.claimLevel, .notApplicable)
+        XCTAssertTrue(classification.warnings.contains { $0.type == .lowHeartRateQuality })
+        XCTAssertTrue(classification.notApplicableReasons.contains { $0.model == .strengthPattern })
+    }
+
+    func testTrainingModeClassifierClassifiesStrengthHighHRAsConditioningLikeBeforeStrengthPattern() {
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "metabolic_strength_circuit" }!
+            .workout
+
+        let classification = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy()
+        )
+
+        XCTAssertEqual(classification.primaryMode, .conditioningLike)
+        XCTAssertEqual(classification.claimLevel, .primaryClassification)
+        XCTAssertNotEqual(classification.primaryMode, .strengthPattern)
+        XCTAssertTrue(classification.evidence.contains { $0.label == "高心率比例" && $0.direction == .supports })
+        XCTAssertNotNil(classification.debug?.ruleScores["conditioning_like"])
+    }
+
+    func testTrainingModeClassifierClassifiesTypicalStrengthAsStrengthPattern() {
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+
+        let classification = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy()
+        )
+
+        XCTAssertEqual(classification.primaryMode, .strengthPattern)
+        XCTAssertEqual(classification.confidence, .mediumHigh)
+        XCTAssertEqual(classification.dataQuality, .high)
+        XCTAssertEqual(classification.claimLevel, .primaryClassification)
+        XCTAssertTrue(classification.evidence.contains { $0.explanation.contains("未觸發高密度循環訓練例外") })
+    }
+
     func testProductReferenceMetricCannotClaimMeasured() {
         let garminEstimate = TrainingMetricMetadata(
             metric: .vo2Max,
@@ -1285,6 +1347,19 @@ final class ZoneTruthCoreTests: XCTestCase {
                 updateFlag: "UPDATE_ACTIVITY_OBSERVATION_FIXTURE"
             )
         ]
+    }
+
+    private func sprint3ClassificationPolicy(minimumSampleCount: Int = 1) -> AnalysisPolicy {
+        AnalysisPolicy(
+            warmupExclusionSeconds: 0,
+            cooldownExclusionSeconds: 0,
+            minimumDurationSeconds: 20 * 60,
+            minimumSampleCount: minimumSampleCount,
+            abnormalSpikeDeltaBPM: AnalysisPolicy.default.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
+            mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
     }
 
     func testInferenceProvenanceFactoryProducesFailClosedWeeklyContract() {

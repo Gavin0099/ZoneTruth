@@ -502,6 +502,361 @@ public enum ActivityObservationAnalyzer {
     }
 }
 
+public enum TrainingModeClassifier {
+    private static let classificationVersion = "training-classification-v3.1-sprint3"
+
+    public static func classify(
+        workout: WorkoutInput,
+        policy: AnalysisPolicy = .default,
+        zoneConfigVersion: String? = nil,
+        usedPersonalizedZones: Bool = false
+    ) -> TrainingClassification {
+        let primitives = WorkoutObservationPrimitiveBuilder.build(workout: workout, policy: policy)
+        let dataQuality = trainingDataQuality(for: workout, primitives: primitives, policy: policy)
+        let debug = TrainingClassificationDebug(
+            classificationVersion: classificationVersion,
+            zoneConfigVersion: zoneConfigVersion,
+            usedPersonalizedZones: usedPersonalizedZones,
+            ruleScores: ruleScores(for: primitives),
+            notes: ["Core-only rule classifier; not connected to UI rendering."]
+        )
+
+        if workout.durationSeconds < policy.minimumDurationSeconds {
+            return insufficientDataClassification(
+                dataQuality: dataQuality,
+                evidence: [
+                    TrainingClassificationEvidence(
+                        label: "運動時間",
+                        value: formatDuration(workout.durationSeconds),
+                        direction: .weakens,
+                        explanation: "運動時間低於本分類器的最低判讀條件。"
+                    )
+                ],
+                warnings: [
+                    TrainingClassificationWarning(
+                        type: .insufficientDuration,
+                        message: "運動時間不足，暫不分類訓練型態。"
+                    )
+                ],
+                debug: debug
+            )
+        }
+
+        if primitives.sampleQuality != .sufficient {
+            return insufficientDataClassification(
+                dataQuality: dataQuality,
+                evidence: [
+                    TrainingClassificationEvidence(
+                        label: "心率樣本",
+                        value: "\(workout.heartRateSamples.count) 筆",
+                        direction: .weakens,
+                        explanation: "心率樣本不足或過度過濾，無法穩定判讀訓練型態。"
+                    )
+                ],
+                warnings: [
+                    TrainingClassificationWarning(
+                        type: .lowHeartRateQuality,
+                        message: "心率資料不足，暫不分類訓練型態。"
+                    )
+                ],
+                debug: debug
+            )
+        }
+
+        switch workout.workoutType {
+        case .strengthTraining:
+            return classifyStrength(primitives: primitives, dataQuality: dataQuality, debug: debug)
+        case .running, .cycling, .walking, .swimming, .mixed, .other:
+            return classifyCardioOrActivity(
+                workout: workout,
+                primitives: primitives,
+                dataQuality: dataQuality,
+                debug: debug
+            )
+        }
+    }
+
+    private static func classifyStrength(
+        primitives: WorkoutObservationPrimitives,
+        dataQuality: TrainingDataQuality,
+        debug: TrainingClassificationDebug
+    ) -> TrainingClassification {
+        let averageHR = primitives.averageHeartRate ?? 0
+        let highHrRatio = primitives.highHrSustainedRatio
+        let highIntensityRatio = primitives.highIntensityRatio
+        let isConditioningLike = averageHR >= 130 || highHrRatio >= 0.35 || highIntensityRatio >= 0.20
+
+        if isConditioningLike {
+            return TrainingClassification(
+                primaryMode: .conditioningLike,
+                confidence: confidence(for: dataQuality, strongMatch: true),
+                dataQuality: dataQuality,
+                claimLevel: .primaryClassification,
+                evidence: [
+                    TrainingClassificationEvidence(
+                        label: "Apple Watch 活動類型",
+                        value: "肌力訓練",
+                        direction: .neutral,
+                        explanation: "活動類型限制候選分類，但心率型態仍可指出是否偏高密度。"
+                    ),
+                    TrainingClassificationEvidence(
+                        label: "高心率比例",
+                        value: formatRatio(highHrRatio),
+                        direction: .supports,
+                        explanation: "重訓活動中高心率比例偏高，較像高密度循環訓練。"
+                    ),
+                    TrainingClassificationEvidence(
+                        label: "平均心率",
+                        value: formatBPM(averageHR),
+                        direction: .supports,
+                        explanation: "平均心率高於典型組間恢復明確的重訓型態。"
+                    )
+                ],
+                notApplicableReasons: [
+                    TrainingNotApplicableReason(
+                        model: .zone2,
+                        reason: .notSteadyStateActivity,
+                        message: "重訓不以連續穩定 Zone 2 作為主要判讀。"
+                    )
+                ],
+                debug: debug
+            )
+        }
+
+        return TrainingClassification(
+            primaryMode: .strengthPattern,
+            confidence: confidence(for: dataQuality, strongMatch: true),
+            dataQuality: dataQuality,
+            claimLevel: .primaryClassification,
+            evidence: [
+                TrainingClassificationEvidence(
+                    label: "Apple Watch 活動類型",
+                    value: "肌力訓練",
+                    direction: .supports,
+                    explanation: "活動類型本身支援肌力訓練型態候選。"
+                ),
+                TrainingClassificationEvidence(
+                    label: "高心率比例",
+                    value: formatRatio(highHrRatio),
+                    direction: .supports,
+                    explanation: "高心率區間沒有長時間主導，符合較典型的肌力訓練心率型態。"
+                ),
+                TrainingClassificationEvidence(
+                    label: "平均心率",
+                    value: formatBPM(averageHR),
+                    direction: .neutral,
+                    explanation: "平均心率未觸發高密度循環訓練例外。"
+                )
+            ],
+            notApplicableReasons: [
+                TrainingNotApplicableReason(
+                    model: .vo2Stimulus,
+                    reason: .notSteadyStateActivity,
+                    message: "這次沒有先以 VO2 刺激作為重訓主結論。"
+                )
+            ],
+            debug: debug
+        )
+    }
+
+    private static func classifyCardioOrActivity(
+        workout: WorkoutInput,
+        primitives: WorkoutObservationPrimitives,
+        dataQuality: TrainingDataQuality,
+        debug: TrainingClassificationDebug
+    ) -> TrainingClassification {
+        let zone2Ratio = primitives.zoneDistribution.ratio(for: .zone2)
+        let zone3Ratio = primitives.zoneDistribution.ratio(for: .zone3)
+        let highIntensityRatio = primitives.highIntensityRatio
+
+        if highIntensityRatio >= 0.20 && primitives.peakZoneRatio >= 0.05 {
+            return TrainingClassification(
+                primaryMode: .vo2Stimulus,
+                confidence: confidence(for: dataQuality, strongMatch: true),
+                dataQuality: dataQuality,
+                claimLevel: claimLevel(for: dataQuality),
+                evidence: [
+                    TrainingClassificationEvidence(
+                        label: "Zone 4/5 比例",
+                        value: formatRatio(highIntensityRatio),
+                        direction: .supports,
+                        explanation: "高強度心率區間比例足以支援 VO2 刺激型態描述。"
+                    )
+                ],
+                warnings: workout.workoutType == .swimming ? lowSwimQualityWarning() : [],
+                debug: debug
+            )
+        }
+
+        if zone2Ratio >= 0.60 && zone3Ratio <= 0.20 && highIntensityRatio < 0.10 {
+            return TrainingClassification(
+                primaryMode: .zone2,
+                confidence: confidence(for: dataQuality, strongMatch: true),
+                dataQuality: dataQuality,
+                claimLevel: claimLevel(for: dataQuality),
+                evidence: [
+                    TrainingClassificationEvidence(
+                        label: "Zone 2 比例",
+                        value: formatRatio(zone2Ratio),
+                        direction: .supports,
+                        explanation: "心率分布主要落在 Zone 2 區間。"
+                    ),
+                    TrainingClassificationEvidence(
+                        label: "Zone 3+ 比例",
+                        value: formatRatio(zone3Ratio + highIntensityRatio),
+                        direction: .supports,
+                        explanation: "較高心率區間沒有主導這次活動。"
+                    )
+                ],
+                warnings: workout.workoutType == .swimming ? lowSwimQualityWarning() : [],
+                debug: debug
+            )
+        }
+
+        if primitives.zoneDistribution.ratio(for: .zone1) >= 0.50 && highIntensityRatio < 0.05 {
+            return TrainingClassification(
+                primaryMode: .generalLowIntensity,
+                confidence: confidence(for: dataQuality, strongMatch: false),
+                dataQuality: dataQuality,
+                claimLevel: claimLevel(for: dataQuality),
+                evidence: [
+                    TrainingClassificationEvidence(
+                        label: "Zone 1 比例",
+                        value: formatRatio(primitives.zoneDistribution.ratio(for: .zone1)),
+                        direction: .supports,
+                        explanation: "活動以低心率區間為主。"
+                    )
+                ],
+                debug: debug
+            )
+        }
+
+        return TrainingClassification(
+            primaryMode: .mixed,
+            confidence: confidence(for: dataQuality, strongMatch: false),
+            dataQuality: dataQuality,
+            claimLevel: claimLevel(for: dataQuality),
+            evidence: [
+                TrainingClassificationEvidence(
+                    label: "心率分布",
+                    value: "混合",
+                    direction: .neutral,
+                    explanation: "心率分布沒有穩定落在單一訓練型態。"
+                )
+            ],
+            warnings: [
+                TrainingClassificationWarning(
+                    type: .ambiguousPattern,
+                    message: "這次心率型態混合，分類僅描述主要傾向。"
+                )
+            ] + (workout.workoutType == .swimming ? lowSwimQualityWarning() : []),
+            debug: debug
+        )
+    }
+
+    private static func insufficientDataClassification(
+        dataQuality: TrainingDataQuality,
+        evidence: [TrainingClassificationEvidence],
+        warnings: [TrainingClassificationWarning],
+        debug: TrainingClassificationDebug
+    ) -> TrainingClassification {
+        TrainingClassification(
+            primaryMode: .insufficientData,
+            confidence: .insufficient,
+            dataQuality: dataQuality,
+            claimLevel: .notApplicable,
+            evidence: evidence,
+            warnings: warnings,
+            notApplicableReasons: [
+                TrainingNotApplicableReason(
+                    model: .zone2,
+                    reason: .insufficientHeartRateData,
+                    message: "心率資料不足，Zone 2 型態不適用。"
+                ),
+                TrainingNotApplicableReason(
+                    model: .vo2Stimulus,
+                    reason: .insufficientHeartRateData,
+                    message: "心率資料不足，VO2 刺激型態不適用。"
+                ),
+                TrainingNotApplicableReason(
+                    model: .strengthPattern,
+                    reason: .insufficientHeartRateData,
+                    message: "心率資料不足，肌力訓練型態不適用。"
+                )
+            ],
+            debug: debug
+        )
+    }
+
+    private static func trainingDataQuality(
+        for workout: WorkoutInput,
+        primitives: WorkoutObservationPrimitives,
+        policy: AnalysisPolicy
+    ) -> TrainingDataQuality {
+        if workout.durationSeconds < policy.minimumDurationSeconds {
+            return .insufficient
+        }
+        switch primitives.sampleQuality {
+        case .sufficient:
+            return workout.workoutType == .swimming ? .low : .high
+        case .heavilyFiltered:
+            return .insufficient
+        case .sparse:
+            return .insufficient
+        }
+    }
+
+    private static func confidence(
+        for dataQuality: TrainingDataQuality,
+        strongMatch: Bool
+    ) -> ClassificationConfidence {
+        switch dataQuality {
+        case .high:
+            return strongMatch ? .mediumHigh : .medium
+        case .medium:
+            return strongMatch ? .medium : .low
+        case .low:
+            return strongMatch ? .low : .low
+        case .insufficient:
+            return .insufficient
+        }
+    }
+
+    private static func claimLevel(for dataQuality: TrainingDataQuality) -> TrainingClaimLevel {
+        dataQuality == .low ? .secondaryReference : .primaryClassification
+    }
+
+    private static func ruleScores(for primitives: WorkoutObservationPrimitives) -> [String: Double] {
+        [
+            "zone2": primitives.zoneDistribution.ratio(for: .zone2),
+            "vo2_stimulus": primitives.highIntensityRatio,
+            "conditioning_like": max(primitives.highHrSustainedRatio, primitives.highIntensityRatio),
+            "strength_pattern": 1 - primitives.highHrSustainedRatio
+        ]
+    }
+
+    private static func lowSwimQualityWarning() -> [TrainingClassificationWarning] {
+        [
+            TrainingClassificationWarning(
+                type: .lowHeartRateQuality,
+                message: "游泳心率資料較容易受量測限制影響，分類僅供描述參考。"
+            )
+        ]
+    }
+
+    private static func formatRatio(_ value: Double) -> String {
+        "\(Int((value * 100).rounded()))%"
+    }
+
+    private static func formatBPM(_ value: Double) -> String {
+        "\(Int(value.rounded())) bpm"
+    }
+
+    private static func formatDuration(_ value: TimeInterval) -> String {
+        "\(Int((value / 60).rounded())) 分鐘"
+    }
+}
+
 public enum StrengthAnalyzer {
     public static func analyze(
         workout: WorkoutInput,

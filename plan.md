@@ -56,7 +56,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 確認 v3.1 是規格/計畫同步，不改產品行為、analyzer verdict、weekly rendering contract
 - [x] Sprint 1 信任止血 UI：移除 user-facing `本次意圖`、`目的符合度`、`舊版判定`，並避免重訓第一屏出現 VO2 max 主卡
 - [x] Sprint 2 Core classification object：在 `ZoneTruthCore` 建立 Swift `TrainingClassification` output contract（mode / confidence / data quality / claim level / evidence / warnings / not-applicable reasons / debug）
-- [ ] 下一步 Sprint 3：rule-based classifier aggregator（Zone 2 / VO2 stimulus / strength-pattern candidates；重訓先判 insufficient / conditioning-like 例外）
+- [x] Sprint 3 rule-based classifier aggregator：在 `ZoneTruthCore` 新增 Core-only `TrainingModeClassifier`，輸出 `TrainingClassification`；先驗證資料不足、重訓 high-HR conditioning-like 例外、典型重訓 strengthPattern
+- [ ] 下一步 Sprint 4：本週訓練型態分布頁（只描述分類分布，不評價、不加入週目標）
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -134,7 +135,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] VO2/強度分析路徑擴充（接入 interval pattern / recovery hint 觀測訊號到 user-facing reasons）
 - [x] Training Classification v3.1 Sprint 1：信任止血 UI，先修正 user-facing 語義，再進 Core classification object
 - [x] Training Classification v3.1 Sprint 2：Core classification object
-- [ ] Training Classification v3.1 Sprint 3：rule-based classifier aggregator
+- [x] Training Classification v3.1 Sprint 3：rule-based classifier aggregator
+- [ ] Training Classification v3.1 Sprint 4：本週分類分布（descriptive only）
 
 ### P2（非阻擋，有空再做）
 - [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）
