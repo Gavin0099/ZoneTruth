@@ -1,6 +1,6 @@
 # Training Analysis Meta-Spec
 
-Last updated: 2026-06-04
+Last updated: 2026-06-09
 Owner: ZoneTruth Product + Core
 Status: Draft implementation spec
 Source review: `docs/TRAINING_ANALYSIS_LITERATURE_REVIEW.md`
@@ -15,6 +15,7 @@ It defines:
 - shared metadata shape for training metrics
 - evidence-distance and confidence semantics
 - metric-specific claim ceilings
+- spec-resolution order for evidence vs source-role semantics
 - UI wording rules
 - implementation sequence for future analyzer work
 
@@ -37,6 +38,35 @@ ZoneTruth should not answer:
 
 > Which product is correct, what is the user's true physiological state, or what
 > the user must do next.
+
+## Spec Resolution Order
+
+Implementation-facing training-analysis work should resolve spec authority in
+this order:
+
+1. [TRAINING_ESTIMATOR_EVIDENCE_MAP.md](/Users/gavin_wu/Desktop/ZoneTruth/docs/TRAINING_ESTIMATOR_EVIDENCE_MAP.md)
+   for literature-informed evidence levels, claim ceilings, downgrade rules,
+   and allowed or forbidden inference language.
+2. This document for shared analyzer metadata shape, cross-metric semantics,
+   and implementation contract.
+3. Source-role matrices such as
+   [APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md](/Users/gavin_wu/Desktop/ZoneTruth/docs/APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md)
+   for source-specific ingestion, display, and overclaim boundaries.
+
+Keep the split stable:
+
+- Evidence Map answers what the underlying evidence can support.
+- Meta-Spec answers how analyzers should carry and render that meaning.
+- Source-role matrices answer what a specific source is allowed to contribute.
+
+Rule:
+
+- Analyzer metadata must resolve evidence level and claim ceiling from the
+  Evidence Map.
+- Source-specific ingestion and display must resolve source-role semantics from
+  the relevant source-role matrix.
+- A source-role matrix may narrow a claim, but it must not upgrade the evidence
+  authority defined by the Evidence Map.
 
 ## Evidence Tier Model
 
@@ -92,12 +122,23 @@ claim:
     - string
   forbidden_terms:
     - string
+spec_resolution:
+  evidence_layer: TRAINING_ESTIMATOR_EVIDENCE_MAP
+  source_role_layer: none | APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX | future_source_matrix
 data_quality:
   coverage: complete | partial | sparse | unknown
   flags:
     - string
 recommended_validation: string | null
 ```
+
+Implementation rule:
+
+- `spec_resolution.evidence_layer` is mandatory for analyzer-facing metadata.
+- `spec_resolution.source_role_layer` is required when ingestion or rendering
+  depends on source-specific semantics such as Apple Health.
+- If no source-role matrix applies, use `none` rather than inferring Apple
+  Health-like semantics from another source.
 
 ## Confidence Semantics
 
@@ -150,6 +191,9 @@ Required metadata:
 metric: vo2max
 method.name: wearable_estimated_from_running_hr_speed
 method.source: garmin | apple | firstbeat | running_hr_speed | cycling_power_hr | cpet | unknown
+spec_resolution:
+  evidence_layer: TRAINING_ESTIMATOR_EVIDENCE_MAP
+  source_role_layer: APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX when method.source = apple
 recommended_validation: CPET if used for clinical or high-performance decisions
 ```
 
@@ -192,6 +236,9 @@ metric: zone2_hr_range
 popular_label: Zone 2
 physiological_domain: below_or_near_first_threshold
 threshold_basis: LT1 | VT1 | GET | AeT | HR_drift | HRV_threshold | talk_test | percent_hrmax | product_zone | unknown
+spec_resolution:
+  evidence_layer: TRAINING_ESTIMATOR_EVIDENCE_MAP
+  source_role_layer: APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX when Apple Health inputs materially affect bounds or display
 ```
 
 Allowed claims:
@@ -242,6 +289,9 @@ exercise:
   range_of_motion: standardized | partial | unknown
   bodyweight_known: true | false
   failure_definition: technical_failure | volitional_failure | unknown
+spec_resolution:
+  evidence_layer: TRAINING_ESTIMATOR_EVIDENCE_MAP
+  source_role_layer: APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX when Apple Health contributes context-only strength interpretation
 ```
 
 Allowed claims:
@@ -270,6 +320,14 @@ Use this wording map when rendering results:
 | `method.tier = product_reference` | `product estimate from <source>` | `verified`, `lab-equivalent` |
 | `method.tier = weak_heuristic` | `starting point` | `training zone confirmed` |
 | `confidence.level = low` | `interpret cautiously` | strong CTA / imperative advice |
+
+When rendering user-facing text:
+
+- Analyzer verdict wording must follow Evidence Map claim ceilings first.
+- Source labels, source caveats, and source-driven confidence caps must follow
+  the applicable source-role matrix.
+- Source-specific copy must never upgrade an estimate above the analyzer's
+  evidence-layer ceiling.
 
 Global forbidden terms for these metric summaries:
 
@@ -307,6 +365,12 @@ Goal:
   verdict thresholds.
 - Current VO2 analyzer metadata should use `vo2_interval_quality`; reserve
   `vo2max` for future scalar VO2 max estimates or imports.
+
+New rule:
+
+- Core analyzers own evidence-layer resolution.
+- Importers, adapters, and display surfaces may attach source-role resolution
+  only when a source-role matrix explicitly exists.
 
 Targeted tests:
 

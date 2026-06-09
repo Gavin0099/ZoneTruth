@@ -55,6 +55,21 @@ If another source is added later, such as Garmin, Strava, or COROS, it should
 get its own source-role matrix rather than extending Apple Health semantics by
 analogy.
 
+## Implementation Hook
+
+For implementation-facing work:
+
+- analyzer metadata should resolve evidence level, claim ceiling, and downgrade
+  logic from `TRAINING_ESTIMATOR_EVIDENCE_MAP.md`
+- Apple Health ingestion, importer labeling, and source-specific display should
+  resolve role semantics from this document
+- this matrix may narrow or cap confidence, but it must not upgrade a metric
+  above the evidence-layer authority defined in the Evidence Map
+
+If Apple Health is absent, do not borrow this matrix for another source. Use a
+source-role layer of `none` or add a dedicated source-role matrix for that
+provider.
+
 ## Apple Health Role Tiers
 
 ### AH-R0 `reference_anchor`
@@ -568,6 +583,9 @@ apple_health:
   downgrade_reasons:
     - no_external_threshold_test
     - fixed_offset_rule
+spec_resolution:
+  evidence_layer: TRAINING_ESTIMATOR_EVIDENCE_MAP
+  source_role_layer: APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX
 ```
 
 This is a schema direction, not a requirement that every existing analyzer be
