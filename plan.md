@@ -50,6 +50,12 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 ## 當前 Sprint / 當前工作
 
+本次產品規格同步（2026-06-09）：
+- [x] 將訓練分析 v3 修訂為 v3.1 執行版：正式採用 C 路線（Apple Watch 活動類型 + 心率特徵反推本次訓練型態）
+- [x] 新增 `docs/TRAINING_CLASSIFICATION_PLAN_V3_1.md`，明確列出 Sprint 0、不要動清單、Swift Core classification object、資料品質下界、重訓例外優先與本週頁純描述規則
+- [x] 確認 v3.1 是規格/計畫同步，不改產品行為、analyzer verdict、weekly rendering contract
+- [ ] 下一步 Sprint 1：信任止血 UI（移除 user-facing `本次意圖`、`目的符合度`、`舊版判定`，並避免重訓第一屏出現 VO2 max 主卡）
+
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
 - [x] 補入新拆分的治理 routing / protocol 文件：`AI_GOVERNANCE_UPDATE_PROTOCOL.md`、`F7_FULL_UPDATE.md`、`GOVERNANCE_SURFACE_RULES.md`、`MEMORY_PROTOCOL.md`
@@ -124,6 +130,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 個人化 zone 界線設定（Resting HR、Zone 2 上下界輸入、建議 / 套用 / 重設 / 狀態摘要）
 - [x] 擴充邊緣案例標籤集（drift / leakage 閾值附近）
 - [x] VO2/強度分析路徑擴充（接入 interval pattern / recovery hint 觀測訊號到 user-facing reasons）
+- [ ] Training Classification v3.1 Sprint 1：信任止血 UI，先修正 user-facing 語義，再進 Core classification object
 
 ### P2（非阻擋，有空再做）
 - [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）
@@ -220,6 +227,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-09 | 新增 Training Classification Plan v3.1：正式採用 C 路線（資料反推訓練型態），補 Sprint 0、不要動清單、Core classification object、資料品質下界與純描述週分布規則；不改產品行為 |
 | 2026-06-09 | 同步 ai-governance-framework 最新 upstream（`9eb793dbf6c6`）：導入拆分後的 AI Governance update / F-7 / governance surface / memory protocol 文件，刷新 baseline / framework lock；產品行為不變 |
 | 2026-06-05 | 同步 ai-governance-framework 最新 upstream（`cae11be`）導入分析；補入非-submodule consuming repo 適用的治理工具與 F-7 文件，刷新 baseline / framework lock，drift clean / readiness 通過 |
 | 2026-06-04 | 完成 Strength structured metric 最小切片：JSON / domain model / metadata / 單筆 UI disclosure 支援 direct 1RM / e1RM 類肌力指標，並保留 exercise-specific claim ceiling |
