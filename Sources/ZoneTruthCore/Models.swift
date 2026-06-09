@@ -1019,6 +1019,48 @@ public struct TrainingClassificationFeedback: Codable, Equatable, Sendable {
     }
 }
 
+public struct TrainingClassificationFeedbackRecord: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let feedback: TrainingClassificationFeedback
+    public let schemaVersion: Int
+
+    public init(
+        id: UUID,
+        feedback: TrainingClassificationFeedback,
+        schemaVersion: Int = 1
+    ) {
+        self.id = id
+        self.feedback = feedback
+        self.schemaVersion = schemaVersion
+    }
+}
+
+public protocol TrainingClassificationFeedbackStoring {
+    func save(_ record: TrainingClassificationFeedbackRecord)
+    func records(for workoutID: UUID) -> [TrainingClassificationFeedbackRecord]
+    func allRecords() -> [TrainingClassificationFeedbackRecord]
+}
+
+public final class InMemoryTrainingClassificationFeedbackStore: TrainingClassificationFeedbackStoring {
+    private var storedRecords: [TrainingClassificationFeedbackRecord]
+
+    public init(records: [TrainingClassificationFeedbackRecord] = []) {
+        self.storedRecords = records
+    }
+
+    public func save(_ record: TrainingClassificationFeedbackRecord) {
+        storedRecords.append(record)
+    }
+
+    public func records(for workoutID: UUID) -> [TrainingClassificationFeedbackRecord] {
+        storedRecords.filter { $0.feedback.workoutID == workoutID }
+    }
+
+    public func allRecords() -> [TrainingClassificationFeedbackRecord] {
+        storedRecords
+    }
+}
+
 public struct WeeklyTrainingModeDistributionItem: Codable, Equatable, Sendable {
     public let mode: TrainingMode
     public let count: Int

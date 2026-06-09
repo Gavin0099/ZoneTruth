@@ -251,6 +251,66 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(after.primaryMode, .conditioningLike)
     }
 
+    func testTrainingClassificationFeedbackRecordCodableRoundTripsWithoutIntent() throws {
+        let record = TrainingClassificationFeedbackRecord(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            feedback: TrainingClassificationFeedback(
+                workoutID: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
+                recordedAt: Date(timeIntervalSince1970: 3_600),
+                originalClassification: sampleClassification(primaryMode: .vo2Stimulus),
+                rating: .somewhatSimilar,
+                userSuggestedMode: .zone2,
+                source: .user,
+                note: "Felt steadier than VO2."
+            )
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(record)
+        let json = String(decoding: data, as: UTF8.self)
+        let decoded = try JSONDecoder().decode(TrainingClassificationFeedbackRecord.self, from: data)
+
+        XCTAssertEqual(decoded, record)
+        XCTAssertTrue(json.contains("schemaVersion"))
+        XCTAssertTrue(json.contains("feedback"))
+        XCTAssertTrue(json.contains("userSuggestedMode"))
+        XCTAssertFalse(json.contains("intent"))
+        XCTAssertFalse(json.contains("goal"))
+    }
+
+    func testInMemoryTrainingClassificationFeedbackStoreSavesAndReadsRecords() {
+        let workoutID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+        let otherWorkoutID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
+        let targetRecord = TrainingClassificationFeedbackRecord(
+            id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
+            feedback: TrainingClassificationFeedback(
+                workoutID: workoutID,
+                recordedAt: Date(timeIntervalSince1970: 4_200),
+                originalClassification: sampleClassification(primaryMode: .conditioningLike),
+                rating: .inaccurate,
+                userSuggestedMode: .strengthPattern
+            )
+        )
+        let otherRecord = TrainingClassificationFeedbackRecord(
+            id: UUID(uuidString: "88888888-8888-8888-8888-888888888888")!,
+            feedback: TrainingClassificationFeedback(
+                workoutID: otherWorkoutID,
+                recordedAt: Date(timeIntervalSince1970: 4_800),
+                originalClassification: sampleClassification(primaryMode: .zone2),
+                rating: .accurate
+            )
+        )
+        let store = InMemoryTrainingClassificationFeedbackStore()
+
+        store.save(targetRecord)
+        store.save(otherRecord)
+
+        XCTAssertEqual(store.records(for: workoutID), [targetRecord])
+        XCTAssertEqual(store.records(for: otherWorkoutID), [otherRecord])
+        XCTAssertEqual(store.allRecords(), [targetRecord, otherRecord])
+    }
+
     func testTrainingModeClassifierReturnsInsufficientDataBeforeModeGuessing() {
         let start = Date(timeIntervalSince1970: 31 * 86_400)
         let workout = WorkoutInput(
