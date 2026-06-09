@@ -55,9 +55,17 @@ final class CalibrationEngineTests: XCTestCase {
         XCTAssertEqual(suggestion?.suggestedBounds.zone4Threshold, 141)
         XCTAssertEqual(suggestion?.suggestedBounds.zone5Threshold, 156)
         XCTAssertEqual(suggestion?.source, .restingHeartRateHeuristic)
-        XCTAssertEqual(suggestion?.source.displayLabel, "來源：Resting HR 起始建議")
-        XCTAssertEqual(suggestion?.source.verificationLabel, "非驗證閾值")
+        XCTAssertEqual(suggestion?.source.displayLabel, "依據：Resting HR + 產品預設偏移規則")
+        XCTAssertEqual(suggestion?.source.verificationLabel, "初步估算，尚未驗證")
         XCTAssertTrue(suggestion?.reason.contains("Resting HR") == true)
+        XCTAssertTrue(suggestion?.reason.contains("初步 Zone 2 參考範圍") == true)
+        XCTAssertTrue(suggestion?.reason.contains("尚未經足夠訓練資料驗證") == true)
+        XCTAssertFalse(suggestion?.reason.contains("個人化 Zone 2 起始建議") == true)
+        XCTAssertFalse(suggestion?.reason.contains("校正完成") == true)
+        XCTAssertFalse(suggestion?.reason.contains("已驗證 Zone 2") == true)
+        XCTAssertFalse(suggestion?.reason.contains("個人化閾值已確立") == true)
+        XCTAssertEqual(suggestion?.confidence, 0.55)
+        XCTAssertEqual(suggestion?.zone2RangeMatchesCurrent, true)
     }
 
     func testSuggestZoneBoundsFromRestingHeartRateUsesCustomOffsets() {
@@ -70,7 +78,8 @@ final class CalibrationEngineTests: XCTestCase {
         XCTAssertNotNil(suggestion)
         XCTAssertEqual(suggestion?.suggestedBounds.zone2LowerBound, 108)
         XCTAssertEqual(suggestion?.suggestedBounds.zone2UpperBound, 122)
-        XCTAssertTrue(suggestion?.reason.contains("+50/+64") == true)
+        XCTAssertTrue(suggestion?.reason.contains("產品預設偏移規則") == true)
+        XCTAssertFalse(suggestion?.reason.contains("+50/+64") == true)
     }
 
     func testSuggestZoneBoundsFromRestingHeartRateRejectsOutOfRangeInput() {

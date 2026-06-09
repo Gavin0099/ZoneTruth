@@ -32,7 +32,7 @@ Allowed wording:
 - `預設界線`
 - `自訂界線`
 - `Resting HR 建議已套用`
-- `非驗證閾值`
+- `初步估算，尚未驗證`
 
 Forbidden wording:
 

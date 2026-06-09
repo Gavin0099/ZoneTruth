@@ -1214,7 +1214,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(manager.pendingSuggestion?.source, .restingHeartRateHeuristic)
         XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2LowerBound, 115)
         XCTAssertEqual(manager.pendingSuggestion?.suggestedBounds.zone2UpperBound, 130)
-        XCTAssertEqual(manager.pendingSuggestion?.source.verificationLabel, "非驗證閾值")
+        XCTAssertEqual(manager.pendingSuggestion?.source.verificationLabel, "初步估算，尚未驗證")
 
         manager.applySuggestion()
 
@@ -1264,23 +1264,77 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("預設界線"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 110-125 bpm"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 未設定"))
-        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待套用建議"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待處理參考範圍"))
 
         manager.updateRestingHeartRate(60)
         manager.updateRestingHeartRateSuggestionOffsets(lowerOffset: 48, upperOffset: 62)
         manager.generateRestingHeartRateSuggestion()
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 60 bpm"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("偏移 +48/+62"))
-        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("有待套用建議 108-122 bpm"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("可套用初步參考範圍 108-122 bpm"))
 
         manager.applySuggestion()
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 建議已套用"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 108-122 bpm"))
-        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待套用建議"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待處理參考範圍"))
 
         manager.updateZone2Bounds(lower: 112, upper: 126)
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("自訂界線"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 112-126 bpm"))
+    }
+
+    @MainActor
+    func testZone2ProfileStatusSummaryDoesNotShowPendingWhenSuggestionMatchesCurrentRange() {
+        let suiteName = "test.zone.profile.summary.matching.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let manager = SettingsManager(userDefaults: defaults)
+        manager.updateRestingHeartRate(55)
+        manager.generateRestingHeartRateSuggestion()
+
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("目前設定已符合初步參考範圍"))
+        XCTAssertFalse(manager.zone2ProfileStatusSummary.contains("待套用"))
+        XCTAssertFalse(manager.zone2ProfileStatusSummary.contains("有待套用建議"))
+    }
+
+    func testCalibrationSuggestionPresenterDisablesApplyWhenRangeMatchesCurrent() {
+        let suggestion = CalibrationEngine.suggestZoneBounds(
+            restingHeartRate: 55,
+            currentPolicy: .default
+        )!
+
+        let presentation = CalibrationSuggestionPresenter.presentation(for: suggestion)
+
+        XCTAssertEqual(presentation.applyButtonTitle, "目前已套用")
+        XCTAssertTrue(presentation.isApplyDisabled)
+    }
+
+    func testCalibrationSuggestionPresenterEnablesApplyWhenRangeDiffersFromCurrent() {
+        let policy = AnalysisPolicy(
+            warmupExclusionSeconds: AnalysisPolicy.default.warmupExclusionSeconds,
+            cooldownExclusionSeconds: AnalysisPolicy.default.cooldownExclusionSeconds,
+            minimumDurationSeconds: AnalysisPolicy.default.minimumDurationSeconds,
+            minimumSampleCount: AnalysisPolicy.default.minimumSampleCount,
+            abnormalSpikeDeltaBPM: AnalysisPolicy.default.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
+            mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
+            zoneBounds: ZoneBounds(
+                zone2LowerBound: 112,
+                zone2UpperBound: 126,
+                zone4Threshold: AnalysisPolicy.default.zoneBounds.zone4Threshold,
+                zone5Threshold: AnalysisPolicy.default.zoneBounds.zone5Threshold
+            )
+        )
+        let suggestion = CalibrationEngine.suggestZoneBounds(
+            restingHeartRate: 55,
+            currentPolicy: policy
+        )!
+
+        let presentation = CalibrationSuggestionPresenter.presentation(for: suggestion)
+
+        XCTAssertEqual(presentation.applyButtonTitle, "套用參考範圍")
+        XCTAssertFalse(presentation.isApplyDisabled)
     }
 
     @MainActor

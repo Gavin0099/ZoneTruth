@@ -70,6 +70,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Zone 2 feature-complete gate closeout：新增 `docs/ZONE2_FEATURE_GATE_CHECKLIST.md`，盤點 manual bounds / Resting HR / reset / single detail / weekly policy 既有測試覆蓋，鎖住非 exact threshold claim；不改 classifier、不擴 UI、不碰 weekly rendering contract
 - [x] Long-term memory hygiene：建立 `memory/00_long_term.md`，補齊 AGENTS.md 要求的 main-session 長期記憶檔；只記 durable context / workflow preferences / active boundaries，不改產品碼或治理規則
 - [x] Apple Health Resting HR import gate fix：修正 read-only HealthKit authorization status 擋住 Resting HR query 的問題；request authorization 後嘗試查詢 baseline，只有 query unauthorized / no data / unavailable 時顯示對應訊息；補測 `.sharingDenied` 但 baseline 可讀仍能匯入
+- [x] Resting HR Zone 2 claim ceiling / state consistency：將 Resting HR-based 建議卡改為「初步 Zone 2 參考範圍」，標示「初步估算，尚未驗證」，等值範圍顯示「目前已套用」且不再顯示待套用；補測 forbidden overclaim 與 button 狀態
 - [ ] 下一步：Training Classification v3.1 與 repo hygiene 已收斂；新的產品或測試工作需先定義 fresh narrow DONE
 
 本次治理同步（2026-06-09）：
@@ -98,7 +99,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 本次產品切片（2026-06-03）：
 - [x] 完成 P1「個人化 zone 界線設定」垂直 slice：使用者輸入 Resting HR / Zone 2 上下界 → 分析器採用自訂界線 → 週報與單筆詳情顯示已套用個人化設定
-- [x] 支援 Resting HR 產生 Zone 2 起始建議、來源 / 非驗證閾值標示、套用建議、重設回預設界線
+- [x] 支援 Resting HR 產生初步 Zone 2 參考範圍、來源 / 初步估算標示、套用參考範圍、重設回預設界線
 - [x] 支援 Resting HR 建議公式上下偏移量調整，並在設定頁顯示目前 Zone 2 設定狀態摘要
 
 本次研究切片（2026-06-04）：
@@ -234,6 +235,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Strength feature-complete slice | 已完成最小切片（direct 1RM / e1RM structured metric import/display + claim-bounded disclosure；不做全身/臨床肌力診斷） | Done |
 | Zone 2 feature-complete gate | 已完成（manual bounds / Resting HR / reset / single detail / weekly policy 已盤點；新增 acceptance checklist 鎖住非 exact threshold claim） | Done |
 | Apple Health Resting HR import gate | 已完成（read-only authorization status 不再提前擋掉可讀 baseline query） | Done |
+| Resting HR Zone 2 claim ceiling / state consistency | 已完成（initial heuristic boundary，不宣稱 personalized calibrated threshold；等值狀態不再顯示待套用） | Done |
 | Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 已建立最小長期記憶檔 | Done |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |

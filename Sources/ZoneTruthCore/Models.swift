@@ -1278,7 +1278,7 @@ public enum CalibrationSuggestionSource: String, Codable, Equatable, Sendable {
     public var displayLabel: String {
         switch self {
         case .restingHeartRateHeuristic:
-            return "來源：Resting HR 起始建議"
+            return "依據：Resting HR + 產品預設偏移規則"
         case .driftTrend:
             return "來源：歷史心率飄移校正"
         }
@@ -1287,7 +1287,7 @@ public enum CalibrationSuggestionSource: String, Codable, Equatable, Sendable {
     public var verificationLabel: String {
         switch self {
         case .restingHeartRateHeuristic:
-            return "非驗證閾值"
+            return "初步估算，尚未驗證"
         case .driftTrend:
             return "訓練觀測校正"
         }
@@ -1331,6 +1331,11 @@ public struct CalibrationSuggestion: Equatable, Sendable {
         self.confidence = confidence
         self.source = source
         self.sourceSessionIDs = sourceSessionIDs
+    }
+
+    public var zone2RangeMatchesCurrent: Bool {
+        currentBounds.zone2LowerBound == suggestedBounds.zone2LowerBound &&
+        currentBounds.zone2UpperBound == suggestedBounds.zone2UpperBound
     }
 }
 

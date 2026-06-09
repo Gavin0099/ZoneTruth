@@ -2091,10 +2091,14 @@ struct CalibrationSuggestionView: View {
     let suggestion: CalibrationSuggestion
     let onApply: () -> Void
 
+    private var presentation: CalibrationSuggestionPresentation {
+        CalibrationSuggestionPresenter.presentation(for: suggestion)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("個人化 Zone 2 校正", systemImage: "sparkles")
+                Label("初步 Zone 2 參考範圍", systemImage: "sparkles")
                     .font(.system(.subheadline, design: .rounded).bold())
                     .foregroundStyle(.white)
                 Spacer()
@@ -2151,13 +2155,14 @@ struct CalibrationSuggestionView: View {
                 
                 Spacer()
                 
-                Button("套用建議", action: onApply)
+                Button(presentation.applyButtonTitle, action: onApply)
                     .font(.caption.bold())
                     .padding(.vertical, 8)
                     .padding(.horizontal, 14)
                     .background(Color.white)
                     .foregroundColor(PremiumColor.neonPurple)
                     .clipShape(Capsule())
+                    .disabled(presentation.isApplyDisabled)
             }
         }
         .padding(14)
@@ -2170,6 +2175,27 @@ struct CalibrationSuggestionView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: PremiumColor.neonPurple.opacity(0.3), radius: 8, x: 0, y: 4)
+    }
+}
+
+struct CalibrationSuggestionPresentation: Equatable {
+    let applyButtonTitle: String
+    let isApplyDisabled: Bool
+}
+
+enum CalibrationSuggestionPresenter {
+    static func presentation(for suggestion: CalibrationSuggestion) -> CalibrationSuggestionPresentation {
+        if suggestion.zone2RangeMatchesCurrent {
+            return CalibrationSuggestionPresentation(
+                applyButtonTitle: "目前已套用",
+                isApplyDisabled: true
+            )
+        }
+
+        return CalibrationSuggestionPresentation(
+            applyButtonTitle: "套用參考範圍",
+            isApplyDisabled: false
+        )
     }
 }
 
@@ -2331,7 +2357,7 @@ struct SettingsView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            Text("Resting HR 會用下方偏移量產生 Zone 2 起始建議；只有按下套用建議後，分析器才會改用新的 bpm 邊界。")
+            Text("Resting HR 會用下方偏移量產生初步 Zone 2 參考範圍；只有按下套用參考範圍後，分析器才會改用新的 bpm 邊界。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

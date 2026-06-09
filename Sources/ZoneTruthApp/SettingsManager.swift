@@ -249,9 +249,13 @@ final class SettingsManager: ObservableObject {
         let offsetsLabel = "偏移 +\(Self.formattedBPM(restingHeartRateSuggestionOffsets.lowerOffset))/+\(Self.formattedBPM(restingHeartRateSuggestionOffsets.upperOffset))"
         let pendingLabel: String
         if let pendingSuggestion {
-            pendingLabel = "有待套用建議 \(Self.formattedBPM(pendingSuggestion.suggestedBounds.zone2LowerBound))-\(Self.formattedBPM(pendingSuggestion.suggestedBounds.zone2UpperBound)) bpm"
+            if pendingSuggestion.zone2RangeMatchesCurrent {
+                pendingLabel = "目前設定已符合初步參考範圍"
+            } else {
+                pendingLabel = "可套用初步參考範圍 \(Self.formattedBPM(pendingSuggestion.suggestedBounds.zone2LowerBound))-\(Self.formattedBPM(pendingSuggestion.suggestedBounds.zone2UpperBound)) bpm"
+            }
         } else {
-            pendingLabel = "沒有待套用建議"
+            pendingLabel = "沒有待處理參考範圍"
         }
 
         return "\(sourceLabel) · Zone 2 \(Self.formattedBPM(bounds.zone2LowerBound))-\(Self.formattedBPM(bounds.zone2UpperBound)) bpm · \(restingLabel) · \(offsetsLabel) · \(pendingLabel)"
