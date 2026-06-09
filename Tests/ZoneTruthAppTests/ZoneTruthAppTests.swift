@@ -797,6 +797,25 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(viewModel.canConnectStrava)
     }
 
+    func testAppEnvironmentFeedbackFileURLUsesDedicatedJSONFile() {
+        let fileURL = AppEnvironment.feedbackFileURL()
+
+        XCTAssertEqual(fileURL.lastPathComponent, "classification-feedback.json")
+    }
+
+    @MainActor
+    func testViewModelAcceptsFeedbackStoreWithoutAutoSaving() {
+        let feedbackStore = InMemoryTrainingClassificationFeedbackStore()
+        let viewModel = WorkoutListViewModel(
+            repository: MockWorkoutRepository(),
+            feedbackStore: feedbackStore,
+            settingsManager: SettingsManager()
+        )
+
+        XCTAssertTrue(viewModel.feedbackStore is InMemoryTrainingClassificationFeedbackStore)
+        XCTAssertTrue(viewModel.feedbackStore.allRecords().isEmpty)
+    }
+
     @MainActor
     func testViewModelCannotConnectStravaWhenURLNotSet() {
         let viewModel = WorkoutListViewModel(

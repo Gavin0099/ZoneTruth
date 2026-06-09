@@ -98,6 +98,7 @@ final class WorkoutListViewModel: ObservableObject {
     let bodyCompositionLedger: BodyCompositionLedger?
 
     let stravaAuthorizationURL: URL?
+    let feedbackStore: any TrainingClassificationFeedbackStoring
     private let repository: WorkoutRepository
     private let intentOverrideStore: WorkoutIntentOverrideStore
     private let settingsManager: SettingsManager
@@ -108,6 +109,7 @@ final class WorkoutListViewModel: ObservableObject {
     init(
         repository: WorkoutRepository,
         intentOverrideStore: WorkoutIntentOverrideStore = InMemoryWorkoutIntentOverrideStore(),
+        feedbackStore: any TrainingClassificationFeedbackStoring = InMemoryTrainingClassificationFeedbackStore(),
         settingsManager: SettingsManager,
         stravaAuthorizationURL: URL? = nil,
         callbackHandler: StravaCallbackHandler? = nil,
@@ -115,6 +117,7 @@ final class WorkoutListViewModel: ObservableObject {
     ) {
         self.repository = repository
         self.intentOverrideStore = intentOverrideStore
+        self.feedbackStore = feedbackStore
         self.settingsManager = settingsManager
         self.stravaAuthorizationURL = stravaAuthorizationURL
         self.callbackHandler = callbackHandler

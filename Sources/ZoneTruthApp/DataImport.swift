@@ -4,6 +4,7 @@ import ZoneTruthCore
 struct AppEnvironment {
     let repository: WorkoutRepository
     let intentOverrideStore: WorkoutIntentOverrideStore
+    let feedbackStore: any TrainingClassificationFeedbackStoring
     let stravaCallbackHandler: StravaCallbackHandler?
     let stravaAuthorizationURL: URL?
     let bodyCompositionLedger: BodyCompositionLedger?
@@ -51,6 +52,10 @@ struct AppEnvironment {
                     .appendingPathComponent("intent-overrides.json"),
                 fileManager: fileManager
             ),
+            feedbackStore: FileTrainingClassificationFeedbackStore(
+                fileURL: feedbackFileURL(fileManager: fileManager),
+                fileManager: fileManager
+            ),
             stravaCallbackHandler: callbackHandler,
             stravaAuthorizationURL: stravaConfig?.mobileAuthorizationURL,
             bodyCompositionLedger: resolvedLedger
@@ -65,6 +70,11 @@ struct AppEnvironment {
     private static func defaultStravaSessionURL(fileManager: FileManager) -> URL {
         documentsDirectory(fileManager: fileManager)
             .appendingPathComponent("strava-session.json")
+    }
+
+    static func feedbackFileURL(fileManager: FileManager = .default) -> URL {
+        documentsDirectory(fileManager: fileManager)
+            .appendingPathComponent("classification-feedback.json")
     }
 
     private static func documentsDirectory(fileManager: FileManager) -> URL {

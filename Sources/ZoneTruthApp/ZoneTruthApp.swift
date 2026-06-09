@@ -13,6 +13,7 @@ public struct ZoneTruthMainView: View {
         _viewModel = StateObject(wrappedValue: WorkoutListViewModel(
             repository: environment.repository,
             intentOverrideStore: environment.intentOverrideStore,
+            feedbackStore: environment.feedbackStore,
             settingsManager: settings,
             stravaAuthorizationURL: environment.stravaAuthorizationURL,
             callbackHandler: handler,
