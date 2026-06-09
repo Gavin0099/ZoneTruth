@@ -184,6 +184,73 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(classification.warnings.first?.visibility, .userVisible)
     }
 
+    func testTrainingClassificationFeedbackCodableRoundTripsWithoutIntent() throws {
+        let classification = sampleClassification(primaryMode: .conditioningLike)
+        let feedback = TrainingClassificationFeedback(
+            workoutID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            recordedAt: Date(timeIntervalSince1970: 1_800),
+            originalClassification: classification,
+            rating: .inaccurate,
+            userSuggestedMode: .strengthPattern,
+            note: "Felt more like separated sets."
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(feedback)
+        let json = String(decoding: data, as: UTF8.self)
+        let decoded = try JSONDecoder().decode(TrainingClassificationFeedback.self, from: data)
+
+        XCTAssertEqual(decoded, feedback)
+        XCTAssertTrue(json.contains("userSuggestedMode"))
+        XCTAssertTrue(json.contains("strength_pattern"))
+        XCTAssertFalse(json.contains("intent"))
+        XCTAssertFalse(json.contains("goal"))
+    }
+
+    func testTrainingClassificationFeedbackShapeDoesNotExposeIntentFields() {
+        let feedback = TrainingClassificationFeedback(
+            workoutID: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            recordedAt: Date(timeIntervalSince1970: 2_400),
+            originalClassification: sampleClassification(primaryMode: .zone2),
+            rating: .somewhatSimilar,
+            userSuggestedMode: .mixed
+        )
+        let fieldNames = Set(Mirror(reflecting: feedback).children.compactMap(\.label))
+
+        XCTAssertTrue(fieldNames.contains("originalClassification"))
+        XCTAssertTrue(fieldNames.contains("userSuggestedMode"))
+        XCTAssertFalse(fieldNames.contains("intent"))
+        XCTAssertFalse(fieldNames.contains("declaredIntent"))
+        XCTAssertFalse(fieldNames.contains("originalIntent"))
+        XCTAssertFalse(fieldNames.contains("goal"))
+    }
+
+    func testTrainingClassificationFeedbackDoesNotMutateClassifierOutput() {
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "metabolic_strength_circuit" }!
+            .workout
+        let before = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy()
+        )
+        _ = TrainingClassificationFeedback(
+            workoutID: workout.id,
+            recordedAt: Date(timeIntervalSince1970: 3_000),
+            originalClassification: before,
+            rating: .inaccurate,
+            userSuggestedMode: .strengthPattern
+        )
+        let after = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy()
+        )
+
+        XCTAssertEqual(before, after)
+        XCTAssertEqual(after.primaryMode, .conditioningLike)
+    }
+
     func testTrainingModeClassifierReturnsInsufficientDataBeforeModeGuessing() {
         let start = Date(timeIntervalSince1970: 31 * 86_400)
         let workout = WorkoutInput(
@@ -1430,6 +1497,27 @@ final class ZoneTruthCoreTests: XCTestCase {
             lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
             mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
             zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+    }
+
+    private func sampleClassification(primaryMode: TrainingMode) -> TrainingClassification {
+        TrainingClassification(
+            primaryMode: primaryMode,
+            confidence: .medium,
+            dataQuality: .high,
+            claimLevel: .primaryClassification,
+            evidence: [
+                TrainingClassificationEvidence(
+                    label: "心率型態",
+                    value: "sample",
+                    direction: .supports,
+                    explanation: "測試用分類快照。"
+                )
+            ],
+            debug: TrainingClassificationDebug(
+                classificationVersion: "test",
+                usedPersonalizedZones: false
+            )
         )
     }
 

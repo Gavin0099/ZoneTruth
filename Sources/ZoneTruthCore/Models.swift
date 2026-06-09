@@ -980,6 +980,45 @@ public struct TrainingClassification: Codable, Equatable, Sendable {
     }
 }
 
+public enum TrainingClassificationFeedbackRating: String, Codable, CaseIterable, Sendable {
+    case accurate
+    case somewhatSimilar = "somewhat_similar"
+    case inaccurate
+}
+
+public enum TrainingClassificationFeedbackSource: String, Codable, CaseIterable, Sendable {
+    case user
+    case reviewer
+}
+
+public struct TrainingClassificationFeedback: Codable, Equatable, Sendable {
+    public let workoutID: UUID
+    public let recordedAt: Date
+    public let originalClassification: TrainingClassification
+    public let rating: TrainingClassificationFeedbackRating
+    public let userSuggestedMode: TrainingMode?
+    public let source: TrainingClassificationFeedbackSource
+    public let note: String?
+
+    public init(
+        workoutID: UUID,
+        recordedAt: Date,
+        originalClassification: TrainingClassification,
+        rating: TrainingClassificationFeedbackRating,
+        userSuggestedMode: TrainingMode? = nil,
+        source: TrainingClassificationFeedbackSource = .user,
+        note: String? = nil
+    ) {
+        self.workoutID = workoutID
+        self.recordedAt = recordedAt
+        self.originalClassification = originalClassification
+        self.rating = rating
+        self.userSuggestedMode = userSuggestedMode
+        self.source = source
+        self.note = note
+    }
+}
+
 public struct WeeklyTrainingModeDistributionItem: Codable, Equatable, Sendable {
     public let mode: TrainingMode
     public let count: Int
