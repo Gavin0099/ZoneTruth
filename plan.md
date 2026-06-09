@@ -62,7 +62,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Sprint 6 Core feedback/calibration data shape：新增 `TrainingClassificationFeedback`，可記錄準確 / 有點像 / 不準與 suggested `TrainingMode`；測試鎖住 feedback 不等於原始 intent、且不會改變 classifier output
 - [x] App-facing feedback entry：在 workout detail 加入本地 state 的分類回饋控制（準確 / 有點像 / 不準 + suggested `TrainingMode`），不持久化、不改 classifier、不回填 workout intent
 - [x] Core-only feedback persistence contract：新增 Codable `TrainingClassificationFeedbackRecord`、store protocol、in-memory store 與 save/read tests；不接 SwiftUI、不寫檔案、不改 classifier、不回填 workout intent
-- [ ] 下一步：若要接 App 真存儲，先定義 UI-to-store 的窄 DONE；不得把 feedback 回填為 workout intent
+- [x] App feedback UI-to-store adapter：WorkoutDetail feedback control 可透過注入的 `WorkoutClassificationFeedbackRecorder` 將 feedback record 存入 in-memory store；不寫檔案、不接資料庫、不改 classifier、不回填 workout intent
+- [ ] 下一步：若要真持久化 feedback，先定義 filesystem / database adapter 的窄 DONE；不得把 feedback 回填為 workout intent
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -146,7 +147,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Training Classification v3.1 Sprint 6：回饋與校準資料形狀
 - [x] Training Classification v3.1 App-facing feedback entry：Workout detail local-state control
 - [x] Training Classification v3.1 Core-only feedback persistence contract
-- [ ] Training Classification v3.1 下一步：App feedback persistence 接入前先定義窄切片
+- [x] Training Classification v3.1 App feedback UI-to-store adapter
+- [ ] Training Classification v3.1 下一步：feedback 真持久化 adapter 接入前先定義窄切片
 
 ### P2（非阻擋，有空再做）
 - [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）

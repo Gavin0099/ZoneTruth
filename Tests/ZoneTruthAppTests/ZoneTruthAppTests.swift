@@ -1688,6 +1688,91 @@ final class ZoneTruthAppTests: XCTestCase {
         _ = view.body
     }
 
+    func testWorkoutClassificationFeedbackRecorderSavesSuggestedTrainingModeRecord() {
+        let workoutID = UUID(uuidString: "99999999-9999-9999-9999-999999999999")!
+        let recordID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let recordedAt = Date(timeIntervalSince1970: 5_400)
+        let store = InMemoryTrainingClassificationFeedbackStore()
+        let recorder = WorkoutClassificationFeedbackRecorder(
+            workoutID: workoutID,
+            classification: appTestClassification(primaryMode: .conditioningLike),
+            store: store,
+            makeRecordID: { recordID },
+            now: { recordedAt }
+        )
+
+        recorder.record(rating: .inaccurate, suggestedMode: nil)
+        XCTAssertTrue(store.allRecords().isEmpty)
+
+        recorder.record(rating: .inaccurate, suggestedMode: .strengthPattern)
+
+        let records = store.records(for: workoutID)
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records.first?.id, recordID)
+        XCTAssertEqual(records.first?.feedback.workoutID, workoutID)
+        XCTAssertEqual(records.first?.feedback.recordedAt, recordedAt)
+        XCTAssertEqual(records.first?.feedback.rating, .inaccurate)
+        XCTAssertEqual(records.first?.feedback.userSuggestedMode, .strengthPattern)
+        XCTAssertEqual(records.first?.feedback.originalClassification.primaryMode, .conditioningLike)
+    }
+
+    func testWorkoutClassificationFeedbackRecorderDoesNotExposeIntentOverrideFields() {
+        let store = InMemoryTrainingClassificationFeedbackStore()
+        let recorder = WorkoutClassificationFeedbackRecorder(
+            workoutID: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
+            classification: appTestClassification(primaryMode: .zone2),
+            store: store,
+            makeRecordID: { UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")! },
+            now: { Date(timeIntervalSince1970: 6_000) }
+        )
+
+        recorder.record(rating: .accurate, suggestedMode: .vo2Stimulus)
+
+        guard let feedback = store.allRecords().first?.feedback else {
+            return XCTFail("Expected one feedback record.")
+        }
+        let fieldNames = Set(Mirror(reflecting: feedback).children.compactMap(\.label))
+        XCTAssertEqual(feedback.rating, .accurate)
+        XCTAssertNil(feedback.userSuggestedMode)
+        XCTAssertFalse(fieldNames.contains("intent"))
+        XCTAssertFalse(fieldNames.contains("declaredIntent"))
+        XCTAssertFalse(fieldNames.contains("originalIntent"))
+        XCTAssertFalse(fieldNames.contains("goal"))
+    }
+
+    @MainActor
+    func testWorkoutDetailViewAcceptsInjectedFeedbackRecorder() {
+        let suiteName = "test.workout.detail.feedback.recorder.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = SettingsManager(userDefaults: defaults)
+        let workout = SampleWorkoutCases.strengthValidationCases().first { $0.name == "traditional_strength_training" }!.workout
+        let result = WorkoutIntentAnalyzer.analyze(workout, policy: settings.policy)
+        let evaluation = WorkoutEvaluationAdapter.mapLegacyAnalysisToEvaluation(
+            primaryIntentBaseline: .strength,
+            legacy: result
+        )
+        let view = WorkoutDetailView(
+            workout: workout,
+            selectedIntent: .strength,
+            selectedIntentSource: .auto,
+            result: result,
+            evaluation: evaluation,
+            onIntentChanged: { _ in },
+            onApplyToSameWorkoutType: { _ in },
+            impactedCountForScope: { _ in 0 },
+            zoneContextSummary: "預設界線 110-125 bpm",
+            classificationFeedbackRecorder: WorkoutClassificationFeedbackRecorder(
+                workoutID: workout.id,
+                classification: appTestClassification(primaryMode: .strengthPattern),
+                store: InMemoryTrainingClassificationFeedbackStore()
+            ),
+            settingsManager: settings
+        )
+
+        _ = view.body
+    }
+
     @MainActor
     func testWorkoutDetailViewSmokeCompilesForThreePrimaryIntents() {
         let suiteName = "test.workout.detail.architecture.\(UUID().uuidString)"
@@ -3068,6 +3153,27 @@ final class ZoneTruthAppTests: XCTestCase {
         let s = makeWeeklySummary(workoutCount: 4, highIntensityDays: 1, restDays: 3, z2Count: 3)
         XCTAssertEqual(MultiWeekAdaptationAnalyzer.classifyDirection(s), .enduranceBuild)
     }
+}
+
+private func appTestClassification(primaryMode: TrainingMode) -> TrainingClassification {
+    TrainingClassification(
+        primaryMode: primaryMode,
+        confidence: .medium,
+        dataQuality: .high,
+        claimLevel: .primaryClassification,
+        evidence: [
+            TrainingClassificationEvidence(
+                label: "心率型態",
+                value: "sample",
+                direction: .supports,
+                explanation: "App 測試用分類快照。"
+            )
+        ],
+        debug: TrainingClassificationDebug(
+            classificationVersion: "app-test",
+            usedPersonalizedZones: false
+        )
+    )
 }
 
 private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {

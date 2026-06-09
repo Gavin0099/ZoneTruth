@@ -828,6 +828,53 @@ enum TrainingModeFeedbackPresenter {
     }
 }
 
+struct WorkoutClassificationFeedbackRecorder {
+    let workoutID: UUID
+    let classification: TrainingClassification
+    let store: any TrainingClassificationFeedbackStoring
+    let makeRecordID: () -> UUID
+    let now: () -> Date
+
+    init(
+        workoutID: UUID,
+        classification: TrainingClassification,
+        store: any TrainingClassificationFeedbackStoring,
+        makeRecordID: @escaping () -> UUID = { UUID() },
+        now: @escaping () -> Date = { Date() }
+    ) {
+        self.workoutID = workoutID
+        self.classification = classification
+        self.store = store
+        self.makeRecordID = makeRecordID
+        self.now = now
+    }
+
+    func record(
+        rating: TrainingClassificationFeedbackRating?,
+        suggestedMode: TrainingMode?
+    ) {
+        guard let rating else { return }
+        if (rating == .somewhatSimilar || rating == .inaccurate), suggestedMode == nil {
+            return
+        }
+        let normalizedSuggestedMode = rating == .accurate ? nil : suggestedMode
+
+        let feedback = TrainingClassificationFeedback(
+            workoutID: workoutID,
+            recordedAt: now(),
+            originalClassification: classification,
+            rating: rating,
+            userSuggestedMode: normalizedSuggestedMode
+        )
+        store.save(
+            TrainingClassificationFeedbackRecord(
+                id: makeRecordID(),
+                feedback: feedback
+            )
+        )
+    }
+}
+
 struct WorkoutDetailView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
@@ -838,10 +885,37 @@ struct WorkoutDetailView: View {
     let onApplyToSameWorkoutType: (IntentApplyScope) -> Void
     let impactedCountForScope: (IntentApplyScope) -> Int
     let zoneContextSummary: String
+    let classificationFeedbackRecorder: WorkoutClassificationFeedbackRecorder?
     @ObservedObject var settingsManager: SettingsManager
     @State private var showDetailedData = false
     @State private var feedbackRating: TrainingClassificationFeedbackRating?
     @State private var feedbackSuggestedMode: TrainingMode?
+
+    init(
+        workout: WorkoutInput,
+        selectedIntent: TrainingIntent,
+        selectedIntentSource: IntentSource,
+        result: AnalysisResult,
+        evaluation: WorkoutEvaluation,
+        onIntentChanged: @escaping (TrainingIntent) -> Void,
+        onApplyToSameWorkoutType: @escaping (IntentApplyScope) -> Void,
+        impactedCountForScope: @escaping (IntentApplyScope) -> Int,
+        zoneContextSummary: String,
+        classificationFeedbackRecorder: WorkoutClassificationFeedbackRecorder? = nil,
+        settingsManager: SettingsManager
+    ) {
+        self.workout = workout
+        self.selectedIntent = selectedIntent
+        self.selectedIntentSource = selectedIntentSource
+        self.result = result
+        self.evaluation = evaluation
+        self.onIntentChanged = onIntentChanged
+        self.onApplyToSameWorkoutType = onApplyToSameWorkoutType
+        self.impactedCountForScope = impactedCountForScope
+        self.zoneContextSummary = zoneContextSummary
+        self.classificationFeedbackRecorder = classificationFeedbackRecorder
+        self.settingsManager = settingsManager
+    }
 
     var body: some View {
         ScrollView {
@@ -851,7 +925,13 @@ struct WorkoutDetailView: View {
                 EvidenceSummarySectionView(result: result, evaluation: evaluation)
                 TrainingClassificationFeedbackControl(
                     rating: $feedbackRating,
-                    suggestedMode: $feedbackSuggestedMode
+                    suggestedMode: $feedbackSuggestedMode,
+                    onFeedbackChanged: { rating, suggestedMode in
+                        classificationFeedbackRecorder?.record(
+                            rating: rating,
+                            suggestedMode: suggestedMode
+                        )
+                    }
                 )
                 AnalysisZoneContextCard(summary: zoneContextSummary)
 
@@ -1213,6 +1293,17 @@ struct EvidenceSignalRow: View {
 struct TrainingClassificationFeedbackControl: View {
     @Binding var rating: TrainingClassificationFeedbackRating?
     @Binding var suggestedMode: TrainingMode?
+    let onFeedbackChanged: (TrainingClassificationFeedbackRating?, TrainingMode?) -> Void
+
+    init(
+        rating: Binding<TrainingClassificationFeedbackRating?>,
+        suggestedMode: Binding<TrainingMode?>,
+        onFeedbackChanged: @escaping (TrainingClassificationFeedbackRating?, TrainingMode?) -> Void = { _, _ in }
+    ) {
+        self._rating = rating
+        self._suggestedMode = suggestedMode
+        self.onFeedbackChanged = onFeedbackChanged
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1227,6 +1318,7 @@ struct TrainingClassificationFeedbackControl: View {
                         if option == .accurate {
                             suggestedMode = nil
                         }
+                        onFeedbackChanged(rating, suggestedMode)
                     } label: {
                         Text(TrainingModeFeedbackPresenter.label(for: option))
                             .font(.caption.bold())
@@ -1254,6 +1346,7 @@ struct TrainingClassificationFeedbackControl: View {
                         ForEach(TrainingModeFeedbackPresenter.suggestedModeOptions, id: \.self) { mode in
                             Button {
                                 suggestedMode = mode
+                                onFeedbackChanged(rating, suggestedMode)
                             } label: {
                                 Text(TrainingModeFeedbackPresenter.label(for: mode))
                                     .font(.caption.bold())
@@ -1276,7 +1369,7 @@ struct TrainingClassificationFeedbackControl: View {
                 }
             }
 
-            Text("目前只保留在此畫面狀態，尚未寫入紀錄。")
+            Text("目前先保留在畫面狀態；接入儲存邊界時會建立回饋紀錄，尚未寫入永久資料庫。")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
