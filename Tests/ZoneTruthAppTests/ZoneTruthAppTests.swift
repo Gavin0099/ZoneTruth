@@ -1723,7 +1723,8 @@ final class ZoneTruthAppTests: XCTestCase {
             var body: some View {
                 TrainingClassificationFeedbackControl(
                     rating: $rating,
-                    suggestedMode: $mode
+                    suggestedMode: $mode,
+                    recordingResult: .saved
                 )
             }
         }
@@ -1745,10 +1746,11 @@ final class ZoneTruthAppTests: XCTestCase {
             now: { recordedAt }
         )
 
-        recorder.record(rating: .inaccurate, suggestedMode: nil)
+        XCTAssertEqual(recorder.record(rating: .inaccurate, suggestedMode: nil), .incomplete)
         XCTAssertTrue(store.allRecords().isEmpty)
 
-        recorder.record(rating: .inaccurate, suggestedMode: .strengthPattern)
+        XCTAssertEqual(recorder.record(rating: .inaccurate, suggestedMode: .strengthPattern), .saved)
+        XCTAssertEqual(recorder.record(rating: .inaccurate, suggestedMode: .strengthPattern), .duplicate)
 
         let records = store.records(for: workoutID)
         XCTAssertEqual(records.count, 1)
@@ -1770,11 +1772,13 @@ final class ZoneTruthAppTests: XCTestCase {
             now: { Date(timeIntervalSince1970: 6_000) }
         )
 
-        recorder.record(rating: .accurate, suggestedMode: .vo2Stimulus)
+        XCTAssertEqual(recorder.record(rating: .accurate, suggestedMode: .vo2Stimulus), .saved)
+        XCTAssertEqual(recorder.record(rating: .accurate, suggestedMode: .vo2Stimulus), .duplicate)
 
         guard let feedback = store.allRecords().first?.feedback else {
             return XCTFail("Expected one feedback record.")
         }
+        XCTAssertEqual(store.allRecords().count, 1)
         let fieldNames = Set(Mirror(reflecting: feedback).children.compactMap(\.label))
         XCTAssertEqual(feedback.rating, .accurate)
         XCTAssertNil(feedback.userSuggestedMode)

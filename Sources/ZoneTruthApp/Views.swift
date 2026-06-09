@@ -829,6 +829,12 @@ enum TrainingModeFeedbackPresenter {
     }
 }
 
+enum WorkoutClassificationFeedbackRecordingResult: Equatable {
+    case saved
+    case duplicate
+    case incomplete
+}
+
 struct WorkoutClassificationFeedbackRecorder {
     let workoutID: UUID
     let classification: TrainingClassification
@@ -850,15 +856,23 @@ struct WorkoutClassificationFeedbackRecorder {
         self.now = now
     }
 
+    @discardableResult
     func record(
         rating: TrainingClassificationFeedbackRating?,
         suggestedMode: TrainingMode?
-    ) {
-        guard let rating else { return }
+    ) -> WorkoutClassificationFeedbackRecordingResult {
+        guard let rating else { return .incomplete }
         if (rating == .somewhatSimilar || rating == .inaccurate), suggestedMode == nil {
-            return
+            return .incomplete
         }
         let normalizedSuggestedMode = rating == .accurate ? nil : suggestedMode
+        let isDuplicate = store.records(for: workoutID).contains { record in
+            record.feedback.rating == rating &&
+            record.feedback.userSuggestedMode == normalizedSuggestedMode
+        }
+        if isDuplicate {
+            return .duplicate
+        }
 
         let feedback = TrainingClassificationFeedback(
             workoutID: workoutID,
@@ -873,6 +887,7 @@ struct WorkoutClassificationFeedbackRecorder {
                 feedback: feedback
             )
         )
+        return .saved
     }
 }
 
@@ -891,6 +906,7 @@ struct WorkoutDetailView: View {
     @State private var showDetailedData = false
     @State private var feedbackRating: TrainingClassificationFeedbackRating?
     @State private var feedbackSuggestedMode: TrainingMode?
+    @State private var feedbackRecordingResult: WorkoutClassificationFeedbackRecordingResult?
 
     init(
         workout: WorkoutInput,
@@ -927,11 +943,14 @@ struct WorkoutDetailView: View {
                 TrainingClassificationFeedbackControl(
                     rating: $feedbackRating,
                     suggestedMode: $feedbackSuggestedMode,
+                    recordingResult: feedbackRecordingResult,
                     onFeedbackChanged: { rating, suggestedMode in
-                        classificationFeedbackRecorder?.record(
+                        let result = classificationFeedbackRecorder?.record(
                             rating: rating,
                             suggestedMode: suggestedMode
-                        )
+                        ) ?? .incomplete
+                        feedbackRecordingResult = result
+                        return result
                     }
                 )
                 AnalysisZoneContextCard(summary: zoneContextSummary)
@@ -1294,15 +1313,18 @@ struct EvidenceSignalRow: View {
 struct TrainingClassificationFeedbackControl: View {
     @Binding var rating: TrainingClassificationFeedbackRating?
     @Binding var suggestedMode: TrainingMode?
-    let onFeedbackChanged: (TrainingClassificationFeedbackRating?, TrainingMode?) -> Void
+    let recordingResult: WorkoutClassificationFeedbackRecordingResult?
+    let onFeedbackChanged: (TrainingClassificationFeedbackRating?, TrainingMode?) -> WorkoutClassificationFeedbackRecordingResult
 
     init(
         rating: Binding<TrainingClassificationFeedbackRating?>,
         suggestedMode: Binding<TrainingMode?>,
-        onFeedbackChanged: @escaping (TrainingClassificationFeedbackRating?, TrainingMode?) -> Void = { _, _ in }
+        recordingResult: WorkoutClassificationFeedbackRecordingResult? = nil,
+        onFeedbackChanged: @escaping (TrainingClassificationFeedbackRating?, TrainingMode?) -> WorkoutClassificationFeedbackRecordingResult = { _, _ in .incomplete }
     ) {
         self._rating = rating
         self._suggestedMode = suggestedMode
+        self.recordingResult = recordingResult
         self.onFeedbackChanged = onFeedbackChanged
     }
 
@@ -1319,7 +1341,7 @@ struct TrainingClassificationFeedbackControl: View {
                         if option == .accurate {
                             suggestedMode = nil
                         }
-                        onFeedbackChanged(rating, suggestedMode)
+                        _ = onFeedbackChanged(rating, suggestedMode)
                     } label: {
                         Text(TrainingModeFeedbackPresenter.label(for: option))
                             .font(.caption.bold())
@@ -1347,7 +1369,7 @@ struct TrainingClassificationFeedbackControl: View {
                         ForEach(TrainingModeFeedbackPresenter.suggestedModeOptions, id: \.self) { mode in
                             Button {
                                 suggestedMode = mode
-                                onFeedbackChanged(rating, suggestedMode)
+                                _ = onFeedbackChanged(rating, suggestedMode)
                             } label: {
                                 Text(TrainingModeFeedbackPresenter.label(for: mode))
                                     .font(.caption.bold())
@@ -1370,9 +1392,9 @@ struct TrainingClassificationFeedbackControl: View {
                 }
             }
 
-            Text("目前先保留在畫面狀態；接入儲存邊界時會建立回饋紀錄，尚未寫入永久資料庫。")
+            Text(recordingStatusText)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(recordingStatusColor)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
@@ -1390,6 +1412,30 @@ struct TrainingClassificationFeedbackControl: View {
             return PremiumColor.gold
         case .inaccurate:
             return PremiumColor.redOrange
+        }
+    }
+
+    private var recordingStatusText: String {
+        switch recordingResult {
+        case .saved:
+            return "已保存這次回饋。"
+        case .duplicate:
+            return "這次回饋已保存，沒有新增重複紀錄。"
+        case .incomplete:
+            return "請先選擇比較像的訓練型態，才會保存回饋。"
+        case nil:
+            return "選擇後會保存為回饋紀錄，不會改變原始活動資料。"
+        }
+    }
+
+    private var recordingStatusColor: Color {
+        switch recordingResult {
+        case .saved, .duplicate:
+            return PremiumColor.emerald.opacity(0.9)
+        case .incomplete:
+            return PremiumColor.gold.opacity(0.9)
+        case nil:
+            return .secondary
         }
     }
 }
