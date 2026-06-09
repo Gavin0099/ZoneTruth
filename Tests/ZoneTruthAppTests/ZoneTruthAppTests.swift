@@ -817,6 +817,31 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testViewModelFeedbackRecorderPersistsIntoInjectedStore() {
+        let feedbackStore = InMemoryTrainingClassificationFeedbackStore()
+        let viewModel = WorkoutListViewModel(
+            repository: MockWorkoutRepository(),
+            feedbackStore: feedbackStore,
+            settingsManager: SettingsManager()
+        )
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+        let snapshot = viewModel.trainingClassificationSnapshot(for: workout)
+        let recorder = viewModel.classificationFeedbackRecorder(for: workout)
+
+        recorder.record(rating: .accurate, suggestedMode: nil)
+
+        let records = feedbackStore.records(for: workout.id)
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records.first?.feedback.workoutID, workout.id)
+        XCTAssertEqual(records.first?.feedback.rating, .accurate)
+        XCTAssertEqual(records.first?.feedback.originalClassification, snapshot)
+        XCTAssertNil(records.first?.feedback.userSuggestedMode)
+    }
+
+    @MainActor
     func testViewModelCannotConnectStravaWhenURLNotSet() {
         let viewModel = WorkoutListViewModel(
             repository: MockWorkoutRepository(),

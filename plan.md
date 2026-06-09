@@ -65,7 +65,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] App feedback UI-to-store adapter：WorkoutDetail feedback control 可透過注入的 `WorkoutClassificationFeedbackRecorder` 將 feedback record 存入 in-memory store；不寫檔案、不接資料庫、不改 classifier、不回填 workout intent
 - [x] Feedback JSON file store adapter：新增 App-layer `FileTrainingClassificationFeedbackStore`，可將 `TrainingClassificationFeedbackRecord` 讀寫到指定 JSON 檔；不接 WorkoutDetailView、不改 UI、不改 classifier、不回填 workout intent
 - [x] Feedback store dependency wiring：`AppEnvironment.live()` 建立 `FileTrainingClassificationFeedbackStore`，`WorkoutListViewModel` 可接收 feedback store；不改 feedback UI 行為、不自動保存、不改 classifier、不回填 workout intent
-- [ ] 下一步：若要讓產品實際保存回饋，先定義 recorder 產生與 `TrainingClassification` source 的窄 DONE；不得在 App layer 呼叫 `TrainingModeClassifier`
+- [x] Live feedback recorder + classification snapshot flow：新增 Core `TrainingClassificationSnapshotProvider`，`WorkoutListViewModel` 產生 snapshot 與 recorder，`WorkoutDetailView` 使用 recorder 將完成的 feedback 寫入已注入 store；SwiftUI view 不呼叫 `TrainingModeClassifier`，不回填 workout intent
+- [ ] 下一步：若要改善產品體驗，先定義 feedback saved state / duplicate handling 的窄 DONE；不得把 feedback 當作 intent override
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -152,7 +153,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Training Classification v3.1 App feedback UI-to-store adapter
 - [x] Training Classification v3.1 feedback JSON file store adapter
 - [x] Training Classification v3.1 feedback store dependency wiring
-- [ ] Training Classification v3.1 下一步：live recorder / classification source 接入前先定義窄切片
+- [x] Training Classification v3.1 live recorder / classification snapshot flow
+- [ ] Training Classification v3.1 下一步：feedback saved state / duplicate handling 前先定義窄切片
 
 ### P2（非阻擋，有空再做）
 - [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）

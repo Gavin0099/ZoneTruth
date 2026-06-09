@@ -373,6 +373,31 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(classification.evidence.contains { $0.explanation.contains("未觸發高密度循環訓練例外") })
     }
 
+    func testTrainingClassificationSnapshotProviderDelegatesToCoreClassifier() {
+        let workout = SampleWorkoutCases
+            .strengthValidationCases()
+            .first { $0.name == "traditional_strength_training" }!
+            .workout
+        let policy = sprint3ClassificationPolicy()
+
+        let direct = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: policy,
+            zoneConfigVersion: "test-zones",
+            usedPersonalizedZones: true
+        )
+        let snapshot = TrainingClassificationSnapshotProvider.snapshot(
+            for: workout,
+            policy: policy,
+            zoneConfigVersion: "test-zones",
+            usedPersonalizedZones: true
+        )
+
+        XCTAssertEqual(snapshot, direct)
+        XCTAssertEqual(snapshot.debug?.zoneConfigVersion, "test-zones")
+        XCTAssertEqual(snapshot.debug?.usedPersonalizedZones, true)
+    }
+
     func testTrainingModeClassifierDowngradesSwimmingZone2LikeClassification() {
         let workout = makeSwimmingWorkout(
             samples: Array(repeating: 118, count: 30),

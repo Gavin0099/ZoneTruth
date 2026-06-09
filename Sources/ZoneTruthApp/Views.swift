@@ -183,6 +183,7 @@ struct WorkoutListView: View {
                         onApplyToSameWorkoutType: viewModel.applySelectedIntentToSameWorkoutType(scope:),
                         impactedCountForScope: viewModel.impactedCountForSelectedIntent(scope:),
                         zoneContextSummary: viewModel.analysisZoneContextSummary(for: workout),
+                        classificationFeedbackRecorder: viewModel.classificationFeedbackRecorder(for: workout),
                         settingsManager: settingsManager
                     )
                 } else {

@@ -339,6 +339,23 @@ final class WorkoutListViewModel: ObservableObject {
         )
     }
 
+    func trainingClassificationSnapshot(for workout: WorkoutInput) -> TrainingClassification {
+        TrainingClassificationSnapshotProvider.snapshot(
+            for: workout,
+            policy: settingsManager.policy,
+            zoneConfigVersion: settingsManager.isUsingCustomZoneBounds ? "settings-zone-bounds" : nil,
+            usedPersonalizedZones: settingsManager.isUsingCustomZoneBounds
+        )
+    }
+
+    func classificationFeedbackRecorder(for workout: WorkoutInput) -> WorkoutClassificationFeedbackRecorder {
+        WorkoutClassificationFeedbackRecorder(
+            workoutID: workout.id,
+            classification: trainingClassificationSnapshot(for: workout),
+            store: feedbackStore
+        )
+    }
+
     func analysisZoneContextSummary(for workout: WorkoutInput) -> String {
         let bounds = settingsManager.policy.zoneBounds
         let sourceLabel: String

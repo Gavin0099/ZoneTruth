@@ -1579,6 +1579,22 @@ public enum WeeklyObservationBuilder {
     }
 }
 
+public enum TrainingClassificationSnapshotProvider {
+    public static func snapshot(
+        for workout: WorkoutInput,
+        policy: AnalysisPolicy = .default,
+        zoneConfigVersion: String? = nil,
+        usedPersonalizedZones: Bool = false
+    ) -> TrainingClassification {
+        TrainingModeClassifier.classify(
+            workout: workout,
+            policy: policy,
+            zoneConfigVersion: zoneConfigVersion,
+            usedPersonalizedZones: usedPersonalizedZones
+        )
+    }
+}
+
 public enum WeeklyTrainingModeDistributionBuilder {
     public static func build(
         workouts: [WorkoutInput],
