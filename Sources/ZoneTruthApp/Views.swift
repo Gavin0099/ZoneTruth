@@ -2562,23 +2562,9 @@ struct SettingsView: View {
         isImportingRestingHeartRate = true
         defer { isImportingRestingHeartRate = false }
 
-        let status = await restingHeartRateStore.requestAuthorization()
-        guard status == .sharingAuthorized else {
-            restingHeartRateImportMessage = "尚未取得 Apple Health 讀取權限。"
-            return
-        }
-
-        do {
-            guard let imported = try await restingHeartRateStore.fetchRestingHeartRateBaseline() else {
-                restingHeartRateImportMessage = "Apple Health 最近 7 天沒有可用的 Resting HR 資料。"
-                return
-            }
-
-            settingsManager.updateRestingHeartRate(imported)
-            settingsManager.generateRestingHeartRateSuggestion()
-            restingHeartRateImportMessage = "已匯入 Apple Health 最近 7 天平均 Resting HR \(Int(imported.rounded())) bpm，並產生 Zone 2 建議。"
-        } catch {
-            restingHeartRateImportMessage = "Apple Health Resting HR 匯入失敗，請稍後再試。"
-        }
+        restingHeartRateImportMessage = await RestingHeartRateImporter.importFromAppleHealth(
+            store: restingHeartRateStore,
+            settingsManager: settingsManager
+        )
     }
 }

@@ -804,6 +804,30 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testRestingHeartRateImportAttemptsQueryWhenReadOnlyAuthorizationStatusIsDenied() async {
+        let suiteName = "test.resting.hr.import.denied.readable.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = SettingsManager(userDefaults: defaults)
+        let store = StubHealthKitWorkoutStore(
+            isAvailable: true,
+            authorizationStatus: .sharingDenied,
+            requestedAuthorizationStatus: .sharingDenied,
+            snapshots: [],
+            restingHeartRateBaseline: 56
+        )
+
+        let message = await RestingHeartRateImporter.importFromAppleHealth(
+            store: store,
+            settingsManager: settings
+        )
+
+        XCTAssertEqual(settings.restingHeartRate, 56)
+        XCTAssertNotNil(settings.pendingSuggestion)
+        XCTAssertTrue(message.contains("已匯入 Apple Health 最近 7 天平均 Resting HR 56 bpm"), message)
+    }
+
+    @MainActor
     func testViewModelAcceptsFeedbackStoreWithoutAutoSaving() {
         let feedbackStore = InMemoryTrainingClassificationFeedbackStore()
         let viewModel = WorkoutListViewModel(
