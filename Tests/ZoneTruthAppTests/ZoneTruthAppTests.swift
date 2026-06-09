@@ -1740,6 +1740,61 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(fieldNames.contains("goal"))
     }
 
+    func testFileTrainingClassificationFeedbackStorePersistsRecordsAcrossInstances() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("classification-feedback.json")
+        let workoutID = UUID(uuidString: "dddddddd-dddd-dddd-dddd-dddddddddddd")!
+        let otherWorkoutID = UUID(uuidString: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")!
+        let targetRecord = appTestFeedbackRecord(
+            id: UUID(uuidString: "abababab-abab-abab-abab-abababababab")!,
+            workoutID: workoutID,
+            rating: .inaccurate,
+            userSuggestedMode: .strengthPattern,
+            primaryMode: .conditioningLike
+        )
+        let otherRecord = appTestFeedbackRecord(
+            id: UUID(uuidString: "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd")!,
+            workoutID: otherWorkoutID,
+            rating: .accurate,
+            userSuggestedMode: nil,
+            primaryMode: .zone2
+        )
+
+        let emptyStore = FileTrainingClassificationFeedbackStore(fileURL: fileURL)
+        XCTAssertTrue(emptyStore.allRecords().isEmpty)
+
+        emptyStore.save(targetRecord)
+        emptyStore.save(otherRecord)
+
+        let reloadedStore = FileTrainingClassificationFeedbackStore(fileURL: fileURL)
+        XCTAssertEqual(reloadedStore.allRecords(), [targetRecord, otherRecord])
+        XCTAssertEqual(reloadedStore.records(for: workoutID), [targetRecord])
+        XCTAssertEqual(reloadedStore.records(for: otherWorkoutID), [otherRecord])
+    }
+
+    func testFileTrainingClassificationFeedbackStoreJSONDoesNotContainIntentOverrideLanguage() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("classification-feedback.json")
+        let store = FileTrainingClassificationFeedbackStore(fileURL: fileURL)
+        let record = appTestFeedbackRecord(
+            id: UUID(uuidString: "fefefefe-fefe-fefe-fefe-fefefefefefe")!,
+            workoutID: UUID(uuidString: "12121212-1212-1212-1212-121212121212")!,
+            rating: .somewhatSimilar,
+            userSuggestedMode: .mixed,
+            primaryMode: .zone2
+        )
+
+        store.save(record)
+
+        let data = try Data(contentsOf: fileURL)
+        let json = String(decoding: data, as: UTF8.self)
+        XCTAssertTrue(json.contains("schemaVersion"))
+        XCTAssertTrue(json.contains("records"))
+        XCTAssertTrue(json.contains("userSuggestedMode"))
+        XCTAssertFalse(json.contains("intent"))
+        XCTAssertFalse(json.contains("goal"))
+    }
+
     @MainActor
     func testWorkoutDetailViewAcceptsInjectedFeedbackRecorder() {
         let suiteName = "test.workout.detail.feedback.recorder.\(UUID().uuidString)"
@@ -3172,6 +3227,25 @@ private func appTestClassification(primaryMode: TrainingMode) -> TrainingClassif
         debug: TrainingClassificationDebug(
             classificationVersion: "app-test",
             usedPersonalizedZones: false
+        )
+    )
+}
+
+private func appTestFeedbackRecord(
+    id: UUID,
+    workoutID: UUID,
+    rating: TrainingClassificationFeedbackRating,
+    userSuggestedMode: TrainingMode?,
+    primaryMode: TrainingMode
+) -> TrainingClassificationFeedbackRecord {
+    TrainingClassificationFeedbackRecord(
+        id: id,
+        feedback: TrainingClassificationFeedback(
+            workoutID: workoutID,
+            recordedAt: Date(timeIntervalSince1970: 7_200),
+            originalClassification: appTestClassification(primaryMode: primaryMode),
+            rating: rating,
+            userSuggestedMode: userSuggestedMode
         )
     )
 }
