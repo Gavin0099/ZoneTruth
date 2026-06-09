@@ -94,6 +94,96 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(json.contains("estimate_only"))
     }
 
+    func testTrainingClassificationCodableRoundTripsV31Shape() throws {
+        let classification = TrainingClassification(
+            primaryMode: .conditioningLike,
+            confidence: .mediumHigh,
+            dataQuality: .medium,
+            claimLevel: .primaryClassification,
+            evidence: [
+                TrainingClassificationEvidence(
+                    label: "Zone 4/5",
+                    value: "28%",
+                    direction: .supports,
+                    explanation: "重訓活動中高心率比例偏高，較像高密度循環訓練。"
+                ),
+                TrainingClassificationEvidence(
+                    label: "Apple Watch 活動類型",
+                    value: "肌力訓練",
+                    direction: .neutral,
+                    explanation: "活動類型限制候選分類，但不是最終答案。",
+                    visibility: .advancedUser
+                )
+            ],
+            warnings: [
+                TrainingClassificationWarning(
+                    type: .missingPersonalZones,
+                    message: "目前使用預設心率區間，分類可能較粗略。"
+                )
+            ],
+            notApplicableReasons: [
+                TrainingNotApplicableReason(
+                    model: .zone2,
+                    reason: .notSteadyStateActivity,
+                    message: "重訓不以連續 Zone 2 作為主要判讀。"
+                )
+            ],
+            debug: TrainingClassificationDebug(
+                classificationVersion: "v3.1.0",
+                zoneConfigVersion: "default-20260609",
+                usedPersonalizedZones: false,
+                ruleScores: [
+                    "conditioning_like": 0.82,
+                    "strength_pattern": 0.44
+                ],
+                notes: ["debug values are not user-facing"]
+            )
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(classification)
+        let json = String(decoding: data, as: UTF8.self)
+        let decoded = try JSONDecoder().decode(TrainingClassification.self, from: data)
+
+        XCTAssertEqual(decoded, classification)
+        XCTAssertTrue(json.contains("conditioning_like"))
+        XCTAssertTrue(json.contains("medium_high"))
+        XCTAssertTrue(json.contains("primary_classification"))
+        XCTAssertTrue(json.contains("missing_personal_zones"))
+        XCTAssertTrue(json.contains("not_steady_state_activity"))
+        XCTAssertTrue(json.contains("usedPersonalizedZones"))
+    }
+
+    func testTrainingClassificationKeepsClaimConfidenceAndDataQualityIndependent() {
+        let classification = TrainingClassification(
+            primaryMode: .zone2,
+            confidence: .mediumHigh,
+            dataQuality: .low,
+            claimLevel: .secondaryReference,
+            evidence: [
+                TrainingClassificationEvidence(
+                    label: "Zone 2 佔比",
+                    value: "68%",
+                    direction: .supports,
+                    explanation: "心率分布偏向 Zone 2。"
+                )
+            ],
+            warnings: [
+                TrainingClassificationWarning(
+                    type: .lowHeartRateQuality,
+                    message: "心率資料品質偏低，判讀僅供參考。"
+                )
+            ]
+        )
+
+        XCTAssertEqual(classification.confidence, .mediumHigh)
+        XCTAssertEqual(classification.dataQuality, .low)
+        XCTAssertEqual(classification.claimLevel, .secondaryReference)
+        XCTAssertEqual(classification.evidence.first?.visibility, .userVisible)
+        XCTAssertEqual(classification.warnings.first?.visibility, .userVisible)
+    }
+
     func testProductReferenceMetricCannotClaimMeasured() {
         let garminEstimate = TrainingMetricMetadata(
             metric: .vo2Max,

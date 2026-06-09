@@ -801,6 +801,185 @@ public struct AnalysisResult: Equatable, Sendable {
     }
 }
 
+public enum TrainingMode: String, Codable, CaseIterable, Sendable {
+    case zone2
+    case vo2Stimulus = "vo2_stimulus"
+    case strengthPattern = "strength_pattern"
+    case conditioningLike = "conditioning_like"
+    case generalLowIntensity = "general_low_intensity"
+    case mixed
+    case insufficientData = "insufficient_data"
+}
+
+public enum ClassificationConfidence: String, Codable, CaseIterable, Sendable {
+    case high
+    case mediumHigh = "medium_high"
+    case medium
+    case low
+    case insufficient
+}
+
+public enum TrainingDataQuality: String, Codable, CaseIterable, Sendable {
+    case high
+    case medium
+    case low
+    case insufficient
+}
+
+public enum TrainingClaimLevel: String, Codable, CaseIterable, Sendable {
+    case primaryClassification = "primary_classification"
+    case secondaryReference = "secondary_reference"
+    case referenceOnly = "reference_only"
+    case notApplicable = "not_applicable"
+    case unsupported
+}
+
+public enum TrainingClassificationEvidenceDirection: String, Codable, CaseIterable, Sendable {
+    case supports
+    case weakens
+    case neutral
+}
+
+public enum TrainingClassificationVisibility: String, Codable, CaseIterable, Sendable {
+    case userVisible = "user_visible"
+    case advancedUser = "advanced_user"
+    case devOnly = "dev_only"
+}
+
+public struct TrainingClassificationEvidence: Codable, Equatable, Hashable, Sendable {
+    public let label: String
+    public let value: String
+    public let direction: TrainingClassificationEvidenceDirection
+    public let explanation: String
+    public let visibility: TrainingClassificationVisibility
+
+    public init(
+        label: String,
+        value: String,
+        direction: TrainingClassificationEvidenceDirection,
+        explanation: String,
+        visibility: TrainingClassificationVisibility = .userVisible
+    ) {
+        self.label = label
+        self.value = value
+        self.direction = direction
+        self.explanation = explanation
+        self.visibility = visibility
+    }
+}
+
+public enum TrainingClassificationWarningType: String, Codable, CaseIterable, Sendable {
+    case lowHeartRateQuality = "low_hr_quality"
+    case insufficientDuration = "insufficient_duration"
+    case ambiguousPattern = "ambiguous_pattern"
+    case unsupportedClaim = "unsupported_claim"
+    case missingPersonalZones = "missing_personal_zones"
+    case unsupportedActivityType = "unsupported_activity_type"
+}
+
+public struct TrainingClassificationWarning: Codable, Equatable, Hashable, Sendable {
+    public let type: TrainingClassificationWarningType
+    public let message: String
+    public let visibility: TrainingClassificationVisibility
+
+    public init(
+        type: TrainingClassificationWarningType,
+        message: String,
+        visibility: TrainingClassificationVisibility = .userVisible
+    ) {
+        self.type = type
+        self.message = message
+        self.visibility = visibility
+    }
+}
+
+public enum TrainingNotApplicableModel: String, Codable, CaseIterable, Sendable {
+    case zone2
+    case vo2Stimulus = "vo2_stimulus"
+    case strengthPattern = "strength_pattern"
+    case hrDrift = "hr_drift"
+}
+
+public enum TrainingNotApplicableReasonCode: String, Codable, CaseIterable, Sendable {
+    case activityTypeNotSupported = "activity_type_not_supported"
+    case insufficientHeartRateData = "insufficient_hr_data"
+    case noStableSegment = "no_stable_segment"
+    case notSteadyStateActivity = "not_steady_state_activity"
+    case missingRequiredData = "missing_required_data"
+}
+
+public struct TrainingNotApplicableReason: Codable, Equatable, Hashable, Sendable {
+    public let model: TrainingNotApplicableModel
+    public let reason: TrainingNotApplicableReasonCode
+    public let message: String
+    public let visibility: TrainingClassificationVisibility
+
+    public init(
+        model: TrainingNotApplicableModel,
+        reason: TrainingNotApplicableReasonCode,
+        message: String,
+        visibility: TrainingClassificationVisibility = .advancedUser
+    ) {
+        self.model = model
+        self.reason = reason
+        self.message = message
+        self.visibility = visibility
+    }
+}
+
+public struct TrainingClassificationDebug: Codable, Equatable, Sendable {
+    public let classificationVersion: String
+    public let zoneConfigVersion: String?
+    public let usedPersonalizedZones: Bool
+    public let ruleScores: [String: Double]
+    public let notes: [String]
+
+    public init(
+        classificationVersion: String,
+        zoneConfigVersion: String? = nil,
+        usedPersonalizedZones: Bool,
+        ruleScores: [String: Double] = [:],
+        notes: [String] = []
+    ) {
+        self.classificationVersion = classificationVersion
+        self.zoneConfigVersion = zoneConfigVersion
+        self.usedPersonalizedZones = usedPersonalizedZones
+        self.ruleScores = ruleScores
+        self.notes = notes
+    }
+}
+
+public struct TrainingClassification: Codable, Equatable, Sendable {
+    public let primaryMode: TrainingMode
+    public let confidence: ClassificationConfidence
+    public let dataQuality: TrainingDataQuality
+    public let claimLevel: TrainingClaimLevel
+    public let evidence: [TrainingClassificationEvidence]
+    public let warnings: [TrainingClassificationWarning]
+    public let notApplicableReasons: [TrainingNotApplicableReason]
+    public let debug: TrainingClassificationDebug?
+
+    public init(
+        primaryMode: TrainingMode,
+        confidence: ClassificationConfidence,
+        dataQuality: TrainingDataQuality,
+        claimLevel: TrainingClaimLevel,
+        evidence: [TrainingClassificationEvidence],
+        warnings: [TrainingClassificationWarning] = [],
+        notApplicableReasons: [TrainingNotApplicableReason] = [],
+        debug: TrainingClassificationDebug? = nil
+    ) {
+        self.primaryMode = primaryMode
+        self.confidence = confidence
+        self.dataQuality = dataQuality
+        self.claimLevel = claimLevel
+        self.evidence = evidence
+        self.warnings = warnings
+        self.notApplicableReasons = notApplicableReasons
+        self.debug = debug
+    }
+}
+
 public enum SampleQuality: String, Codable, Equatable, Sendable {
     case sufficient
     case sparse

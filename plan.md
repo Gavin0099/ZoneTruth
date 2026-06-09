@@ -55,7 +55,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 新增 `docs/TRAINING_CLASSIFICATION_PLAN_V3_1.md`，明確列出 Sprint 0、不要動清單、Swift Core classification object、資料品質下界、重訓例外優先與本週頁純描述規則
 - [x] 確認 v3.1 是規格/計畫同步，不改產品行為、analyzer verdict、weekly rendering contract
 - [x] Sprint 1 信任止血 UI：移除 user-facing `本次意圖`、`目的符合度`、`舊版判定`，並避免重訓第一屏出現 VO2 max 主卡
-- [ ] 下一步 Sprint 2：在 `ZoneTruthCore` 建立 Swift `TrainingClassification` object（mode / confidence / data quality / claim level / evidence / warnings / not-applicable reasons）
+- [x] Sprint 2 Core classification object：在 `ZoneTruthCore` 建立 Swift `TrainingClassification` output contract（mode / confidence / data quality / claim level / evidence / warnings / not-applicable reasons / debug）
+- [ ] 下一步 Sprint 3：rule-based classifier aggregator（Zone 2 / VO2 stimulus / strength-pattern candidates；重訓先判 insufficient / conditioning-like 例外）
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -132,7 +133,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 擴充邊緣案例標籤集（drift / leakage 閾值附近）
 - [x] VO2/強度分析路徑擴充（接入 interval pattern / recovery hint 觀測訊號到 user-facing reasons）
 - [x] Training Classification v3.1 Sprint 1：信任止血 UI，先修正 user-facing 語義，再進 Core classification object
-- [ ] Training Classification v3.1 Sprint 2：Core classification object
+- [x] Training Classification v3.1 Sprint 2：Core classification object
+- [ ] Training Classification v3.1 Sprint 3：rule-based classifier aggregator
 
 ### P2（非阻擋，有空再做）
 - [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）
@@ -229,6 +231,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-09 | 完成 Training Classification v3.1 Sprint 2：新增 Core `TrainingClassification` / `TrainingMode` / confidence / data quality / claim level / evidence / warnings / not-applicable / debug 型別與 Codable guard tests；尚未接入 analyzer |
 | 2026-06-09 | 完成 Training Classification v3.1 Sprint 1 信任止血 UI：單次詳情移除本次意圖 / 目的符合度 / 舊版判定，重訓主要 metric surface 不顯示 VO2 max；新增 targeted UI guard tests |
 | 2026-06-09 | 新增 Training Classification Plan v3.1：正式採用 C 路線（資料反推訓練型態），補 Sprint 0、不要動清單、Core classification object、資料品質下界與純描述週分布規則；不改產品行為 |
 | 2026-06-09 | 同步 ai-governance-framework 最新 upstream（`9eb793dbf6c6`）：導入拆分後的 AI Governance update / F-7 / governance surface / memory protocol 文件，刷新 baseline / framework lock；產品行為不變 |
