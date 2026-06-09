@@ -1579,6 +1579,97 @@ public enum WeeklyObservationBuilder {
     }
 }
 
+public enum WeeklyTrainingModeDistributionBuilder {
+    public static func build(
+        workouts: [WorkoutInput],
+        weekStart: Date,
+        calendar: Calendar = .current,
+        asOf: Date = Date(),
+        policy: AnalysisPolicy = .default,
+        zoneConfigVersion: String? = nil,
+        usedPersonalizedZones: Bool = false
+    ) -> WeeklyTrainingModeDistribution {
+        let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)!
+        let weekEnd = nextWeekStart.addingTimeInterval(-1)
+        let effectiveEnd = min(nextWeekStart, asOf)
+        let weekWorkouts = workouts.filter {
+            $0.startDate >= weekStart && $0.startDate < effectiveEnd
+        }
+
+        var counts: [TrainingMode: Int] = [:]
+        for workout in weekWorkouts {
+            let classification = TrainingModeClassifier.classify(
+                workout: workout,
+                policy: policy,
+                zoneConfigVersion: zoneConfigVersion,
+                usedPersonalizedZones: usedPersonalizedZones
+            )
+            counts[classification.primaryMode, default: 0] += 1
+        }
+
+        let workoutCount = weekWorkouts.count
+        let ratios = Dictionary(uniqueKeysWithValues: TrainingMode.allCases.map { mode in
+            (mode, workoutCount > 0 ? Double(counts[mode, default: 0]) / Double(workoutCount) : 0)
+        })
+        let items = TrainingMode.allCases.map { mode in
+            WeeklyTrainingModeDistributionItem(
+                mode: mode,
+                count: counts[mode, default: 0],
+                ratio: ratios[mode, default: 0]
+            )
+        }
+        let descriptiveLines = makeDescriptiveLines(items: items, workoutCount: workoutCount)
+
+        return WeeklyTrainingModeDistribution(
+            weekStart: weekStart,
+            weekEnd: weekEnd,
+            workoutCount: workoutCount,
+            counts: counts,
+            ratios: ratios,
+            items: items,
+            descriptiveLines: descriptiveLines
+        )
+    }
+
+    private static func makeDescriptiveLines(
+        items: [WeeklyTrainingModeDistributionItem],
+        workoutCount: Int
+    ) -> [String] {
+        guard workoutCount > 0 else {
+            return ["本週尚無訓練型態分類。"]
+        }
+
+        let presentLines = items
+            .filter { $0.count > 0 }
+            .map { "\(displayName(for: $0.mode))：\($0.count) 次" }
+
+        let absentReferenceLines = [TrainingMode.vo2Stimulus, .zone2, .strengthPattern]
+            .filter { mode in items.first(where: { $0.mode == mode })?.count == 0 }
+            .map { "本週尚未出現\(displayName(for: $0))。" }
+
+        return presentLines + absentReferenceLines
+    }
+
+    private static func displayName(for mode: TrainingMode) -> String {
+        switch mode {
+        case .zone2:
+            return "Zone 2 型態"
+        case .vo2Stimulus:
+            return "VO2 刺激型態"
+        case .strengthPattern:
+            return "肌力型態"
+        case .conditioningLike:
+            return "高密度循環型態"
+        case .generalLowIntensity:
+            return "一般低強度"
+        case .mixed:
+            return "混合型態"
+        case .insufficientData:
+            return "資料不足"
+        }
+    }
+}
+
 public enum WeeklyLoadPolicyEngine {
     public static func evaluate(summary: WeeklyWorkoutSummary) -> WeeklyLoadPolicy {
         let totalZoneSamples = summary.zoneDistribution.counts.values.reduce(0, +)

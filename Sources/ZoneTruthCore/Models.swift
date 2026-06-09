@@ -980,6 +980,46 @@ public struct TrainingClassification: Codable, Equatable, Sendable {
     }
 }
 
+public struct WeeklyTrainingModeDistributionItem: Codable, Equatable, Sendable {
+    public let mode: TrainingMode
+    public let count: Int
+    public let ratio: Double
+
+    public init(mode: TrainingMode, count: Int, ratio: Double) {
+        self.mode = mode
+        self.count = count
+        self.ratio = ratio
+    }
+}
+
+public struct WeeklyTrainingModeDistribution: Codable, Equatable, Sendable {
+    public let weekStart: Date
+    public let weekEnd: Date
+    public let workoutCount: Int
+    public let counts: [TrainingMode: Int]
+    public let ratios: [TrainingMode: Double]
+    public let items: [WeeklyTrainingModeDistributionItem]
+    public let descriptiveLines: [String]
+
+    public init(
+        weekStart: Date,
+        weekEnd: Date,
+        workoutCount: Int,
+        counts: [TrainingMode: Int],
+        ratios: [TrainingMode: Double],
+        items: [WeeklyTrainingModeDistributionItem],
+        descriptiveLines: [String]
+    ) {
+        self.weekStart = weekStart
+        self.weekEnd = weekEnd
+        self.workoutCount = workoutCount
+        self.counts = counts
+        self.ratios = ratios
+        self.items = items
+        self.descriptiveLines = descriptiveLines
+    }
+}
+
 public enum SampleQuality: String, Codable, Equatable, Sendable {
     case sufficient
     case sparse

@@ -249,6 +249,86 @@ final class WeeklyObservationTests: XCTestCase {
         XCTAssertTrue(fieldNames.contains("consecutiveTrainingDays"))
     }
 
+    // MARK: - WeeklyTrainingModeDistributionBuilder
+
+    func testWeeklyTrainingModeDistributionUsesClassifierModesInsteadOfDeclaredIntent() {
+        let monday = weekMonday
+        let workouts = [
+            makeTrainingModeWorkout(
+                workoutType: .running,
+                intent: .strength,
+                startDate: monday,
+                bpms: Array(repeating: 118, count: 30)
+            ),
+            makeTrainingModeWorkout(
+                workoutType: .strengthTraining,
+                intent: .strength,
+                startDate: monday + 86400,
+                bpms: Array(repeating: 145, count: 30)
+            ),
+            makeTrainingModeWorkout(
+                workoutType: .strengthTraining,
+                intent: .zone2,
+                startDate: monday + 2 * 86400,
+                bpms: Array(repeating: 100, count: 30)
+            ),
+            makeTrainingModeWorkout(
+                workoutType: .cycling,
+                intent: .activityReview,
+                startDate: monday + 8 * 86400,
+                bpms: Array(repeating: 118, count: 30)
+            )
+        ]
+
+        let distribution = WeeklyTrainingModeDistributionBuilder.build(
+            workouts: workouts,
+            weekStart: monday,
+            calendar: utcCalendar,
+            asOf: weekEndAsOf,
+            policy: sprint4ClassificationPolicy()
+        )
+
+        XCTAssertEqual(distribution.workoutCount, 3)
+        XCTAssertEqual(distribution.counts[.zone2], 1)
+        XCTAssertEqual(distribution.counts[.conditioningLike], 1)
+        XCTAssertEqual(distribution.counts[.strengthPattern], 1)
+        XCTAssertEqual(distribution.counts[.vo2Stimulus, default: 0], 0)
+        XCTAssertEqual(distribution.ratios[.zone2] ?? 0, 1.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(distribution.ratios[.conditioningLike] ?? 0, 1.0 / 3.0, accuracy: 0.001)
+        XCTAssertTrue(distribution.descriptiveLines.contains("Zone 2 型態：1 次"))
+        XCTAssertTrue(distribution.descriptiveLines.contains("高密度循環型態：1 次"))
+        XCTAssertTrue(distribution.descriptiveLines.contains("肌力型態：1 次"))
+        XCTAssertTrue(distribution.descriptiveLines.contains("本週尚未出現VO2 刺激型態。"))
+    }
+
+    func testWeeklyTrainingModeDistributionDescriptionsAreDescriptiveOnly() {
+        let monday = weekMonday
+        let workouts = [
+            makeTrainingModeWorkout(
+                workoutType: .running,
+                intent: .zone2,
+                startDate: monday,
+                bpms: Array(repeating: 118, count: 30)
+            )
+        ]
+
+        let distribution = WeeklyTrainingModeDistributionBuilder.build(
+            workouts: workouts,
+            weekStart: monday,
+            calendar: utcCalendar,
+            asOf: weekEndAsOf,
+            policy: sprint4ClassificationPolicy()
+        )
+        let text = distribution.descriptiveLines.joined(separator: " ")
+        let forbiddenGoalTerms = ["偏少", "不足", "達標", "未達標", "不足 1 次", "需要", "應該", "建議"]
+
+        XCTAssertFalse(distribution.descriptiveLines.isEmpty)
+        for term in forbiddenGoalTerms {
+            XCTAssertFalse(text.contains(term), "Weekly training-mode distribution should not contain goal wording: \(term)")
+        }
+        XCTAssertTrue(text.contains("本週尚未出現VO2 刺激型態。"))
+    }
+
     // MARK: - Helpers
 
     private func makeWorkout(
@@ -270,6 +350,39 @@ final class WeeklyObservationTests: XCTestCase {
             HeartRateSample(timestamp: startDate.addingTimeInterval(Double(i) * spacing), bpm: bpm)
         }
         return WorkoutInput(workoutType: .running, startDate: startDate, endDate: endDate, heartRateSamples: samples, intent: intent)
+    }
+
+    private func makeTrainingModeWorkout(
+        workoutType: WorkoutType,
+        intent: TrainingIntent,
+        startDate: Date,
+        bpms: [Double],
+        duration: TimeInterval = 1800
+    ) -> WorkoutInput {
+        let spacing = bpms.count > 1 ? duration / Double(bpms.count - 1) : 0
+        let samples = bpms.enumerated().map { index, bpm in
+            HeartRateSample(timestamp: startDate.addingTimeInterval(TimeInterval(index) * spacing), bpm: bpm)
+        }
+        return WorkoutInput(
+            workoutType: workoutType,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(duration),
+            heartRateSamples: samples,
+            intent: intent
+        )
+    }
+
+    private func sprint4ClassificationPolicy() -> AnalysisPolicy {
+        AnalysisPolicy(
+            warmupExclusionSeconds: 0,
+            cooldownExclusionSeconds: 0,
+            minimumDurationSeconds: 20 * 60,
+            minimumSampleCount: 5,
+            abnormalSpikeDeltaBPM: AnalysisPolicy.default.abnormalSpikeDeltaBPM,
+            lowStabilityStdDev: AnalysisPolicy.default.lowStabilityStdDev,
+            mediumStabilityStdDev: AnalysisPolicy.default.mediumStabilityStdDev,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
     }
 
     private func makeSamples(_ bpms: [Double]) -> [HeartRateSample] {
