@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import XCTest
 @testable import ZoneTruthApp
 @testable import ZoneTruthCore
@@ -1613,6 +1614,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(visibleLabels.contains("本次結論"))
         XCTAssertTrue(visibleLabels.contains("判讀依據"))
         XCTAssertTrue(visibleLabels.contains("本次使用的心率範圍"))
+        XCTAssertTrue(visibleLabels.contains("這次判讀準確嗎？"))
         XCTAssertTrue(visibleLabels.contains("更多內容與詳細數據"))
 
         for label in settingsLabels {
@@ -1646,6 +1648,44 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .running))
         XCTAssertTrue(WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .cycling))
         XCTAssertTrue(WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .swimming))
+    }
+
+    func testWorkoutDetailFeedbackPresenterUsesTrainingModesNotIntentLanguage() {
+        let labels = (
+            TrainingModeFeedbackPresenter.ratingOptions.map(TrainingModeFeedbackPresenter.label(for:)) +
+            TrainingModeFeedbackPresenter.suggestedModeOptions.map(TrainingModeFeedbackPresenter.label(for:)) +
+            [
+                WorkoutDetailInformationArchitecture.classificationFeedback,
+                WorkoutDetailInformationArchitecture.feedbackSuggestedMode
+            ]
+        ).joined(separator: " ")
+
+        XCTAssertTrue(labels.contains("準確"))
+        XCTAssertTrue(labels.contains("有點像"))
+        XCTAssertTrue(labels.contains("不準"))
+        XCTAssertTrue(labels.contains("高密度循環"))
+        XCTAssertFalse(labels.contains("本次意圖"))
+        XCTAssertFalse(labels.contains("目的符合度"))
+        XCTAssertFalse(labels.contains("達標"))
+        XCTAssertFalse(labels.contains("未達標"))
+    }
+
+    @MainActor
+    func testTrainingClassificationFeedbackControlSmokeCompilesWithLocalStateOnly() {
+        struct Harness: View {
+            @State var rating: TrainingClassificationFeedbackRating?
+            @State var mode: TrainingMode?
+
+            var body: some View {
+                TrainingClassificationFeedbackControl(
+                    rating: $rating,
+                    suggestedMode: $mode
+                )
+            }
+        }
+
+        let view = Harness()
+        _ = view.body
     }
 
     @MainActor

@@ -739,6 +739,8 @@ enum WorkoutDetailInformationArchitecture {
     static let classificationConfidence = "判讀信心"
     static let technicalClassificationConfidence = "分類信心"
     static let technicalEvaluationConfidence = "評估信心"
+    static let classificationFeedback = "這次判讀準確嗎？"
+    static let feedbackSuggestedMode = "比較像"
 
     static let userFacingForbiddenLabels = [
         "本次意圖",
@@ -761,7 +763,8 @@ enum WorkoutDetailInformationArchitecture {
         evidenceSummary,
         heartRateContext,
         detailDisclosure,
-        classificationConfidence
+        classificationConfidence,
+        classificationFeedback
     ]
 
     static let settingsOnlyLabels = [
@@ -778,6 +781,53 @@ enum WorkoutDetailInformationArchitecture {
     }
 }
 
+enum TrainingModeFeedbackPresenter {
+    static let ratingOptions: [TrainingClassificationFeedbackRating] = [
+        .accurate,
+        .somewhatSimilar,
+        .inaccurate
+    ]
+
+    static let suggestedModeOptions: [TrainingMode] = [
+        .zone2,
+        .vo2Stimulus,
+        .strengthPattern,
+        .conditioningLike,
+        .generalLowIntensity,
+        .mixed
+    ]
+
+    static func label(for rating: TrainingClassificationFeedbackRating) -> String {
+        switch rating {
+        case .accurate:
+            return "準確"
+        case .somewhatSimilar:
+            return "有點像"
+        case .inaccurate:
+            return "不準"
+        }
+    }
+
+    static func label(for mode: TrainingMode) -> String {
+        switch mode {
+        case .zone2:
+            return "Zone 2"
+        case .vo2Stimulus:
+            return "VO2 刺激"
+        case .strengthPattern:
+            return "肌力"
+        case .conditioningLike:
+            return "高密度循環"
+        case .generalLowIntensity:
+            return "一般低強度"
+        case .mixed:
+            return "混合型態"
+        case .insufficientData:
+            return "資料不足"
+        }
+    }
+}
+
 struct WorkoutDetailView: View {
     let workout: WorkoutInput
     let selectedIntent: TrainingIntent
@@ -790,6 +840,8 @@ struct WorkoutDetailView: View {
     let zoneContextSummary: String
     @ObservedObject var settingsManager: SettingsManager
     @State private var showDetailedData = false
+    @State private var feedbackRating: TrainingClassificationFeedbackRating?
+    @State private var feedbackSuggestedMode: TrainingMode?
 
     var body: some View {
         ScrollView {
@@ -797,6 +849,10 @@ struct WorkoutDetailView: View {
                 WorkoutDetailHeaderView(workout: workout, selectedIntent: selectedIntent)
                 HeroDecisionCardView(workout: workout, result: result, evaluation: evaluation)
                 EvidenceSummarySectionView(result: result, evaluation: evaluation)
+                TrainingClassificationFeedbackControl(
+                    rating: $feedbackRating,
+                    suggestedMode: $feedbackSuggestedMode
+                )
                 AnalysisZoneContextCard(summary: zoneContextSummary)
 
                 DisclosureGroup(isExpanded: $showDetailedData) {
@@ -1151,6 +1207,96 @@ struct EvidenceSignalRow: View {
         .padding(10)
         .background(Color.white.opacity(0.035))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+struct TrainingClassificationFeedbackControl: View {
+    @Binding var rating: TrainingClassificationFeedbackRating?
+    @Binding var suggestedMode: TrainingMode?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(WorkoutDetailInformationArchitecture.classificationFeedback, systemImage: "hand.thumbsup")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            HStack(spacing: 8) {
+                ForEach(TrainingModeFeedbackPresenter.ratingOptions, id: \.self) { option in
+                    Button {
+                        rating = option
+                        if option == .accurate {
+                            suggestedMode = nil
+                        }
+                    } label: {
+                        Text(TrainingModeFeedbackPresenter.label(for: option))
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(feedbackRatingColor(option).opacity(rating == option ? 0.22 : 0.08))
+                            .foregroundStyle(rating == option ? .white : .white.opacity(0.78))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(feedbackRatingColor(option).opacity(rating == option ? 0.65 : 0.20), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if rating == .somewhatSimilar || rating == .inaccurate {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(WorkoutDetailInformationArchitecture.feedbackSuggestedMode)
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.68))
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 8)], spacing: 8) {
+                        ForEach(TrainingModeFeedbackPresenter.suggestedModeOptions, id: \.self) { mode in
+                            Button {
+                                suggestedMode = mode
+                            } label: {
+                                Text(TrainingModeFeedbackPresenter.label(for: mode))
+                                    .font(.caption.bold())
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 8)
+                                    .background(PremiumColor.skyBlue.opacity(suggestedMode == mode ? 0.22 : 0.07))
+                                    .foregroundStyle(suggestedMode == mode ? .white : .white.opacity(0.78))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(PremiumColor.skyBlue.opacity(suggestedMode == mode ? 0.62 : 0.18), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
+            Text("目前只保留在此畫面狀態，尚未寫入紀錄。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.05), lineWidth: 1))
+    }
+
+    private func feedbackRatingColor(_ option: TrainingClassificationFeedbackRating) -> Color {
+        switch option {
+        case .accurate:
+            return PremiumColor.emerald
+        case .somewhatSimilar:
+            return PremiumColor.gold
+        case .inaccurate:
+            return PremiumColor.redOrange
+        }
     }
 }
 

@@ -60,7 +60,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Sprint 4 Core weekly training-mode distribution：新增 `WeeklyTrainingModeDistributionBuilder`，以 `TrainingModeClassifier` 聚合本週 counts / ratios / descriptive lines；測試鎖住不出現「偏少 / 不足 / 達標」等週目標評價語
 - [x] Sprint 5 游泳特殊分類：補 Core guard tests，鎖住 swimming 即使呈現 Zone 2 / VO2-like 心率，也只能輸出 low data quality / low confidence / secondary reference；sparse swimming 仍為 insufficientData
 - [x] Sprint 6 Core feedback/calibration data shape：新增 `TrainingClassificationFeedback`，可記錄準確 / 有點像 / 不準與 suggested `TrainingMode`；測試鎖住 feedback 不等於原始 intent、且不會改變 classifier output
-- [ ] 下一步：若要接產品面，先定義 UI / persistence 的窄 DONE；不得把 feedback 回填為 workout intent
+- [x] App-facing feedback entry：在 workout detail 加入本地 state 的分類回饋控制（準確 / 有點像 / 不準 + suggested `TrainingMode`），不持久化、不改 classifier、不回填 workout intent
+- [ ] 下一步：若要保存回饋，先定義 persistence 的窄 DONE；不得把 feedback 回填為 workout intent
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -142,7 +143,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Training Classification v3.1 Sprint 4：本週分類分布（descriptive only）
 - [x] Training Classification v3.1 Sprint 5：游泳特殊分類與資料品質下界
 - [x] Training Classification v3.1 Sprint 6：回饋與校準資料形狀
-- [ ] Training Classification v3.1 下一步：回饋 UI / persistence 接入前先定義窄切片
+- [x] Training Classification v3.1 App-facing feedback entry：Workout detail local-state control
+- [ ] Training Classification v3.1 下一步：回饋 persistence 接入前先定義窄切片
 
 ### P2（非阻擋，有空再做）
 - [x] Meta-closeout wrapper（一個指令跑常用 governance / syntax / targeted smoke checks）
