@@ -246,6 +246,61 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(classification.evidence.contains { $0.explanation.contains("未觸發高密度循環訓練例外") })
     }
 
+    func testTrainingModeClassifierDowngradesSwimmingZone2LikeClassification() {
+        let workout = makeSwimmingWorkout(
+            samples: Array(repeating: 118, count: 30),
+            intent: .zone2
+        )
+
+        let classification = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy(minimumSampleCount: 5)
+        )
+
+        XCTAssertEqual(classification.primaryMode, .zone2)
+        XCTAssertEqual(classification.confidence, .low)
+        XCTAssertEqual(classification.dataQuality, .low)
+        XCTAssertEqual(classification.claimLevel, .secondaryReference)
+        XCTAssertTrue(classification.warnings.contains { $0.type == .lowHeartRateQuality })
+    }
+
+    func testTrainingModeClassifierDowngradesSwimmingVO2LikeClassification() {
+        let workout = makeSwimmingWorkout(
+            samples: Array(repeating: 160, count: 30),
+            intent: .vo2Interval
+        )
+
+        let classification = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy(minimumSampleCount: 5)
+        )
+
+        XCTAssertEqual(classification.primaryMode, .vo2Stimulus)
+        XCTAssertEqual(classification.confidence, .low)
+        XCTAssertEqual(classification.dataQuality, .low)
+        XCTAssertEqual(classification.claimLevel, .secondaryReference)
+        XCTAssertTrue(classification.warnings.contains { $0.message.contains("游泳心率資料") })
+    }
+
+    func testTrainingModeClassifierKeepsSparseSwimmingAsInsufficientData() {
+        let workout = makeSwimmingWorkout(
+            samples: [118, 120],
+            intent: .zone2,
+            duration: 30 * 60
+        )
+
+        let classification = TrainingModeClassifier.classify(
+            workout: workout,
+            policy: sprint3ClassificationPolicy(minimumSampleCount: 5)
+        )
+
+        XCTAssertEqual(classification.primaryMode, .insufficientData)
+        XCTAssertEqual(classification.confidence, .insufficient)
+        XCTAssertEqual(classification.dataQuality, .insufficient)
+        XCTAssertEqual(classification.claimLevel, .notApplicable)
+        XCTAssertTrue(classification.notApplicableReasons.contains { $0.reason == .insufficientHeartRateData })
+    }
+
     func testProductReferenceMetricCannotClaimMeasured() {
         let garminEstimate = TrainingMetricMetadata(
             metric: .vo2Max,
@@ -1149,6 +1204,22 @@ final class ZoneTruthCoreTests: XCTestCase {
             workoutType: .running,
             startDate: start,
             endDate: end,
+            heartRateSamples: makeSamples(samples),
+            intent: intent
+        )
+    }
+
+    private func makeSwimmingWorkout(
+        samples: [Double],
+        intent: TrainingIntent,
+        duration: TimeInterval? = nil
+    ) -> WorkoutInput {
+        let start = Date(timeIntervalSince1970: 0)
+        let resolvedDuration = duration ?? TimeInterval((samples.count - 1) * 60)
+        return WorkoutInput(
+            workoutType: .swimming,
+            startDate: start,
+            endDate: start.addingTimeInterval(resolvedDuration),
             heartRateSamples: makeSamples(samples),
             intent: intent
         )
