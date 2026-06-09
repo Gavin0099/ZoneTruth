@@ -71,6 +71,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Long-term memory hygiene：建立 `memory/00_long_term.md`，補齊 AGENTS.md 要求的 main-session 長期記憶檔；只記 durable context / workflow preferences / active boundaries，不改產品碼或治理規則
 - [x] Apple Health Resting HR import gate fix：修正 read-only HealthKit authorization status 擋住 Resting HR query 的問題；request authorization 後嘗試查詢 baseline，只有 query unauthorized / no data / unavailable 時顯示對應訊息；補測 `.sharingDenied` 但 baseline 可讀仍能匯入
 - [x] Resting HR Zone 2 claim ceiling / state consistency：將 Resting HR-based 建議卡改為「初步 Zone 2 參考範圍」，標示「初步估算，尚未驗證」，等值範圍顯示「目前已套用」且不再顯示待套用；補測 forbidden overclaim 與 button 狀態
+- [x] Training estimator spec split：新增 `docs/TRAINING_ESTIMATOR_EVIDENCE_MAP.md` 與 `docs/APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md`，正式分離「文獻/推論層級」與「Apple Health 資料來源角色」；`docs/APPLE_HEALTH_HIGH_VALUE_EXPANSION.md` 改為 acquisition/prioritization spec，避免 future source-role semantics 混在同一份文件
 - [ ] 下一步：Training Classification v3.1 與 repo hygiene 已收斂；新的產品或測試工作需先定義 fresh narrow DONE
 
 本次治理同步（2026-06-09）：
@@ -229,6 +230,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Training Analysis Analyzer Adapter Metadata | 已完成（Zone 2 / VO2 interval quality / Strength result metadata；不改 verdict threshold） | Done |
 | Training Analysis UI Disclosure | 已完成最小切片（單筆分析揭露 estimate / measured 與 confidence reason；不改 weekly rendering） | Done |
 | Training Analysis Claim Profiles / Guards | 已完成（metric-specific claim profiles；guard tests 防止 UI disclosure 混淆 VO2 / Zone 2 / Strength） | Done |
+| Training Estimator Evidence Map | 已完成（literature/evidence tiers、claim ceiling、UI copy tiers；不含 source-role semantics） | Done |
+| Apple Health Training Data Role Matrix | 已完成（Apple Health `product_reference` / `field_estimator_input` / `supportive_context_signal` 邊界與 overclaim 防線） | Done |
 | Weekly disclosure preflight guard | 已完成（weekly rendering contract 禁止 metric measurement overclaim；未改 weekly UI） | Done |
 | Test Candidate 2026-06-04 | 已升級為 local product acceptance candidate（VO2 max / Zone 2 / Strength 最小 feature gate 完成；尚未產生 TestFlight build） | Done |
 | VO2 max feature-complete slice | 已完成最小切片（scalar estimate/import + source labeling + claim-bounded disclosure；不做 lab-equivalent claim） | Done |
@@ -262,6 +265,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | 2026-06-09 | 完成 Training Classification v3.1 Sprint 2：新增 Core `TrainingClassification` / `TrainingMode` / confidence / data quality / claim level / evidence / warnings / not-applicable / debug 型別與 Codable guard tests；尚未接入 analyzer |
 | 2026-06-09 | 完成 Training Classification v3.1 Sprint 1 信任止血 UI：單次詳情移除本次意圖 / 目的符合度 / 舊版判定，重訓主要 metric surface 不顯示 VO2 max；新增 targeted UI guard tests |
 | 2026-06-09 | 新增 Training Classification Plan v3.1：正式採用 C 路線（資料反推訓練型態），補 Sprint 0、不要動清單、Core classification object、資料品質下界與純描述週分布規則；不改產品行為 |
+| 2026-06-09 | 正式拆分 estimator 規格層：新增 `TRAINING_ESTIMATOR_EVIDENCE_MAP.md` 管 literature/evidence/claim ceiling，新增 `APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md` 管 Apple Health source-role semantics，並將 `APPLE_HEALTH_HIGH_VALUE_EXPANSION.md` 明確定位為 acquisition/prioritization spec |
 | 2026-06-09 | 同步 ai-governance-framework 最新 upstream（`9eb793dbf6c6`）：導入拆分後的 AI Governance update / F-7 / governance surface / memory protocol 文件，刷新 baseline / framework lock；產品行為不變 |
 | 2026-06-05 | 同步 ai-governance-framework 最新 upstream（`cae11be`）導入分析；補入非-submodule consuming repo 適用的治理工具與 F-7 文件，刷新 baseline / framework lock，drift clean / readiness 通過 |
 | 2026-06-04 | 完成 Strength structured metric 最小切片：JSON / domain model / metadata / 單筆 UI disclosure 支援 direct 1RM / e1RM 類肌力指標，並保留 exercise-specific claim ceiling |

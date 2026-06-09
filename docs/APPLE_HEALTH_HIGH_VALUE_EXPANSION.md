@@ -21,6 +21,30 @@ It does not authorize:
 - copying proprietary Apple algorithms
 - collecting every HealthKit field just because it exists
 
+## Spec Position
+
+This document is the Apple Health acquisition and prioritization spec.
+
+Use [TRAINING_ESTIMATOR_EVIDENCE_MAP.md](/Users/gavin_wu/Desktop/ZoneTruth/docs/TRAINING_ESTIMATOR_EVIDENCE_MAP.md)
+for:
+
+- literature-based evidence levels
+- claim ceilings
+- allowed and forbidden inference language
+
+Use [APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md](/Users/gavin_wu/Desktop/ZoneTruth/docs/APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md)
+for:
+
+- Apple Health source-role classification
+- product-reference vs field-estimator-input vs supportive-context boundaries
+- source-specific overclaim prevention
+
+This split is intentional:
+
+- `TRAINING_ESTIMATOR_EVIDENCE_MAP.md` answers what the evidence can support
+- `APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md` answers what each Apple Health field is allowed to do
+- `APPLE_HEALTH_HIGH_VALUE_EXPANSION.md` answers which Apple Health fields are worth adding next
+
 ## Current State
 
 ZoneTruth already reads these Apple Health workout-adjacent inputs:
@@ -41,7 +65,9 @@ ZoneTruth now also supports:
 A new Apple Health field is worth adding only if all three are true:
 
 1. It improves one of the three scoped pillars: `VO2 max`, `Zone 2`, `Strength`.
-2. It can be rendered with a bounded claim ceiling using the training-analysis meta-spec.
+2. It can be rendered with a bounded claim ceiling using
+   `TRAINING_ESTIMATOR_EVIDENCE_MAP.md` and
+   `APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md`.
 3. It reduces a real ambiguity that current heart-rate-only analysis cannot resolve.
 
 ## Priority Summary
@@ -83,7 +109,8 @@ A new Apple Health field is worth adding only if all three are true:
   - sparse update cadence may confuse users if shown without date/source
 - Implementation note:
   - prefer latest sample plus sample date
-  - if metadata is sparse, keep `reference_standard_distance = two_or_more_levels_below`
+- if metadata is sparse, keep `reference_standard_distance = two_or_more_levels_below`
+- source-role must remain `product_reference`, not reference anchor
 
 ### 2. `restingHeartRate`
 
@@ -105,7 +132,8 @@ A new Apple Health field is worth adding only if all three are true:
   - using one sample is noisier than averaging a recent window
 - Implementation note:
   - use recent rolling average, not a single latest sample
-  - keep the UI explicit that this is a heuristic starting point
+- keep the UI explicit that this is a heuristic starting point
+- source-role must remain weak heuristic input for an initial range, not calibrated threshold
 
 ### 3. `heartRateRecoveryOneMinute`
 
@@ -126,7 +154,8 @@ A new Apple Health field is worth adding only if all three are true:
   - availability may be sparse
   - depends on workout type and device behavior
 - Implementation note:
-  - attach as secondary evidence, not a primary verdict driver at first
+- attach as secondary evidence, not a primary verdict driver at first
+- source-role must remain bounded recovery context, not VO2 max proof
 
 ### 4. `runningPower`
 
@@ -146,8 +175,9 @@ A new Apple Health field is worth adding only if all three are true:
   - not all devices produce this data
   - sample density and condensation behavior may vary
 - Implementation note:
-  - use only when coverage is sufficient
-  - do not silently mix runs with and without power into one confidence level
+- use only when coverage is sufficient
+- do not silently mix runs with and without power into one confidence level
+- source-role must remain field-estimator support, not threshold anchor
 
 ### 5. `cyclingPower`
 
@@ -166,7 +196,8 @@ A new Apple Health field is worth adding only if all three are true:
   - depends on connected peripherals and device setup
   - coverage will be uneven across users
 - Implementation note:
-  - if absent, fall back to HR-only path and lower confidence
+- if absent, fall back to HR-only path and lower confidence
+- source-role must remain field-estimator support, not threshold anchor
 
 ### 6. `workoutRoute`
 
@@ -185,8 +216,9 @@ A new Apple Health field is worth adding only if all three are true:
   - privacy sensitivity is higher than scalar metrics
   - route queries are heavier and can complicate permissions and caching
 - Implementation note:
-  - do not make route mandatory for core analysis
-  - avoid storing more route detail than needed
+- do not make route mandatory for core analysis
+- avoid storing more route detail than needed
+- source-role must remain context-only
 
 ### 7. `runningSpeed`
 
