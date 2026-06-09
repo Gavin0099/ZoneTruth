@@ -67,7 +67,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Feedback store dependency wiring：`AppEnvironment.live()` 建立 `FileTrainingClassificationFeedbackStore`，`WorkoutListViewModel` 可接收 feedback store；不改 feedback UI 行為、不自動保存、不改 classifier、不回填 workout intent
 - [x] Live feedback recorder + classification snapshot flow：新增 Core `TrainingClassificationSnapshotProvider`，`WorkoutListViewModel` 產生 snapshot 與 recorder，`WorkoutDetailView` 使用 recorder 將完成的 feedback 寫入已注入 store；SwiftUI view 不呼叫 `TrainingModeClassifier`，不回填 workout intent
 - [x] Feedback saved state / duplicate handling：完成 feedback 後 UI 顯示已保存 / 已有相同紀錄 / 待補 suggested mode；同一 workout 的同一 rating + suggested mode 不新增重複 record；不回填 workout intent
-- [ ] 下一步：Training Classification v3.1 功能主線完成；若要繼續，先定義 owner acceptance / manual test checklist 的窄 DONE
+- [x] Zone 2 feature-complete gate closeout：新增 `docs/ZONE2_FEATURE_GATE_CHECKLIST.md`，盤點 manual bounds / Resting HR / reset / single detail / weekly policy 既有測試覆蓋，鎖住非 exact threshold claim；不改 classifier、不擴 UI、不碰 weekly rendering contract
+- [ ] 下一步：建立 `memory/00_long_term.md`，補齊 AGENTS.md 要求的 main-session 長期記憶檔
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -229,7 +230,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Test Candidate 2026-06-04 | 已升級為 local product acceptance candidate（VO2 max / Zone 2 / Strength 最小 feature gate 完成；尚未產生 TestFlight build） | Done |
 | VO2 max feature-complete slice | 已完成最小切片（scalar estimate/import + source labeling + claim-bounded disclosure；不做 lab-equivalent claim） | Done |
 | Strength feature-complete slice | 已完成最小切片（direct 1RM / e1RM structured metric import/display + claim-bounded disclosure；不做全身/臨床肌力診斷） | Done |
-| Zone 2 feature-complete gate | 大致完成（manual bounds / Resting HR / reset / single + weekly policy；需維持非 exact threshold claim） | P1 |
+| Zone 2 feature-complete gate | 已完成（manual bounds / Resting HR / reset / single detail / weekly policy 已盤點；新增 acceptance checklist 鎖住非 exact threshold claim） | Done |
 | Daily memory closeout format | 已標準化（commit/push 狀態、claim ceiling、not-claimed、workspace/remote state 分欄） | Done |
 | `memory/00_long_term.md` 不存在（AGENTS.md 要求） | 待建立 | P1 |
 | clean-pilot admissibility 顯示 `false`（unclassified paths 4 個） | 已解決（git 現況只剩 1 個修改） | Resolved |
