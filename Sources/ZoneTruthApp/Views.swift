@@ -736,13 +736,32 @@ enum WorkoutDetailInformationArchitecture {
     static let heartRateContext = "本次使用的心率範圍"
     static let detailDisclosure = "更多內容與詳細數據"
     static let methodSettings = "本次分析設定"
+    static let classificationConfidence = "判讀信心"
+    static let technicalClassificationConfidence = "分類信心"
+    static let technicalEvaluationConfidence = "評估信心"
+
+    static let userFacingForbiddenLabels = [
+        "本次意圖",
+        "目的符合度",
+        "舊版判定"
+    ]
+
+    static let heroSummaryLabels = [
+        classificationConfidence
+    ]
+
+    static let technicalDetailLabels = [
+        technicalClassificationConfidence,
+        technicalEvaluationConfidence
+    ]
 
     static let primaryVisibleLabels = [
         header,
         primaryResult,
         evidenceSummary,
         heartRateContext,
-        detailDisclosure
+        detailDisclosure,
+        classificationConfidence
     ]
 
     static let settingsOnlyLabels = [
@@ -753,6 +772,10 @@ enum WorkoutDetailInformationArchitecture {
         "分析策略設定",
         methodSettings
     ]
+
+    static func shouldShowVO2MaxMetric(on workoutType: WorkoutType) -> Bool {
+        workoutType != .strengthTraining
+    }
 }
 
 struct WorkoutDetailView: View {
@@ -845,13 +868,11 @@ struct WorkoutDetailView: View {
 
                         DisclosureGroup("原始數據與技術細節") {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("分類信心：\(evaluation.classificationConfidence)%")
-                                Text("評估信心：\(evaluation.evaluationConfidence)%")
+                                Text("\(WorkoutDetailInformationArchitecture.technicalClassificationConfidence)：\(evaluation.classificationConfidence)%")
+                                Text("\(WorkoutDetailInformationArchitecture.technicalEvaluationConfidence)：\(evaluation.evaluationConfidence)%")
                                 ForEach(evaluation.secondarySignals, id: \.self) { signal in
                                     Text("• \(signal)")
                                 }
-                                Text("舊版判定：\(result.verdict.localizedName)")
-                                    .foregroundStyle(.secondary)
                             }
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.85))
@@ -911,9 +932,6 @@ struct WorkoutDetailHeaderView: View {
                     Text(workout.startDate.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("本次意圖：\(selectedIntent.localizedName)")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.78))
                 }
 
                 Spacer()
@@ -954,14 +972,9 @@ struct HeroDecisionCardView: View {
 
             HStack(spacing: 8) {
                 summaryPill(
-                    title: "判讀信心",
+                    title: WorkoutDetailInformationArchitecture.classificationConfidence,
                     value: reliabilitySummary,
                     color: reliabilityColor
-                )
-                summaryPill(
-                    title: "目的符合度",
-                    value: "\(evaluation.goalFitScore)%",
-                    color: goalFitColor
                 )
             }
 
@@ -987,14 +1000,6 @@ struct HeroDecisionCardView: View {
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 20).fill(PremiumColor.cardBg))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(PremiumColor.border, lineWidth: 1))
-    }
-
-    private var goalFitColor: Color {
-        switch evaluation.goalFitScore {
-        case 75...: return PremiumColor.emerald
-        case 50..<75: return PremiumColor.gold
-        default: return PremiumColor.redOrange
-        }
     }
 
     private var reliabilitySummary: String {
@@ -1172,7 +1177,8 @@ struct MetricsGridSectionView: View {
                 MetricGridCell(icon: "chart.xyaxis.line", color: PremiumColor.neonPurple,
                                title: "心率飄移", value: String(format: "%.1f%%", drift * 100))
             }
-            if let vo2MaxEstimate = workout.vo2MaxEstimate {
+            if WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: workout.workoutType),
+               let vo2MaxEstimate = workout.vo2MaxEstimate {
                 MetricGridCell(icon: "speedometer", color: PremiumColor.emerald,
                                title: "VO2 max 估算",
                                value: String(format: "%.1f ml/kg/min", vo2MaxEstimate.value))
@@ -1322,10 +1328,6 @@ struct SummaryCardView: View {
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            Text(evaluation.goalFitLabel)
-                .font(.system(.title3, design: .rounded).bold())
-                .foregroundStyle(.white)
-
             Text("建議：\(evaluation.nextAction)")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.85))
@@ -1365,7 +1367,8 @@ struct SummaryCardView: View {
                     )
                 }
 
-                if let vo2MaxEstimate = workout.vo2MaxEstimate {
+                if WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: workout.workoutType),
+                   let vo2MaxEstimate = workout.vo2MaxEstimate {
                     MetricGridCell(
                         icon: "speedometer",
                         color: PremiumColor.emerald,
@@ -1775,13 +1778,11 @@ struct AnalysisResultView: View {
 
             DisclosureGroup("進階分析（技術細節）") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("分類信心：\(evaluation.classificationConfidence)%")
-                    Text("評估信心：\(evaluation.evaluationConfidence)%")
+                    Text("\(WorkoutDetailInformationArchitecture.technicalClassificationConfidence)：\(evaluation.classificationConfidence)%")
+                    Text("\(WorkoutDetailInformationArchitecture.technicalEvaluationConfidence)：\(evaluation.evaluationConfidence)%")
                     ForEach(evaluation.secondarySignals, id: \.self) { signal in
                         Text("• \(signal)")
                     }
-                    Text("舊版判定：\(result.verdict.localizedName)")
-                        .foregroundStyle(.secondary)
                 }
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.85))

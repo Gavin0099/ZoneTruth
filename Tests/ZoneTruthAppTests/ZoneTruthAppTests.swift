@@ -1623,6 +1623,31 @@ final class ZoneTruthAppTests: XCTestCase {
         }
     }
 
+    func testWorkoutDetailPrimaryInformationArchitectureExcludesLegacyIntentAndGoalFitLanguage() {
+        let publicLabels = (
+            WorkoutDetailInformationArchitecture.primaryVisibleLabels +
+            WorkoutDetailInformationArchitecture.heroSummaryLabels +
+            WorkoutDetailInformationArchitecture.technicalDetailLabels
+        ).joined(separator: " ")
+
+        for label in WorkoutDetailInformationArchitecture.userFacingForbiddenLabels {
+            XCTAssertFalse(
+                publicLabels.contains(label),
+                "Workout detail user-facing labels must not expose legacy intent/goal-fit language: \(label)"
+            )
+        }
+    }
+
+    func testWorkoutDetailVO2MaxMetricIsHiddenForStrengthPrimarySurface() {
+        XCTAssertFalse(
+            WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .strengthTraining),
+            "Strength detail primary surface must not expose VO2 max as a main metric."
+        )
+        XCTAssertTrue(WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .running))
+        XCTAssertTrue(WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .cycling))
+        XCTAssertTrue(WorkoutDetailInformationArchitecture.shouldShowVO2MaxMetric(on: .swimming))
+    }
+
     @MainActor
     func testWorkoutDetailViewSmokeCompilesForThreePrimaryIntents() {
         let suiteName = "test.workout.detail.architecture.\(UUID().uuidString)"
