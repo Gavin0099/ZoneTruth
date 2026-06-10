@@ -316,6 +316,43 @@ public struct TrainingMetricClaim: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+public enum EvidenceLayer: String, Codable, CaseIterable, Sendable {
+    case trainingEstimatorEvidenceMap = "TRAINING_ESTIMATOR_EVIDENCE_MAP"
+}
+
+public enum SourceRoleLayer: String, Codable, CaseIterable, Sendable {
+    case none
+    case appleHealthTrainingDataRoleMatrix = "APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX"
+    case futureSourceMatrix = "future_source_matrix"
+}
+
+public enum SourceRoleReason: String, Codable, CaseIterable, Sendable {
+    case analyzerGeneric = "analyzer_generic"
+    case appleHealthVO2MaxProductReference = "apple_health_vo2max_product_reference"
+    case appleHealthRestingHRInitialZone2Range = "apple_health_resting_hr_initial_zone2_range"
+    case appleHealthPowerExternalLoadContext = "apple_health_power_external_load_context"
+    case appleHealthRouteContext = "apple_health_route_context"
+    case appleHealthSwimHRConfidenceCap = "apple_health_swim_hr_confidence_cap"
+    case appleHealthStrengthContext = "apple_health_strength_context"
+    case futureSourceSpecific = "future_source_specific"
+}
+
+public struct TrainingSpecResolution: Codable, Equatable, Hashable, Sendable {
+    public let evidenceLayer: EvidenceLayer
+    public let sourceRoleLayer: SourceRoleLayer
+    public let sourceRoleReason: SourceRoleReason?
+
+    public init(
+        evidenceLayer: EvidenceLayer = .trainingEstimatorEvidenceMap,
+        sourceRoleLayer: SourceRoleLayer = .none,
+        sourceRoleReason: SourceRoleReason? = nil
+    ) {
+        self.evidenceLayer = evidenceLayer
+        self.sourceRoleLayer = sourceRoleLayer
+        self.sourceRoleReason = sourceRoleReason
+    }
+}
+
 public enum TrainingMetricClaimProfileKind: String, Codable, CaseIterable, Sendable {
     case vo2MaxEstimate = "vo2max_estimate"
     case heartRateRecoveryContext = "heart_rate_recovery_context"

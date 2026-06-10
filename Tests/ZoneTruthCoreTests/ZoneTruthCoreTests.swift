@@ -64,6 +64,21 @@ final class ZoneTruthCoreTests: XCTestCase {
         let updateFlag: String
     }
 
+    private struct AnalyzerMetadataEnvelope: Codable, Equatable {
+        let id: String
+        let specResolution: TrainingSpecResolution
+    }
+
+    private struct ImporterMetadataEnvelope: Codable, Equatable {
+        let source: String
+        let specResolution: TrainingSpecResolution
+    }
+
+    private struct DisplayMetadataEnvelope: Codable, Equatable {
+        let surface: String
+        let specResolution: TrainingSpecResolution
+    }
+
     func testTrainingMetricMetadataCodableRoundTripsSpecValues() throws {
         let metadata = TrainingMetricMetadata(
             metric: .vo2Max,
@@ -92,6 +107,65 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(json.contains("product_reference"))
         XCTAssertTrue(json.contains("two_or_more_levels_below"))
         XCTAssertTrue(json.contains("estimate_only"))
+    }
+
+    func testTrainingSpecResolutionCodableRoundTripsContractValues() throws {
+        let resolution = TrainingSpecResolution(
+            evidenceLayer: .trainingEstimatorEvidenceMap,
+            sourceRoleLayer: .appleHealthTrainingDataRoleMatrix,
+            sourceRoleReason: .appleHealthRestingHRInitialZone2Range
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(resolution)
+        let json = String(decoding: data, as: UTF8.self)
+        let decoded = try JSONDecoder().decode(TrainingSpecResolution.self, from: data)
+
+        XCTAssertEqual(decoded, resolution)
+        XCTAssertTrue(json.contains("TRAINING_ESTIMATOR_EVIDENCE_MAP"))
+        XCTAssertTrue(json.contains("APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX"))
+        XCTAssertTrue(json.contains("apple_health_resting_hr_initial_zone2_range"))
+    }
+
+    func testAnalyzerImporterAndDisplayMetadataCanCarrySpecResolution() throws {
+        let analyzerMetadata = AnalyzerMetadataEnvelope(
+            id: "core_vo2_interval_classifier",
+            specResolution: TrainingSpecResolution(
+                sourceRoleLayer: .none,
+                sourceRoleReason: .analyzerGeneric
+            )
+        )
+        let importerMetadata = ImporterMetadataEnvelope(
+            source: "apple_health_vo2max",
+            specResolution: TrainingSpecResolution(
+                sourceRoleLayer: .appleHealthTrainingDataRoleMatrix,
+                sourceRoleReason: .appleHealthVO2MaxProductReference
+            )
+        )
+        let displayMetadata = DisplayMetadataEnvelope(
+            surface: "workout_detail_zone2_reference",
+            specResolution: TrainingSpecResolution(
+                sourceRoleLayer: .appleHealthTrainingDataRoleMatrix,
+                sourceRoleReason: .appleHealthRestingHRInitialZone2Range
+            )
+        )
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        XCTAssertEqual(
+            try decoder.decode(AnalyzerMetadataEnvelope.self, from: encoder.encode(analyzerMetadata)),
+            analyzerMetadata
+        )
+        XCTAssertEqual(
+            try decoder.decode(ImporterMetadataEnvelope.self, from: encoder.encode(importerMetadata)),
+            importerMetadata
+        )
+        XCTAssertEqual(
+            try decoder.decode(DisplayMetadataEnvelope.self, from: encoder.encode(displayMetadata)),
+            displayMetadata
+        )
     }
 
     func testTrainingClassificationCodableRoundTripsV31Shape() throws {
