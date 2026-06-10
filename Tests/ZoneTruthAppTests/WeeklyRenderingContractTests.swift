@@ -104,6 +104,33 @@ final class WeeklyRenderingContractTests: XCTestCase {
         }
     }
 
+    func testWeeklyRenderingDoesNotExposeDebugTokensOrGoalOverrideLanguage() throws {
+        let sourceText = try weeklyDashboardSourceText()
+        let presenterText = weeklyPresenterSurfaceText()
+        let combinedText = sourceText + "\n" + presenterText
+        let forbiddenTerms = [
+            "目標覆寫",
+            "Text(\"Observed:",
+            "Text(\"Unavailable:",
+            "\"bounded_synthesis\"",
+            "\"intent_distribution\"",
+            "\"workout_count\"",
+            "\"zone_distribution\"",
+            "\"28d unavailable\"",
+            "\"7d signal\"",
+            "下週可保留高強度課",
+            "下週建議補足訓練量",
+            "下週建議先安排至少一堂肌力課"
+        ]
+
+        for term in forbiddenTerms {
+            XCTAssertFalse(
+                combinedText.localizedCaseInsensitiveContains(term),
+                "Weekly rendering must not expose debug/coaching/goal-override term '\(term)'."
+            )
+        }
+    }
+
     private func weeklyPresenterSurfaceText() -> String {
         var labels: [String] = []
         for authority in [WeeklyDecisionAuthority.observational, .boundedInference, .weakInference] {
@@ -113,6 +140,20 @@ final class WeeklyRenderingContractTests: XCTestCase {
                 goal: nil,
                 goalSignal: nil
             ))
+            for goal in UserTrainingGoal.allCases {
+                labels.append(WeeklyCTAPresenter.render(
+                    base: "本週訓練節奏尚可，下週視體感微調強度。",
+                    for: authority,
+                    goal: goal,
+                    goalSignal: .partiallyAligned
+                ))
+                labels.append(WeeklyCTAPresenter.render(
+                    base: "本週訓練節奏尚可，下週視體感微調強度。",
+                    for: authority,
+                    goal: goal,
+                    goalSignal: .divergent
+                ))
+            }
             labels.append(WeeklyAdaptationDirection.noSignal.admissibleLabel(for: authority))
             labels.append(TrainingState.functionalFatigue.admissibleLabel(for: authority))
         }

@@ -1342,7 +1342,7 @@ public enum CalibrationSuggestionSource: String, Codable, Equatable, Sendable {
     public var displayLabel: String {
         switch self {
         case .restingHeartRateHeuristic:
-            return "依據：Resting HR + 產品預設偏移規則"
+            return "依據：靜息心率 + 產品預設偏移規則"
         case .driftTrend:
             return "來源：歷史心率飄移校正"
         }

@@ -769,10 +769,10 @@ enum WorkoutDetailInformationArchitecture {
     ]
 
     static let settingsOnlyLabels = [
-        "Resting HR",
+        "靜息心率",
         "靜息心率",
         "偏移",
-        "依 Resting HR 產生建議",
+        "依靜息心率產生建議",
         "分析策略設定",
         methodSettings
     ]
@@ -1814,11 +1814,11 @@ struct IntentPickerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("設定訓練目標")
+                Text("修正判讀類型")
                     .font(.subheadline.bold())
                     .foregroundStyle(.white)
                 Spacer()
-                Text(selectedIntentSource == .auto ? "自動判定" : "手動設定")
+                Text(selectedIntentSource == .auto ? "自動判定" : "手動校準")
                     .font(.caption.bold())
                     .foregroundStyle(selectedIntentSource == .auto ? PremiumColor.skyBlue : PremiumColor.gold)
                     .padding(.horizontal, 8)
@@ -1828,7 +1828,7 @@ struct IntentPickerView: View {
             }
             
             Picker(
-                "目標",
+                "判讀類型",
                 selection: Binding(
                     get: {
                         TrainingIntent.uiVisibleCases.contains(selectedIntent) ? selectedIntent : .zone2
@@ -1848,7 +1848,7 @@ struct IntentPickerView: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.branch")
-                    Text("套用到同類型運動")
+                    Text("作為同類型校準參考")
                 }
                 .font(.caption.bold())
                 .padding(.vertical, 8)
@@ -1859,7 +1859,7 @@ struct IntentPickerView: View {
                 .overlay(Capsule().stroke(PremiumColor.skyBlue.opacity(0.35), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .confirmationDialog("選擇套用範圍", isPresented: $showApplyScopeDialog, titleVisibility: .visible) {
+            .confirmationDialog("選擇校準參考範圍", isPresented: $showApplyScopeDialog, titleVisibility: .visible) {
                 ForEach(IntentApplyScope.allCases) { scope in
                     let count = impactedCountForScope(scope)
                     Button(scopeLabel(scope, count: count)) {
@@ -1869,10 +1869,10 @@ struct IntentPickerView: View {
                 }
                 Button("取消", role: .cancel) {}
             }
-            .confirmationDialog("確認套用目標", isPresented: $showApplyConfirmDialog, titleVisibility: .visible) {
+            .confirmationDialog("確認保存校準參考", isPresented: $showApplyConfirmDialog, titleVisibility: .visible) {
                 if let scope = pendingScope {
                     let count = impactedCountForScope(scope)
-                    Button("套用（\(count) 筆）") {
+                    Button("保存參考（\(count) 筆）") {
                         onApplyToSameWorkoutType(scope)
                         pendingScope = nil
                     }
@@ -1882,7 +1882,7 @@ struct IntentPickerView: View {
                 }
             } message: {
                 if let scope = pendingScope {
-                    Text("將目前目標套用到\(scopeReadable(scope))，預計影響 \(impactedCountForScope(scope)) 筆。")
+                    Text("將目前判讀類型作為\(scopeReadable(scope))的校準參考，預計影響 \(impactedCountForScope(scope)) 筆；不改變原始活動資料。")
                 }
             }
         }
@@ -2357,13 +2357,13 @@ struct SettingsView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            Text("Resting HR 會用下方偏移量產生初步 Zone 2 參考範圍；只有按下套用參考範圍後，分析器才會改用新的 bpm 邊界。")
+            Text("靜息心率會用下方偏移量產生初步 Zone 2 參考範圍；只有按下套用參考範圍後，分析器才會改用新的 bpm 邊界。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Resting HR")
+                Text("靜息心率")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .center, spacing: 12) {
@@ -2422,13 +2422,13 @@ struct SettingsView: View {
                     restingHeartRateOffsetField(title: "下限 +", value: restingLowerOffsetBinding)
                     restingHeartRateOffsetField(title: "上限 +", value: restingUpperOffsetBinding)
                 }
-                Text("目前公式：Resting HR + \(Int(settingsManager.restingHeartRateSuggestionOffsets.lowerOffset.rounded())) 到 + \(Int(settingsManager.restingHeartRateSuggestionOffsets.upperOffset.rounded())) bpm。")
+                Text("目前公式：靜息心率 + \(Int(settingsManager.restingHeartRateSuggestionOffsets.lowerOffset.rounded())) 到 + \(Int(settingsManager.restingHeartRateSuggestionOffsets.upperOffset.rounded())) bpm。")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
-                Button("依 Resting HR 產生建議") {
+                Button("依靜息心率產生建議") {
                     withAnimation {
                         settingsManager.generateRestingHeartRateSuggestion()
                     }
@@ -2442,7 +2442,7 @@ struct SettingsView: View {
                 .disabled(settingsManager.restingHeartRate == nil)
 
                 if settingsManager.restingHeartRate == nil {
-                    Text("先輸入 Resting HR")
+                    Text("先輸入靜息心率")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -2581,7 +2581,7 @@ struct SettingsView: View {
 
     private func importRestingHeartRateFromAppleHealth() async {
         guard restingHeartRateStore.isAvailable else {
-            restingHeartRateImportMessage = "此裝置目前無法使用 Apple Health Resting HR。"
+            restingHeartRateImportMessage = "此裝置目前無法使用 Apple Health 靜息心率。"
             return
         }
 

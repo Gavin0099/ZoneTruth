@@ -27,7 +27,7 @@ public enum CalibrationEngine {
         return CalibrationSuggestion(
             currentBounds: currentPolicy.zoneBounds,
             suggestedBounds: suggestedBounds,
-            reason: "依 Resting HR \(Int(restingHeartRate.rounded())) bpm 與產品預設偏移規則，產生初步 Zone 2 參考範圍。此範圍尚未經足夠訓練資料驗證，後續應依心率漂移、配速穩定度與主觀感受校正。",
+            reason: "依靜息心率 \(Int(restingHeartRate.rounded())) bpm 與產品預設偏移規則，產生初步 Zone 2 參考範圍。此範圍尚未經足夠訓練資料驗證，後續應依心率漂移、配速穩定度與主觀感受校正。",
             confidence: 0.55,
             source: .restingHeartRateHeuristic,
             sourceSessionIDs: []

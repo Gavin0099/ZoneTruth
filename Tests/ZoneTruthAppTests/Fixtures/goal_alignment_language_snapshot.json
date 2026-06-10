@@ -10,8 +10,8 @@
     "signal" : "aligned"
   },
   {
-    "ctaObservational" : "下週可再增加一次低強度有氧時段，讓訓練型態更貼近有氧基礎方向。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週可再增加一次低強度有氧時段，讓訓練型態更貼近有氧基礎方向。",
+    "ctaObservational" : "下週若增加低強度有氧時段，建議同時觀察恢復與體感變化。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若增加低強度有氧時段，建議同時觀察恢復與體感變化。",
     "goal" : "aerobic_base",
     "mismatchFactors" : [
       "高強度課次偏多（2 天），壓縮低強度有氧比例。",
@@ -21,8 +21,8 @@
     "signal" : "partiallyAligned"
   },
   {
-    "ctaObservational" : "下週建議先降低高強度課比例，優先補低強度有氧時段。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週建議先降低高強度課比例，優先補低強度有氧時段。",
+    "ctaObservational" : "下週若調整訓練分布，可先觀察降低高強度比例後的恢復反應。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若調整訓練分布，可先觀察降低高強度比例後的恢復反應。",
     "goal" : "aerobic_base",
     "mismatchFactors" : [
       "高強度課次偏多（2 天），壓縮低強度有氧比例。",
@@ -53,8 +53,8 @@
     "signal" : "aligned"
   },
   {
-    "ctaObservational" : "下週可增加一堂肌力課，讓訓練型態更貼近肌力為主方向。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週可增加一堂肌力課，讓訓練型態更貼近肌力為主方向。",
+    "ctaObservational" : "下週若增加肌力課，建議同時觀察恢復與組間品質。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若增加肌力課，建議同時觀察恢復與組間品質。",
     "goal" : "strength_focus",
     "mismatchFactors" : [
       "肌力課次偏少，目前僅 1 天。"
@@ -63,8 +63,8 @@
     "signal" : "partiallyAligned"
   },
   {
-    "ctaObservational" : "下週建議先安排至少一堂肌力課，修正本週與目標的型態偏差。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週建議先安排至少一堂肌力課，修正本週與目標的型態偏差。",
+    "ctaObservational" : "下週若補入肌力課，建議觀察肌力訓練品質與恢復狀態。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若補入肌力課，建議觀察肌力訓練品質與恢復狀態。",
     "goal" : "strength_focus",
     "mismatchFactors" : [
       "肌力課次偏少，目前僅 1 天。"
@@ -93,8 +93,8 @@
     "signal" : "aligned"
   },
   {
-    "ctaObservational" : "下週可維持目前頻率並補一堂中等強度課，逐步貼近體脂調整方向。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週可維持目前頻率並補一堂中等強度課，逐步貼近體脂調整方向。",
+    "ctaObservational" : "下週若維持目前頻率，建議觀察中等強度課後的恢復反應。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若維持目前頻率，建議觀察中等強度課後的恢復反應。",
     "goal" : "fat_loss_recomp",
     "mismatchFactors" : [
 
@@ -103,8 +103,8 @@
     "signal" : "partiallyAligned"
   },
   {
-    "ctaObservational" : "下週建議提高規律訓練頻率，並保留一堂混合刺激課。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週建議提高規律訓練頻率，並保留一堂混合刺激課。",
+    "ctaObservational" : "下週若提高訓練頻率，建議同步觀察負荷與恢復是否穩定。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若提高訓練頻率，建議同步觀察負荷與恢復是否穩定。",
     "goal" : "fat_loss_recomp",
     "mismatchFactors" : [
 
@@ -133,8 +133,8 @@
     "signal" : "aligned"
   },
   {
-    "ctaObservational" : "下週可保留高強度課並補足恢復，逐步貼近競技準備節奏。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週可保留高強度課並補足恢復，逐步貼近競技準備節奏。",
+    "ctaObservational" : "下週若安排高強度訓練，建議同時觀察恢復訊號與休息安排。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若安排高強度訓練，建議同時觀察恢復訊號與休息安排。",
     "goal" : "performance_peak",
     "mismatchFactors" : [
 
@@ -143,8 +143,8 @@
     "signal" : "partiallyAligned"
   },
   {
-    "ctaObservational" : "下週建議補足訓練量與關鍵強度課，逐步回到競技準備節奏。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週建議補足訓練量與關鍵強度課，逐步回到競技準備節奏。",
+    "ctaObservational" : "下週若補入關鍵強度課，建議先確認恢復訊號與休息安排。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若補入關鍵強度課，建議先確認恢復訊號與休息安排。",
     "goal" : "performance_peak",
     "mismatchFactors" : [
 
@@ -173,8 +173,8 @@
     "signal" : "aligned"
   },
   {
-    "ctaObservational" : "下週可再降低一堂中高強度課，讓週期更接近主動恢復安排。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週可再降低一堂中高強度課，讓週期更接近主動恢復安排。",
+    "ctaObservational" : "下週若減少中高強度課，建議觀察恢復訊號是否更穩定。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若減少中高強度課，建議觀察恢復訊號是否更穩定。",
     "goal" : "active_recovery",
     "mismatchFactors" : [
       "高強度課次偏多（2 天），與恢復週型態不一致。",
@@ -185,8 +185,8 @@
     "signal" : "partiallyAligned"
   },
   {
-    "ctaObservational" : "下週建議優先減少高強度課次，讓週負荷回到恢復導向。",
-    "ctaWeak" : "訊號有限，僅供方向參考：下週建議優先減少高強度課次，讓週負荷回到恢復導向。",
+    "ctaObservational" : "下週若減少高強度課次，建議觀察週負荷與恢復訊號是否回穩。",
+    "ctaWeak" : "訊號有限，僅供方向參考：下週若減少高強度課次，建議觀察週負荷與恢復訊號是否回穩。",
     "goal" : "active_recovery",
     "mismatchFactors" : [
       "高強度課次偏多（2 天），與恢復週型態不一致。",

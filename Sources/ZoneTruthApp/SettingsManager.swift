@@ -235,7 +235,7 @@ final class SettingsManager: ObservableObject {
         let bounds = policy.zoneBounds
         let sourceLabel: String
         if zoneBoundsSource == .restingHeartRateHeuristic {
-            sourceLabel = "Resting HR 建議已套用"
+            sourceLabel = "靜息心率建議已套用"
         } else if zoneBoundsSource == .driftTrend {
             sourceLabel = "歷史飄移校正已套用"
         } else if isUsingCustomZoneBounds {
@@ -245,7 +245,7 @@ final class SettingsManager: ObservableObject {
         }
 
         let restingLabel = restingHeartRate
-            .map { "Resting HR \(Self.formattedBPM($0)) bpm" } ?? "Resting HR 未設定"
+            .map { "靜息心率 \(Self.formattedBPM($0)) bpm" } ?? "靜息心率未設定"
         let offsetsLabel = "偏移 +\(Self.formattedBPM(restingHeartRateSuggestionOffsets.lowerOffset))/+\(Self.formattedBPM(restingHeartRateSuggestionOffsets.upperOffset))"
         let pendingLabel: String
         if let pendingSuggestion {

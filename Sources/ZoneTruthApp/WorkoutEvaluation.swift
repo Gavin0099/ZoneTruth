@@ -284,7 +284,7 @@ private struct VO2EvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationLog
 private struct StrengthEvaluationPolicy: WorkoutEvaluationPolicy, SharedEvaluationLogic {
     func evaluate(_ observation: WorkoutObservation) -> WorkoutEvaluation {
         let highIntensity = observation.zoneDistribution.ratio(for: .zone4) + observation.zoneDistribution.ratio(for: .zone5)
-        let tendency = highIntensity > 0.20 ? "較像代謝循環型肌力" : "肌力訓練節奏明確"
+        let tendency = highIntensity > 0.20 ? "較像代謝循環型肌力" : "偏典型肌力訓練節奏"
         let score = highIntensity > 0.20 ? 46 : 78
         let findings = highIntensity > 0.20
             ? ["高心率停留較多，整體更像連續循環式刺激。"]

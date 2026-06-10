@@ -360,7 +360,7 @@ final class WorkoutListViewModel: ObservableObject {
         let bounds = settingsManager.policy.zoneBounds
         let sourceLabel: String
         if settingsManager.zoneBoundsSource == .restingHeartRateHeuristic {
-            sourceLabel = "Resting HR 建議已套用"
+            sourceLabel = "靜息心率建議已套用"
         } else if settingsManager.zoneBoundsSource == .driftTrend {
             sourceLabel = "歷史飄移校正已套用"
         } else if settingsManager.isUsingCustomZoneBounds {

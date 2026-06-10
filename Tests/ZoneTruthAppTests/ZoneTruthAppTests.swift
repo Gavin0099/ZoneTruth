@@ -824,7 +824,7 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertEqual(settings.restingHeartRate, 56)
         XCTAssertNotNil(settings.pendingSuggestion)
-        XCTAssertTrue(message.contains("已匯入 Apple Health 最近 7 天平均 Resting HR 56 bpm"), message)
+        XCTAssertTrue(message.contains("已匯入 Apple Health 最近 7 天平均靜息心率 56 bpm"), message)
     }
 
     @MainActor
@@ -1263,18 +1263,18 @@ final class ZoneTruthAppTests: XCTestCase {
         let manager = SettingsManager(userDefaults: defaults)
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("預設界線"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 110-125 bpm"))
-        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 未設定"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("靜息心率未設定"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待處理參考範圍"))
 
         manager.updateRestingHeartRate(60)
         manager.updateRestingHeartRateSuggestionOffsets(lowerOffset: 48, upperOffset: 62)
         manager.generateRestingHeartRateSuggestion()
-        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 60 bpm"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("靜息心率 60 bpm"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("偏移 +48/+62"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("可套用初步參考範圍 108-122 bpm"))
 
         manager.applySuggestion()
-        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Resting HR 建議已套用"))
+        XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("靜息心率建議已套用"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("Zone 2 108-122 bpm"))
         XCTAssertTrue(manager.zone2ProfileStatusSummary.contains("沒有待處理參考範圍"))
 
@@ -1790,6 +1790,26 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(labels.contains("目的符合度"))
         XCTAssertFalse(labels.contains("達標"))
         XCTAssertFalse(labels.contains("未達標"))
+    }
+
+    func testWorkoutDetailSourceDoesNotExposeGoalOverrideOrExplosiveStrengthWording() throws {
+        let sourceText = try appSourceText(named: "Views.swift") + "\n" + coreSourceText(named: "RecommendationEngine.swift")
+        let forbiddenTerms = [
+            "設定訓練目標",
+            "套用到同類型運動",
+            "確認套用目標",
+            "將目前目標套用",
+            "爆發力訓練節奏"
+        ]
+
+        for term in forbiddenTerms {
+            XCTAssertFalse(
+                sourceText.contains(term),
+                "Workout detail user-facing wording must not expose goal override or HR-only explosive-strength wording: \(term)"
+            )
+        }
+        XCTAssertTrue(sourceText.contains("修正判讀類型"))
+        XCTAssertTrue(sourceText.contains("作為同類型校準參考"))
     }
 
     @MainActor
@@ -2526,7 +2546,7 @@ final class ZoneTruthAppTests: XCTestCase {
         settings.generateRestingHeartRateSuggestion()
         settings.applySuggestion()
         let suggestedSummary = viewModel.analysisZoneContextSummary(for: workout)
-        XCTAssertTrue(suggestedSummary.contains("Resting HR 建議已套用"))
+        XCTAssertTrue(suggestedSummary.contains("靜息心率建議已套用"))
         XCTAssertTrue(suggestedSummary.contains("115-130 bpm"))
     }
 
@@ -2619,7 +2639,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(signal.direction, .enduranceBuild)
         XCTAssertEqual(signal.authority, .observational)
         XCTAssertEqual(signal.inferenceClass, .bounded)
-        XCTAssertEqual(signal.temporalScopes.map(\.label), ["7d signal", "28d unavailable"])
+        XCTAssertEqual(signal.temporalScopes.map(\.label), ["近 7 天訊號", "近 28 天資料不足"])
         XCTAssertEqual(signal.provenance.authorityCeiling, .nonInterventional)
         XCTAssertTrue(signal.provenance.isValidFailClosed(strength: .bounded))
     }
@@ -2904,7 +2924,9 @@ final class ZoneTruthAppTests: XCTestCase {
             goal: .strengthFocus,
             goalSignal: .divergent
         )
-        XCTAssertTrue(rendered.contains("安排至少一堂肌力課"))
+        XCTAssertTrue(rendered.contains("補入肌力課"))
+        XCTAssertTrue(rendered.contains("觀察肌力訓練品質"))
+        XCTAssertFalse(rendered.contains("安排至少一堂肌力課"))
     }
 
     func testWeeklyCTAPresenterKeepsWeakEvidencePrefixOnGoalAwareAction() {
@@ -2915,7 +2937,9 @@ final class ZoneTruthAppTests: XCTestCase {
             goalSignal: .divergent
         )
         XCTAssertTrue(rendered.hasPrefix("訊號有限，僅供方向參考："))
-        XCTAssertTrue(rendered.contains("優先補低強度有氧時段"))
+        XCTAssertTrue(rendered.contains("降低高強度比例"))
+        XCTAssertTrue(rendered.contains("觀察"))
+        XCTAssertFalse(rendered.contains("優先補低強度有氧時段"))
     }
 
     func testGoalAlignmentMismatchFactorsExposeDeterministicReasons() {
@@ -3013,8 +3037,8 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     func testWeeklyTemporalScopeLabelsAreLocalized() {
-        XCTAssertEqual(WeeklyTemporalScopeLabel.signal7d, "7d 訊號")
-        XCTAssertEqual(WeeklyTemporalScopeLabel.unavailable28d, "28d 不可用")
+        XCTAssertEqual(WeeklyTemporalScopeLabel.signal7d, "近 7 天訊號")
+        XCTAssertEqual(WeeklyTemporalScopeLabel.unavailable28d, "近 28 天資料不足")
         XCTAssertFalse(WeeklyTemporalScopeLabel.signal7d.contains("signal"))
         XCTAssertFalse(WeeklyTemporalScopeLabel.unavailable28d.contains("unavailable"))
     }
@@ -3374,6 +3398,24 @@ private func appTestFeedbackRecord(
             userSuggestedMode: userSuggestedMode
         )
     )
+}
+
+private func appSourceText(named fileName: String) throws -> String {
+    try sourceText(relativePath: "Sources/ZoneTruthApp/\(fileName)")
+}
+
+private func coreSourceText(named fileName: String) throws -> String {
+    try sourceText(relativePath: "Sources/ZoneTruthCore/\(fileName)")
+}
+
+private func sourceText(relativePath: String) throws -> String {
+    let testFile = URL(fileURLWithPath: #filePath)
+    let repoRoot = testFile
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+    let sourceURL = repoRoot.appendingPathComponent(relativePath)
+    return try String(contentsOf: sourceURL, encoding: .utf8)
 }
 
 private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {

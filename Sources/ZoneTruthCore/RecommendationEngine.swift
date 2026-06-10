@@ -42,7 +42,7 @@ public enum RecommendationEngine {
     ) -> [String] {
         switch verdict {
         case .pass:
-            return ["心率型態顯示組間恢復較明顯，與傳統肌力或爆發力訓練節奏較一致。"]
+            return ["心率型態顯示組間恢復較明顯，與組間休息明確的傳統肌力訓練節奏較一致。"]
         case .warning:
             return ["對於純肌力訓練來說，您的心率偏高。如果目標是最大肌力，建議拉長組間休息時間。"]
         case .fail:

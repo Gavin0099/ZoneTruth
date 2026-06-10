@@ -74,10 +74,10 @@ enum WeeklyHRVCoverageSignal: Equatable {
 
     var label: String {
         switch self {
-        case .missing: return "HRV 缺失"
-        case .sparse: return "HRV 稀疏"
-        case .partial: return "HRV 部分"
-        case .good: return "HRV 充足"
+        case .missing: return "心率變異缺失"
+        case .sparse: return "心率變異稀疏"
+        case .partial: return "心率變異部分"
+        case .good: return "心率變異充足"
         }
     }
 
@@ -125,8 +125,8 @@ enum NonAuthorityReminderLevel {
 }
 
 enum WeeklyTemporalScopeLabel {
-    static let signal7d = "7d 訊號"
-    static let unavailable28d = "28d 不可用"
+    static let signal7d = "近 7 天訊號"
+    static let unavailable28d = "近 28 天資料不足"
 }
 
 // CTA wording ceiling: stronger directives require higher-authority evidence.
@@ -166,28 +166,28 @@ enum WeeklyCTAPresenter {
         case .partiallyAligned:
             switch goal {
             case .aerobicBase:
-                return "下週可再增加一次低強度有氧時段，讓訓練型態更貼近有氧基礎方向。"
+                return "下週若增加低強度有氧時段，建議同時觀察恢復與體感變化。"
             case .strengthFocus:
-                return "下週可增加一堂肌力課，讓訓練型態更貼近肌力為主方向。"
+                return "下週若增加肌力課，建議同時觀察恢復與組間品質。"
             case .fatLossRecomp:
-                return "下週可維持目前頻率並補一堂中等強度課，逐步貼近體脂調整方向。"
+                return "下週若維持目前頻率，建議觀察中等強度課後的恢復反應。"
             case .performancePeak:
-                return "下週可保留高強度課並補足恢復，逐步貼近競技準備節奏。"
+                return "下週若安排高強度訓練，建議同時觀察恢復訊號與休息安排。"
             case .activeRecovery:
-                return "下週可再降低一堂中高強度課，讓週期更接近主動恢復安排。"
+                return "下週若減少中高強度課，建議觀察恢復訊號是否更穩定。"
             }
         case .divergent:
             switch goal {
             case .aerobicBase:
-                return "下週建議先降低高強度課比例，優先補低強度有氧時段。"
+                return "下週若調整訓練分布，可先觀察降低高強度比例後的恢復反應。"
             case .strengthFocus:
-                return "下週建議先安排至少一堂肌力課，修正本週與目標的型態偏差。"
+                return "下週若補入肌力課，建議觀察肌力訓練品質與恢復狀態。"
             case .fatLossRecomp:
-                return "下週建議提高規律訓練頻率，並保留一堂混合刺激課。"
+                return "下週若提高訓練頻率，建議同步觀察負荷與恢復是否穩定。"
             case .performancePeak:
-                return "下週建議補足訓練量與關鍵強度課，逐步回到競技準備節奏。"
+                return "下週若補入關鍵強度課，建議先確認恢復訊號與休息安排。"
             case .activeRecovery:
-                return "下週建議優先減少高強度課次，讓週負荷回到恢復導向。"
+                return "下週若減少高強度課次，建議觀察週負荷與恢復訊號是否回穩。"
             }
         case .insufficientEvidence:
             return "本週訓練樣本不足，先以輕量規律訓練累積觀測，再調整目標方向。"
@@ -325,8 +325,8 @@ extension TrainingState {
 extension AdaptationTemporalScope {
     var label: String {
         switch self {
-        case .short7d: return "7d signal"
-        case .medium28dUnavailable: return "28d unavailable"
+        case .short7d: return WeeklyTemporalScopeLabel.signal7d
+        case .medium28dUnavailable: return WeeklyTemporalScopeLabel.unavailable28d
         }
     }
 }
@@ -456,11 +456,11 @@ struct WeeklyPersonalizationCard: View {
                 .foregroundStyle(.white.opacity(0.9))
 
             if let restingHeartRate = settingsManager.restingHeartRate {
-                Text("Resting HR：\(Int(restingHeartRate.rounded())) bpm")
+                Text("靜息心率：\(Int(restingHeartRate.rounded())) bpm")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("Resting HR：尚未設定")
+                Text("靜息心率：尚未設定")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -491,7 +491,7 @@ struct WeeklyOverrideInsightCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("目標覆寫洞察", systemImage: "arrow.triangle.branch")
+                Label("分類校準覆蓋率", systemImage: "arrow.triangle.branch")
                     .font(.subheadline.bold())
                     .foregroundStyle(.white)
                 Spacer()
@@ -501,15 +501,15 @@ struct WeeklyOverrideInsightCard: View {
             }
 
             if insight.workoutCount == 0 {
-                Text("本週尚無訓練紀錄，暫無覆寫統計。")
+                Text("本週尚無訓練紀錄，暫無校準統計。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("本週共 \(insight.workoutCount) 筆，手動覆寫 \(insight.overrideCount) 筆。")
+                Text("本週共 \(insight.workoutCount) 筆，手動校準 \(insight.overrideCount) 筆。")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
                 if let topType = insight.topOverriddenType, insight.topOverriddenTypeCount > 0 {
-                    Text("最常覆寫類型：\(topType.localizedName)（\(insight.topOverriddenTypeCount) 筆）")
+                    Text("最常校準類型：\(topType.localizedName)（\(insight.topOverriddenTypeCount) 筆）")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -832,25 +832,83 @@ private struct InferenceProvenanceSection: View {
                 .font(.caption.bold())
                 .foregroundStyle(.secondary)
             HStack(spacing: 6) {
-                EvidenceChip(label: provenance.inferenceType.rawValue, color: PremiumColor.skyBlue)
-                EvidenceChip(label: authorityCeilingLabel(provenance.authorityCeiling.rawValue), color: PremiumColor.gold)
+                EvidenceChip(label: inferenceTypeLabel(provenance.inferenceType), color: PremiumColor.skyBlue)
+                EvidenceChip(label: authorityCeilingLabel(provenance.authorityCeiling), color: PremiumColor.gold)
             }
-            Text("Observed: " + provenance.derivedFrom.map(\.rawValue).joined(separator: ", "))
+            Text("已觀察：" + localizedDerivedSignals(provenance.derivedFrom).joined(separator: "、"))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Unavailable: " + provenance.missingEvidence.map(\.rawValue).joined(separator: ", "))
+            Text("缺少：" + localizedMissingEvidence(provenance.missingEvidence).joined(separator: "、"))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
-private func authorityCeilingLabel(_ raw: String) -> String {
-    if raw == "non_interventional" {
+
+private func inferenceTypeLabel(_ type: InferenceType) -> String {
+    switch type {
+    case .directObservation:
+        return "直接觀察"
+    case .boundedSynthesis:
+        return "受限綜合"
+    case .sparseInference:
+        return "資料稀疏"
+    }
+}
+
+private func authorityCeilingLabel(_ ceiling: InferenceAuthorityCeiling) -> String {
+    switch ceiling {
+    case .nonInterventional:
         return "非介入上限"
     }
-    return raw
+}
+
+private func localizedDerivedSignals(_ signals: [DerivedFromSignal]) -> [String] {
+    signals.map { signal in
+        switch signal {
+        case .workoutCount:
+            return "訓練次數"
+        case .dataFreshness:
+            return "資料新鮮度"
+        case .hrvCoverage:
+            return "心率變異覆蓋"
+        case .restDays:
+            return "休息天數"
+        case .intentDistribution:
+            return "訓練型態分布"
+        case .highIntensityDays:
+            return "高強度天數"
+        case .consecutiveTrainingDays:
+            return "連續訓練天數"
+        case .recoveryConcernLevel:
+            return "恢復觀察"
+        case .zoneDistribution:
+            return "心率區間分布"
+        }
+    }
+}
+
+private func localizedMissingEvidence(_ evidence: [MissingEvidence]) -> [String] {
+    evidence.map { item in
+        switch item {
+        case .sleep:
+            return "睡眠"
+        case .hrv:
+            return "心率變異"
+        case .nutrition:
+            return "營養"
+        case .illness:
+            return "生病狀態"
+        case .stress:
+            return "壓力"
+        case .deviceQuality:
+            return "裝置品質"
+        case .other:
+            return "其他"
+        }
+    }
 }
 
 // MARK: - Section 3: Advanced
@@ -1038,14 +1096,14 @@ struct WeeklyAdvancedCard: View {
 
             // HRV observation import (P3a): observation-only, no policy coupling.
             VStack(alignment: .leading, spacing: 8) {
-                Text("HRV 觀測")
+                Text("心率變異觀測")
                     .font(.subheadline.bold())
                     .foregroundStyle(.white.opacity(0.8))
 
                 if let avg = summary.averageHRVSDNNMilliseconds {
                     EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
                     HStack {
-                        Text("平均 SDNN")
+                        Text("平均心率變異")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -1065,15 +1123,15 @@ struct WeeklyAdvancedCard: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Text("僅顯示 HRV 觀測訊號，不直接輸出恢復診斷。")
+                    Text("僅顯示心率變異觀測訊號，不直接輸出恢復診斷。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     EvidenceChip(label: hrvCoverageSignal.label, color: hrvCoverageSignal.color)
-                    Text("本週尚無可用 HRV（SDNN）樣本。")
+                    Text("本週尚無可用心率變異樣本。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text("若健康已有 HRV，請刷新資料與健康授權；系統會優先抓訓練時段，無樣本時回退同日觀測。")
+                    Text("若健康已有心率變異資料，請刷新資料與健康授權；系統會優先抓訓練時段，無樣本時回退同日觀測。")
                         .font(.caption2)
                         .foregroundStyle(.secondary.opacity(0.85))
                 }
@@ -1090,7 +1148,7 @@ struct WeeklyAdvancedCard: View {
                     Text("身體組成脈絡")
                         .font(.subheadline.bold())
                         .foregroundStyle(.white.opacity(0.8))
-                    Text("尚無可用的身體組成資料，請確認 seed 載入或匯入資料。")
+                    Text("尚無可用的身體組成資料，請確認範例資料載入或匯入資料。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
