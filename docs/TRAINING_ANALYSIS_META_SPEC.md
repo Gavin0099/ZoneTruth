@@ -4,6 +4,7 @@ Last updated: 2026-06-09
 Owner: ZoneTruth Product + Core
 Status: Draft implementation spec
 Source review: `docs/TRAINING_ANALYSIS_LITERATURE_REVIEW.md`
+Implementation contract: `docs/TRAINING_ANALYSIS_METADATA_CONTRACT.md`
 
 ## Purpose
 
@@ -67,6 +68,9 @@ Rule:
   the relevant source-role matrix.
 - A source-role matrix may narrow a claim, but it must not upgrade the evidence
   authority defined by the Evidence Map.
+
+For concrete analyzer/importer/display requirements, use
+[TRAINING_ANALYSIS_METADATA_CONTRACT.md](/Users/gavin_wu/Desktop/ZoneTruth/docs/TRAINING_ANALYSIS_METADATA_CONTRACT.md).
 
 ## Evidence Tier Model
 
@@ -139,6 +143,8 @@ Implementation rule:
   depends on source-specific semantics such as Apple Health.
 - If no source-role matrix applies, use `none` rather than inferring Apple
   Health-like semantics from another source.
+- `TRAINING_ANALYSIS_METADATA_CONTRACT.md` defines which analyzer, importer,
+  and display metadata surfaces must carry these fields.
 
 ## Confidence Semantics
 

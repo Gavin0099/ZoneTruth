@@ -6,6 +6,7 @@ last_updated: 2026-06-09
 source_review:
   - docs/TRAINING_ESTIMATOR_EVIDENCE_MAP.md
   - docs/APPLE_HEALTH_HIGH_VALUE_EXPANSION.md
+  - docs/TRAINING_ANALYSIS_METADATA_CONTRACT.md
 ---
 
 # Apple Health Training Data Role Matrix
@@ -69,6 +70,9 @@ For implementation-facing work:
 If Apple Health is absent, do not borrow this matrix for another source. Use a
 source-role layer of `none` or add a dedicated source-role matrix for that
 provider.
+
+`TRAINING_ANALYSIS_METADATA_CONTRACT.md` defines when analyzer, importer, and
+display metadata must carry this matrix as `spec_resolution.source_role_layer`.
 
 ## Apple Health Role Tiers
 
