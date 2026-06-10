@@ -469,6 +469,7 @@ public struct TrainingMetricMetadata: Codable, Equatable, Hashable, Sendable {
     public let claim: TrainingMetricClaim
     public let dataQualityFlags: [String]
     public let recommendedValidation: String?
+    public let specResolution: TrainingSpecResolution
 
     public init(
         metric: TrainingMetricKind,
@@ -476,7 +477,8 @@ public struct TrainingMetricMetadata: Codable, Equatable, Hashable, Sendable {
         confidence: TrainingMetricConfidence,
         claim: TrainingMetricClaim? = nil,
         dataQualityFlags: [String] = [],
-        recommendedValidation: String? = nil
+        recommendedValidation: String? = nil,
+        specResolution: TrainingSpecResolution = TrainingSpecResolution()
     ) {
         self.metric = metric
         self.method = method
@@ -486,6 +488,30 @@ public struct TrainingMetricMetadata: Codable, Equatable, Hashable, Sendable {
         )
         self.dataQualityFlags = dataQualityFlags
         self.recommendedValidation = recommendedValidation
+        self.specResolution = specResolution
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case metric
+        case method
+        case confidence
+        case claim
+        case dataQualityFlags
+        case recommendedValidation
+        case specResolution
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        metric = try container.decode(TrainingMetricKind.self, forKey: .metric)
+        method = try container.decode(TrainingMetricMethod.self, forKey: .method)
+        confidence = try container.decode(TrainingMetricConfidence.self, forKey: .confidence)
+        claim = try container.decodeIfPresent(TrainingMetricClaim.self, forKey: .claim) ?? TrainingMetricClaim(
+            ceiling: TrainingMetricClaimCeiling.defaultCeiling(for: method)
+        )
+        dataQualityFlags = try container.decodeIfPresent([String].self, forKey: .dataQualityFlags) ?? []
+        recommendedValidation = try container.decodeIfPresent(String.self, forKey: .recommendedValidation)
+        specResolution = try container.decodeIfPresent(TrainingSpecResolution.self, forKey: .specResolution) ?? TrainingSpecResolution()
     }
 
     public var isClaimCeilingAdmissible: Bool {

@@ -107,6 +107,77 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertTrue(json.contains("product_reference"))
         XCTAssertTrue(json.contains("two_or_more_levels_below"))
         XCTAssertTrue(json.contains("estimate_only"))
+        XCTAssertTrue(json.contains("specResolution"))
+        XCTAssertEqual(decoded.specResolution.evidenceLayer, .trainingEstimatorEvidenceMap)
+        XCTAssertEqual(decoded.specResolution.sourceRoleLayer, .none)
+    }
+
+    func testTrainingMetricMetadataDecodesLegacyJSONWithoutSpecResolution() throws {
+        let legacyJSON = """
+        {
+          "metric": "vo2max",
+          "method": {
+            "tier": "product_reference",
+            "source": "apple",
+            "name": "Apple Health VO2 max estimate",
+            "referenceStandardDistance": "two_or_more_levels_below"
+          },
+          "confidence": {
+            "level": "medium_low",
+            "basis": "Apple product estimate.",
+            "limitingFactors": ["No CPET data"]
+          },
+          "claim": {
+            "ceiling": "estimate_only",
+            "allowedTerms": ["Apple Health VO2 max estimate"],
+            "forbiddenTerms": ["true VO2 max"]
+          },
+          "dataQualityFlags": ["apple_health"],
+          "recommendedValidation": "CPET if precision matters."
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(TrainingMetricMetadata.self, from: legacyJSON)
+
+        XCTAssertEqual(decoded.metric, .vo2Max)
+        XCTAssertEqual(decoded.method.source, .apple)
+        XCTAssertEqual(decoded.specResolution.evidenceLayer, .trainingEstimatorEvidenceMap)
+        XCTAssertEqual(decoded.specResolution.sourceRoleLayer, .none)
+        XCTAssertNil(decoded.specResolution.sourceRoleReason)
+    }
+
+    func testTrainingMetricMetadataCanCarryAppleHealthSourceRoleResolution() throws {
+        let metadata = TrainingMetricMetadata(
+            metric: .vo2Max,
+            method: TrainingMetricMethod(
+                tier: .productReference,
+                source: .apple,
+                name: "Apple Health VO2 max estimate",
+                referenceStandardDistance: .twoOrMoreLevelsBelow
+            ),
+            confidence: TrainingMetricConfidence(
+                level: .mediumLow,
+                basis: "Apple-produced product estimate, not CPET."
+            ),
+            dataQualityFlags: ["apple_health"],
+            recommendedValidation: "CPET if used for clinical or high-performance decisions.",
+            specResolution: TrainingSpecResolution(
+                sourceRoleLayer: .appleHealthTrainingDataRoleMatrix,
+                sourceRoleReason: .appleHealthVO2MaxProductReference
+            )
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(metadata)
+        let json = String(decoding: data, as: UTF8.self)
+        let decoded = try JSONDecoder().decode(TrainingMetricMetadata.self, from: data)
+
+        XCTAssertEqual(decoded, metadata)
+        XCTAssertTrue(json.contains("APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX"))
+        XCTAssertTrue(json.contains("apple_health_vo2max_product_reference"))
+        XCTAssertEqual(decoded.specResolution.evidenceLayer, .trainingEstimatorEvidenceMap)
+        XCTAssertEqual(decoded.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
     }
 
     func testTrainingSpecResolutionCodableRoundTripsContractValues() throws {
