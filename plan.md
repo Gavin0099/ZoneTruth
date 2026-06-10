@@ -12,7 +12,7 @@ default_load: always
 > **Primary Language**: Swift (app core) / Python (governance tooling)
 > **Task Level**: L2
 > **Planning Window**: 2026-04-01 ~ 2026-06-30
-> **最後更新**: 2026-06-09
+> **最後更新**: 2026-06-10
 > **Owner**: Gavin Wu
 > **Freshness**: Sprint (7d)
 
@@ -77,7 +77,8 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Core-only spec resolution metadata types：新增 `TrainingSpecResolution` / `EvidenceLayer` / `SourceRoleLayer` / `SourceRoleReason`，以 Codable Core 型別承載 evidence layer 與 source-role layer；不接 analyzer、不改 SwiftUI、不改 HealthKit importer、不碰 weekly rendering
 - [x] TrainingMetricMetadata spec resolution field：新增 backward-compatible `specResolution` 欄位，預設 evidence layer 為 `TRAINING_ESTIMATOR_EVIDENCE_MAP`、source role layer 為 `none`；補測舊 JSON decode 與 Apple Health source-role encode/decode；不改 analyzer、不改 SwiftUI、不改 HealthKit importer、不碰 weekly rendering
 - [x] Apple Health-backed metric source-role metadata：VO2 max、heart-rate recovery、running power、cycling power、workout route 的 Apple Health-backed `TrainingMetricMetadata` 會帶 `APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX` 與對應 `SourceRoleReason`；不改 SwiftUI、不改 weekly rendering、不新增 HealthKit 權限
-- [ ] 下一步：Training Classification v3.1 與 repo hygiene 已收斂；新的產品或測試工作需先定義 fresh narrow DONE
+- [x] Owner acceptance / manual test checklist 2026-06-10：新增 `docs/OWNER_ACCEPTANCE_2026-06-10.md`，整合 VO2 max、Zone 2、肌力分類、Apple Health-backed metadata disclosure、feedback persistence 路徑、不可宣稱邊界與本機 smoke command；不改 Swift code、不改 SwiftUI、不改 weekly rendering、不新增 HealthKit 權限
+- [ ] 下一步：依 `docs/OWNER_ACCEPTANCE_2026-06-10.md` 跑 local smoke 與 owner manual acceptance，測完後只針對 observed concern/fail 定義修正 DONE
 
 本次治理同步（2026-06-09）：
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
@@ -242,6 +243,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 | Core Spec Resolution Metadata Types | 已完成（Codable `TrainingSpecResolution` 與 evidence/source-role enum；測試證明 analyzer/importer/display envelope 可攜帶） | Done |
 | TrainingMetricMetadata Spec Resolution Field | 已完成（backward-compatible optional decode；新 metadata 可攜帶 Apple Health source-role） | Done |
 | Apple Health-backed Metric Source Roles | 已完成（VO2 max / HRR / running power / cycling power / route metadata 標上 Apple Health role matrix 與 reason） | Done |
+| Owner Acceptance 2026-06-10 | 已完成（目前測試入口，涵蓋 VO2 max / Zone 2 / Strength / Apple Health metadata / feedback persistence 與 claim boundaries） | Done |
 | Weekly disclosure preflight guard | 已完成（weekly rendering contract 禁止 metric measurement overclaim；未改 weekly UI） | Done |
 | Test Candidate 2026-06-04 | 已升級為 local product acceptance candidate（VO2 max / Zone 2 / Strength 最小 feature gate 完成；尚未產生 TestFlight build） | Done |
 | VO2 max feature-complete slice | 已完成最小切片（scalar estimate/import + source labeling + claim-bounded disclosure；不做 lab-equivalent claim） | Done |
@@ -272,6 +274,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-10 | 建立 `docs/OWNER_ACCEPTANCE_2026-06-10.md` 作為最新 owner acceptance 測試入口，整合 VO2 max / Zone 2 / Strength / Apple Health-backed metadata / feedback persistence |
 | 2026-06-09 | 完成 Training Classification v3.1 Sprint 2：新增 Core `TrainingClassification` / `TrainingMode` / confidence / data quality / claim level / evidence / warnings / not-applicable / debug 型別與 Codable guard tests；尚未接入 analyzer |
 | 2026-06-09 | 完成 Training Classification v3.1 Sprint 1 信任止血 UI：單次詳情移除本次意圖 / 目的符合度 / 舊版判定，重訓主要 metric surface 不顯示 VO2 max；新增 targeted UI guard tests |
 | 2026-06-09 | 新增 Training Classification Plan v3.1：正式採用 C 路線（資料反推訓練型態），補 Sprint 0、不要動清單、Core classification object、資料品質下界與純描述週分布規則；不改產品行為 |
