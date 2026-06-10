@@ -144,6 +144,29 @@ final class ZoneTruthAppTests: XCTestCase {
     func testHealthKitReadTypeIdentifiersIncludeVO2MaxAndRecovery() {
         XCTAssertTrue(healthKitReadTypeIdentifiers.contains("vo2Max"))
         XCTAssertTrue(healthKitReadTypeIdentifiers.contains("heartRateRecoveryOneMinute"))
+        XCTAssertTrue(healthKitReadTypeIdentifiers.contains("sleepAnalysis"))
+    }
+
+    func testHealthKitWorkoutRepositoryCarriesAppleSleepContext() async {
+        let sleepContext = WeeklySleepContext(
+            lookbackDays: 7,
+            nightsWithSleep: 5,
+            averageSleepHours: 6.8
+        )
+        let repository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()],
+                sleepContext: sleepContext
+            )
+        )
+
+        let result = await repository.refreshResult()
+
+        XCTAssertEqual(result.source, .healthKit)
+        XCTAssertEqual(result.sleepContext, sleepContext)
     }
 
     func testHealthKitWorkoutRepositoryMapsAppleHeartRateRecoveryContext() async {
@@ -838,6 +861,21 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertTrue(viewModel.feedbackStore is InMemoryTrainingClassificationFeedbackStore)
         XCTAssertTrue(viewModel.feedbackStore.allRecords().isEmpty)
+    }
+
+    @MainActor
+    func testViewModelCarriesSleepContextIntoCurrentWeeklySummary() {
+        let sleepContext = WeeklySleepContext(
+            lookbackDays: 7,
+            nightsWithSleep: 6,
+            averageSleepHours: 7.1
+        )
+        let viewModel = WorkoutListViewModel(
+            repository: StaticWorkoutRepository(workouts: [], sleepContext: sleepContext),
+            settingsManager: SettingsManager()
+        )
+
+        XCTAssertEqual(viewModel.weeklySummary.sleepContext, sleepContext)
     }
 
     @MainActor
@@ -2685,6 +2723,28 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(state.provenance.isValidFailClosed(strength: .sparse))
     }
 
+    func testWeeklyVisibleMissingEvidenceRemovesSleepWhenContextIsAvailable() {
+        let provenance = InferenceProvenance(
+            inferenceType: .boundedSynthesis,
+            derivedFrom: [.workoutCount, .zoneDistribution],
+            missingEvidence: [.sleep, .hrv, .stress],
+            authorityCeiling: .nonInterventional
+        )
+        let sleepContext = WeeklySleepContext(
+            lookbackDays: 7,
+            nightsWithSleep: 5,
+            averageSleepHours: 6.9
+        )
+
+        let visibleWithSleep = weeklyVisibleMissingEvidence(provenance, sleepContext: sleepContext)
+        let visibleWithoutSleep = weeklyVisibleMissingEvidence(provenance, sleepContext: nil)
+
+        XCTAssertFalse(visibleWithSleep.contains(MissingEvidence.sleep))
+        XCTAssertTrue(visibleWithSleep.contains(MissingEvidence.hrv))
+        XCTAssertTrue(visibleWithSleep.contains(MissingEvidence.stress))
+        XCTAssertTrue(visibleWithoutSleep.contains(MissingEvidence.sleep))
+    }
+
 
     func testWeeklyHRVCoverageSignalClassifiesCoverageBands() {
         XCTAssertEqual(
@@ -3423,6 +3483,7 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
     let authorizationStatus: HealthAuthorizationStatus
     let requestedAuthorizationStatus: HealthAuthorizationStatus
     let snapshots: [HealthKitWorkoutSnapshot]
+    var sleepContext: WeeklySleepContext? = nil
     var restingHeartRateBaseline: Double? = nil
     var debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails? = nil
     var debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary? = nil
@@ -3434,6 +3495,11 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
     func fetchRecentWorkouts(limit: Int) async throws -> [HealthKitWorkoutSnapshot] {
         _ = limit
         return snapshots
+    }
+
+    func fetchRecentSleepContext(days: Int) async throws -> WeeklySleepContext? {
+        _ = days
+        return sleepContext
     }
 
     func fetchRestingHeartRateBaseline() async throws -> Double? {
@@ -3496,9 +3562,10 @@ private struct StubStravaOAuthClient: StravaOAuthClient {
 
 private struct StaticWorkoutRepository: WorkoutRepository {
     let workouts: [WorkoutInput]
+    var sleepContext: WeeklySleepContext? = nil
 
     func loadResult() -> WorkoutLoadResult {
-        WorkoutLoadResult(workouts: workouts, source: .mockSamples)
+        WorkoutLoadResult(workouts: workouts, source: .mockSamples, sleepContext: sleepContext)
     }
 }
 

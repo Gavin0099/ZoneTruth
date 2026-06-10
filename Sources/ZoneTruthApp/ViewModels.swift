@@ -23,15 +23,18 @@ struct WorkoutLoadResult: Equatable, Sendable {
     let workouts: [WorkoutInput]
     let source: WorkoutDataSource
     let statusMessage: String?
+    let sleepContext: WeeklySleepContext?
 
     init(
         workouts: [WorkoutInput],
         source: WorkoutDataSource,
-        statusMessage: String? = nil
+        statusMessage: String? = nil,
+        sleepContext: WeeklySleepContext? = nil
     ) {
         self.workouts = workouts
         self.source = source
         self.statusMessage = statusMessage
+        self.sleepContext = sleepContext
     }
 }
 
@@ -209,7 +212,8 @@ final class WorkoutListViewModel: ObservableObject {
             WorkoutLoadResult(
                 workouts: refreshed,
                 source: currentSource,
-                statusMessage: statusMessage
+                statusMessage: statusMessage,
+                sleepContext: weeklySummary.sleepContext
             )
         )
     }
@@ -240,7 +244,8 @@ final class WorkoutListViewModel: ObservableObject {
             WorkoutLoadResult(
                 workouts: workouts,
                 source: currentSource,
-                statusMessage: statusMessage
+                statusMessage: statusMessage,
+                sleepContext: weeklySummary.sleepContext
             )
         )
     }
@@ -263,7 +268,8 @@ final class WorkoutListViewModel: ObservableObject {
             WorkoutLoadResult(
                 workouts: workouts,
                 source: currentSource,
-                statusMessage: statusMessage
+                statusMessage: statusMessage,
+                sleepContext: weeklySummary.sleepContext
             )
         )
     }
@@ -419,16 +425,17 @@ final class WorkoutListViewModel: ObservableObject {
         if selectedWorkout == nil, let intent = result.workouts.first?.intent {
             selectedIntent = intent
         }
-        updateWeeklyData(workouts: result.workouts)
+        updateWeeklyData(workouts: result.workouts, sleepContext: result.sleepContext)
         triggerCalibrationCheck()
     }
 
-    private func updateWeeklyData(workouts: [WorkoutInput]) {
+    private func updateWeeklyData(workouts: [WorkoutInput], sleepContext: WeeklySleepContext? = nil) {
         let monday = Self.currentWeekMonday()
         let summary = WeeklyObservationBuilder.build(
             workouts: workouts,
             weekStart: monday,
-            policy: settingsManager.policy
+            policy: settingsManager.policy,
+            sleepContext: sleepContext
         )
         weeklySummary = summary
         weeklyPolicy = WeeklyLoadPolicyEngine.evaluate(summary: summary)

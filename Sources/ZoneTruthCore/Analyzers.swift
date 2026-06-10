@@ -1515,7 +1515,8 @@ public enum WeeklyObservationBuilder {
         weekStart: Date,
         calendar: Calendar = .current,
         asOf: Date = Date(),
-        policy: AnalysisPolicy = .default
+        policy: AnalysisPolicy = .default,
+        sleepContext: WeeklySleepContext? = nil
     ) -> WeeklyWorkoutSummary {
         let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)!
         let weekEnd = nextWeekStart.addingTimeInterval(-1)
@@ -1609,7 +1610,8 @@ public enum WeeklyObservationBuilder {
             consecutiveTrainingDays: consecutiveTrainingDays,
             hrvSampledWorkoutCount: hrvSampledWorkoutCount,
             hrvCoverageRatio: hrvCoverageRatio,
-            averageHRVSDNNMilliseconds: averageHRVSDNNMilliseconds
+            averageHRVSDNNMilliseconds: averageHRVSDNNMilliseconds,
+            sleepContext: sleepContext
         )
     }
 }

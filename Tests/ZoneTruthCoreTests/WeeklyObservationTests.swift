@@ -17,6 +17,30 @@ final class WeeklyObservationTests: XCTestCase {
 
     // MARK: - WeeklyObservationBuilder cases
 
+    func testBuildCarriesSleepContextWithoutChangingWorkoutCounts() {
+        let monday = weekMonday
+        let sleepContext = WeeklySleepContext(
+            lookbackDays: 7,
+            nightsWithSleep: 5,
+            averageSleepHours: 6.8
+        )
+        let workouts = [
+            makeWorkout(intent: .zone2, startDate: monday, duration: 3600)
+        ]
+
+        let summary = WeeklyObservationBuilder.build(
+            workouts: workouts,
+            weekStart: monday,
+            calendar: utcCalendar,
+            asOf: weekEndAsOf,
+            sleepContext: sleepContext
+        )
+
+        XCTAssertEqual(summary.sleepContext, sleepContext)
+        XCTAssertEqual(summary.workoutCount, 1)
+        XCTAssertEqual(summary.intentDistribution[.zone2], 1)
+    }
+
     func testBalancedWeek() {
         let monday = weekMonday
         let workouts = [

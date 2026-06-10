@@ -825,6 +825,7 @@ private struct EvidenceChip: View {
 
 private struct InferenceProvenanceSection: View {
     let provenance: InferenceProvenance
+    let sleepContext: WeeklySleepContext?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -839,10 +840,13 @@ private struct InferenceProvenanceSection: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("缺少：" + localizedMissingEvidence(provenance.missingEvidence).joined(separator: "、"))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            let missingEvidence = weeklyVisibleMissingEvidence(provenance, sleepContext: sleepContext)
+            if !missingEvidence.isEmpty {
+                Text("缺少：" + localizedMissingEvidence(missingEvidence).joined(separator: "、"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
@@ -907,6 +911,65 @@ private func localizedMissingEvidence(_ evidence: [MissingEvidence]) -> [String]
             return "裝置品質"
         case .other:
             return "其他"
+        }
+    }
+}
+
+func weeklyVisibleMissingEvidence(
+    _ provenance: InferenceProvenance,
+    sleepContext: WeeklySleepContext?
+) -> [MissingEvidence] {
+    guard sleepContext?.hasSleepData == true else { return provenance.missingEvidence }
+    return provenance.missingEvidence.filter { $0 != .sleep }
+}
+
+private struct SleepContextSection: View {
+    let sleepContext: WeeklySleepContext?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("睡眠脈絡")
+                .font(.subheadline.bold())
+                .foregroundStyle(.white.opacity(0.8))
+
+            if let sleepContext, sleepContext.hasSleepData {
+                EvidenceChip(
+                    label: "睡眠資料 \(sleepContext.nightsWithSleep)/\(sleepContext.lookbackDays) 晚",
+                    color: PremiumColor.emerald
+                )
+                HStack {
+                    Text("平均睡眠時長")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(String(format: "%.1f 小時", sleepContext.averageSleepHours ?? 0))
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                HStack {
+                    Text("覆蓋率")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(sleepContext.nightsWithSleep)/\(sleepContext.lookbackDays)")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text(String(format: "(%.0f%%)", sleepContext.coverageRatio * 100))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text("僅作為恢復脈絡參考，不直接輸出恢復診斷。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                EvidenceChip(label: "睡眠資料不足", color: .gray)
+                Text("近 7 天尚無可用睡眠資料。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text("若 Apple Health 已有睡眠資料，請刷新資料與健康授權。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.85))
+            }
         }
     }
 }
@@ -988,7 +1051,7 @@ struct WeeklyAdvancedCard: View {
                 Text(adaptation.rationale)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                InferenceProvenanceSection(provenance: adaptation.provenance)
+                InferenceProvenanceSection(provenance: adaptation.provenance, sleepContext: summary.sleepContext)
                 if let trend = adaptationTrend28d {
                     Text(trend.rationaleText)
                         .font(.caption2)
@@ -1024,7 +1087,7 @@ struct WeeklyAdvancedCard: View {
                 Text(trainingState.rationale)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                InferenceProvenanceSection(provenance: trainingState.provenance)
+                InferenceProvenanceSection(provenance: trainingState.provenance, sleepContext: summary.sleepContext)
             }
             .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: trainingState.authority))
 
@@ -1091,6 +1154,11 @@ struct WeeklyAdvancedCard: View {
                 }
             }
             .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
+
+            Divider().background(PremiumColor.border)
+
+            SleepContextSection(sleepContext: summary.sleepContext)
+                .opacity(WeeklyAuthorityRendering.cardSurfaceOpacity(for: advancedAuthority))
 
             Divider().background(PremiumColor.border)
 

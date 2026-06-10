@@ -164,7 +164,8 @@ struct CompositeWorkoutRepository: WorkoutRepository {
         return WorkoutLoadResult(
             workouts: Array(merged),
             source: source,
-            statusMessage: statusMsg
+            statusMessage: statusMsg,
+            sleepContext: realResults.compactMap(\.sleepContext).first
         )
     }
 }

@@ -1420,6 +1420,7 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
     public let hrvSampledWorkoutCount: Int
     public let hrvCoverageRatio: Double
     public let averageHRVSDNNMilliseconds: Double?
+    public let sleepContext: WeeklySleepContext?
 
     public init(
         weekStart: Date,
@@ -1437,7 +1438,8 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
         consecutiveTrainingDays: Int,
         hrvSampledWorkoutCount: Int = 0,
         hrvCoverageRatio: Double = 0,
-        averageHRVSDNNMilliseconds: Double? = nil
+        averageHRVSDNNMilliseconds: Double? = nil,
+        sleepContext: WeeklySleepContext? = nil
     ) {
         self.weekStart = weekStart
         self.weekEnd = weekEnd
@@ -1455,6 +1457,38 @@ public struct WeeklyWorkoutSummary: Equatable, Sendable {
         self.hrvSampledWorkoutCount = hrvSampledWorkoutCount
         self.hrvCoverageRatio = hrvCoverageRatio
         self.averageHRVSDNNMilliseconds = averageHRVSDNNMilliseconds
+        self.sleepContext = sleepContext
+    }
+}
+
+public struct WeeklySleepContext: Equatable, Codable, Sendable {
+    public let lookbackDays: Int
+    public let nightsWithSleep: Int
+    public let averageSleepHours: Double?
+    public let source: TrainingMetricMethodSource
+    public let sourceLabel: String?
+
+    public init(
+        lookbackDays: Int,
+        nightsWithSleep: Int,
+        averageSleepHours: Double?,
+        source: TrainingMetricMethodSource = .apple,
+        sourceLabel: String? = "Apple Health sleep analysis"
+    ) {
+        self.lookbackDays = max(0, lookbackDays)
+        self.nightsWithSleep = max(0, nightsWithSleep)
+        self.averageSleepHours = averageSleepHours
+        self.source = source
+        self.sourceLabel = sourceLabel
+    }
+
+    public var coverageRatio: Double {
+        guard lookbackDays > 0 else { return 0 }
+        return min(1, Double(nightsWithSleep) / Double(lookbackDays))
+    }
+
+    public var hasSleepData: Bool {
+        nightsWithSleep > 0 && averageSleepHours != nil
     }
 }
 
