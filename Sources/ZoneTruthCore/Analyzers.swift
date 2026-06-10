@@ -980,7 +980,11 @@ private enum TrainingMetricMetadataFactory {
                     forbiddenTerms: ["true VO2 max", "lab-equivalent", "clinical fitness diagnosis"]
                 ),
                 dataQualityFlags: ["vo2max_value_imported"],
-                recommendedValidation: "CPET/GXT gas analysis if VO2 max precision matters."
+                recommendedValidation: "CPET/GXT gas analysis if VO2 max precision matters.",
+                specResolution: sourceRoleResolution(
+                    isSourceBacked: estimate.source == .apple || isAppleHealthLabel(estimate.sourceLabel),
+                    reason: .appleHealthVO2MaxProductReference
+                )
             )
         ]
     }
@@ -1008,7 +1012,11 @@ private enum TrainingMetricMetadataFactory {
                     forbiddenTerms: ["recovery diagnosis", "VO2 max measurement", "clinical recovery diagnosis"]
                 ),
                 dataQualityFlags: ["heart_rate_recovery_imported"],
-                recommendedValidation: "Use a standardized recovery protocol or broader lab/field testing if recovery precision matters."
+                recommendedValidation: "Use a standardized recovery protocol or broader lab/field testing if recovery precision matters.",
+                specResolution: sourceRoleResolution(
+                    isSourceBacked: observation.source == .apple || isAppleHealthLabel(observation.sourceLabel),
+                    reason: .appleHealthHeartRateRecoveryContext
+                )
             )
         ]
     }
@@ -1043,7 +1051,11 @@ private enum TrainingMetricMetadataFactory {
                     forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
                 ),
                 dataQualityFlags: ["running_power_imported"],
-                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters."
+                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters.",
+                specResolution: sourceRoleResolution(
+                    isSourceBacked: isAppleHealthLabel(observation.sourceLabel),
+                    reason: .appleHealthPowerExternalLoadContext
+                )
             )
         ]
     }
@@ -1071,7 +1083,11 @@ private enum TrainingMetricMetadataFactory {
                     forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
                 ),
                 dataQualityFlags: ["cycling_power_imported"],
-                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters."
+                recommendedValidation: "Use standardized threshold or lab testing if metabolic precision matters.",
+                specResolution: sourceRoleResolution(
+                    isSourceBacked: isAppleHealthLabel(observation.sourceLabel),
+                    reason: .appleHealthPowerExternalLoadContext
+                )
             )
         ]
     }
@@ -1099,7 +1115,11 @@ private enum TrainingMetricMetadataFactory {
                     forbiddenTerms: ["threshold measurement", "VO2 max measurement", "exact Zone 2"]
                 ),
                 dataQualityFlags: ["workout_route_imported"],
-                recommendedValidation: "Use route context only as supporting evidence; pair with threshold or lab testing if metabolic precision matters."
+                recommendedValidation: "Use route context only as supporting evidence; pair with threshold or lab testing if metabolic precision matters.",
+                specResolution: sourceRoleResolution(
+                    isSourceBacked: isAppleHealthLabel(observation.sourceLabel),
+                    reason: .appleHealthRouteContext
+                )
             )
         ]
     }
@@ -1234,6 +1254,21 @@ private enum TrainingMetricMetadataFactory {
         default:
             return "External-load decoupling context"
         }
+    }
+
+    private static func sourceRoleResolution(
+        isSourceBacked: Bool,
+        reason: SourceRoleReason
+    ) -> TrainingSpecResolution {
+        guard isSourceBacked else { return TrainingSpecResolution() }
+        return TrainingSpecResolution(
+            sourceRoleLayer: .appleHealthTrainingDataRoleMatrix,
+            sourceRoleReason: reason
+        )
+    }
+
+    private static func isAppleHealthLabel(_ label: String?) -> Bool {
+        label?.localizedCaseInsensitiveContains("Apple Health") == true
     }
 
     static func zone2Range(sampleQuality: SampleQuality) -> TrainingMetricMetadata {

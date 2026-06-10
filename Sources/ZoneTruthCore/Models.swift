@@ -329,6 +329,7 @@ public enum SourceRoleLayer: String, Codable, CaseIterable, Sendable {
 public enum SourceRoleReason: String, Codable, CaseIterable, Sendable {
     case analyzerGeneric = "analyzer_generic"
     case appleHealthVO2MaxProductReference = "apple_health_vo2max_product_reference"
+    case appleHealthHeartRateRecoveryContext = "apple_health_heart_rate_recovery_context"
     case appleHealthRestingHRInitialZone2Range = "apple_health_resting_hr_initial_zone2_range"
     case appleHealthPowerExternalLoadContext = "apple_health_power_external_load_context"
     case appleHealthRouteContext = "apple_health_route_context"

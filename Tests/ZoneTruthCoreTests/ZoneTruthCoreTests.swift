@@ -762,7 +762,74 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(scalarVO2?.claim.ceiling, .estimateOnly)
         XCTAssertEqual(scalarVO2?.confidence.level, .mediumLow)
         XCTAssertEqual(scalarVO2?.isClaimCeilingAdmissible, true)
+        XCTAssertEqual(scalarVO2?.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
+        XCTAssertEqual(scalarVO2?.specResolution.sourceRoleReason, .appleHealthVO2MaxProductReference)
         XCTAssertFalse(scalarVO2?.claim.allowedTerms.contains("lab-equivalent") == true)
+    }
+
+    func testAppleHealthBackedMetricMetadataCarriesSourceRoleResolution() {
+        let base = SampleWorkoutCases
+            .zone2ValidationCases()
+            .first { $0.name == "steady_zone2_run" }!
+            .workout
+        let workout = WorkoutInput(
+            id: base.id,
+            workoutType: .running,
+            startDate: base.startDate,
+            endDate: base.endDate,
+            durationSeconds: base.durationSeconds,
+            heartRateSamples: base.heartRateSamples,
+            hrvSDNNMilliseconds: base.hrvSDNNMilliseconds,
+            intent: base.intent,
+            intentSource: base.intentSource,
+            dataSource: base.dataSource,
+            activeCaloriesKcal: base.activeCaloriesKcal,
+            totalDistanceMeters: base.totalDistanceMeters,
+            vo2MaxEstimate: VO2MaxEstimate(
+                value: 48.2,
+                source: .apple,
+                sourceLabel: "Apple Health VO2 max"
+            ),
+            heartRateRecoveryOneMinute: HeartRateRecoveryObservation(
+                value: 21,
+                source: .apple,
+                sourceLabel: "Apple Health 1-minute heart-rate recovery"
+            ),
+            runningPower: RunningPowerObservation(
+                averageWatts: 246,
+                source: .runningHRSpeed,
+                sourceLabel: "Apple Health running power"
+            ),
+            cyclingPower: CyclingPowerObservation(
+                averageWatts: 212,
+                source: .cyclingPowerHR,
+                sourceLabel: "Apple Health cycling power"
+            ),
+            workoutRoute: WorkoutRouteObservation(
+                pointCount: 128,
+                elevationGainMeters: 86,
+                source: .workoutRoute,
+                sourceLabel: "Apple Health workout route"
+            )
+        )
+
+        let metadata = WorkoutIntentAnalyzer.analyze(workout).metricMetadata
+        let vo2 = metadata.first { $0.metric == .vo2Max }
+        let recovery = metadata.first { $0.metric == .heartRateRecovery }
+        let runningPower = metadata.first { $0.metric == .runningPower }
+        let cyclingPower = metadata.first { $0.metric == .cyclingPower }
+        let route = metadata.first { $0.metric == .workoutRoute }
+
+        XCTAssertEqual(vo2?.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
+        XCTAssertEqual(vo2?.specResolution.sourceRoleReason, .appleHealthVO2MaxProductReference)
+        XCTAssertEqual(recovery?.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
+        XCTAssertEqual(recovery?.specResolution.sourceRoleReason, .appleHealthHeartRateRecoveryContext)
+        XCTAssertEqual(runningPower?.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
+        XCTAssertEqual(runningPower?.specResolution.sourceRoleReason, .appleHealthPowerExternalLoadContext)
+        XCTAssertEqual(cyclingPower?.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
+        XCTAssertEqual(cyclingPower?.specResolution.sourceRoleReason, .appleHealthPowerExternalLoadContext)
+        XCTAssertEqual(route?.specResolution.sourceRoleLayer, .appleHealthTrainingDataRoleMatrix)
+        XCTAssertEqual(route?.specResolution.sourceRoleReason, .appleHealthRouteContext)
     }
 
     func testStructuredStrengthMetricAddsMeasurementMetadataWithoutReplacingHeartRatePattern() {
