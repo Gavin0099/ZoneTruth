@@ -2,7 +2,7 @@
 audience: owner, agent-runtime
 authority: product-spec
 status: draft
-last_updated: 2026-06-09
+last_updated: 2026-06-11
 source_review:
   - docs/TRAINING_ESTIMATOR_EVIDENCE_MAP.md
   - docs/APPLE_HEALTH_HIGH_VALUE_EXPANSION.md
@@ -148,6 +148,7 @@ Useful context, but not enough to determine physiological state on its own.
 Examples:
 
 - `workoutRoute`
+- `sleepAnalysis`
 - `activeEnergy`
 - workout category
 - HRV SDNN
@@ -202,6 +203,7 @@ validated maximal-strength test
 | `cyclingPower` | `AH-R2 field_estimator_input` | external-load context for cycling | supports interval or steady-state interpretation | metabolic-threshold proof |
 | `runningSpeed` | `AH-R2 field_estimator_input` | pace and HR relationship input | supports pace-HR consistency interpretation | Zone 2 proof |
 | `workoutRoute` | `AH-R3 supportive_context_signal` | terrain and route context | explains pace or HR distortion | fitness truth; threshold validation |
+| `sleepAnalysis` | `AH-R3 supportive_context_signal` | supportive recovery context | sleep duration and coverage context | recovery diagnosis; readiness verdict; training prescription |
 | distance | `AH-R3 supportive_context_signal` | volume context | supports workload interpretation | physiological adaptation proof |
 | `activeEnergy` | `AH-R3 supportive_context_signal` | session-load context | contextual energy/load estimate | precise metabolic truth |
 | workout category | `AH-R3 supportive_context_signal` | analyzer routing and modality context | activity-type context | exercise-physiology proof |
@@ -546,6 +548,53 @@ Forbidden:
 - Apple Health measured your strength
 - this proves strength gain
 
+## Sleep Context
+
+### `sleepAnalysis`
+
+Role:
+
+```text
+AH-R3 supportive_context_signal
+```
+
+Use for:
+
+- weekly supportive recovery context
+- sleep duration and coverage summary
+- removing `sleep` from displayed missing-evidence gaps when recent sleep data is available
+- explaining that recovery interpretation has more context than workout data alone
+
+Do not use for:
+
+- recovery diagnosis
+- readiness score
+- training prescription
+- classifier changes
+- proving under-recovery, overtraining, illness, or stress
+
+Allowed copy:
+
+```text
+近 7 天睡眠資料可作為恢復脈絡參考，不直接輸出恢復診斷。
+```
+
+Forbidden copy:
+
+```text
+你恢復不足。
+你睡眠不足，所以今天不要練。
+睡眠資料證明你已恢復。
+ZoneTruth 診斷你的恢復狀態。
+```
+
+Implementation boundary:
+
+- HealthKit ingestion may read `HKCategoryTypeIdentifier.sleepAnalysis`.
+- Weekly display may show nights covered, average sleep duration, and coverage ratio.
+- Weekly provenance display may stop listing `sleep` as missing when a valid recent sleep context exists.
+- Weekly classifier, training-mode classifier, and coaching policy must not change because sleep is present.
+
 ## Confidence Rules
 
 Confidence may increase when:
@@ -685,4 +734,34 @@ downgrade_reasons:
   - no_direct_1rm
   - no_failure_proximity
 ui_copy_tier: pattern_only
+```
+
+### Sleep Context From Apple Health
+
+```yaml
+metric_id: apple_health_sleep_context
+source: apple_health
+apple_health:
+  used: true
+  data_types:
+    - sleepAnalysis
+  role:
+    - supportive_context_signal
+  not_reference_anchor: true
+evidence_level: AH_R3_CONTEXT_SIGNAL
+claim_level: SUPPORTIVE_RECOVERY_CONTEXT
+allowed_claims:
+  - 睡眠脈絡
+  - 近 7 天睡眠資料覆蓋
+  - 恢復脈絡參考
+forbidden_claims:
+  - 恢復診斷
+  - readiness verdict
+  - 今天不要練
+  - overtraining proof
+downgrade_reasons:
+  - context_only
+  - no_clinical_sleep_protocol
+  - no_training_prescription_authority
+ui_copy_tier: supportive_context
 ```

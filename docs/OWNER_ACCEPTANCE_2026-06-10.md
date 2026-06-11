@@ -2,7 +2,7 @@
 audience: owner, local-tester, agent-runtime
 authority: product-acceptance
 status: local-owner-acceptance-candidate
-last_updated: 2026-06-10
+last_updated: 2026-06-11
 depends_on:
   - docs/OWNER_ACCEPTANCE_2026-06-05.md
   - docs/TEST_CANDIDATE_2026-06-04.md
@@ -15,7 +15,7 @@ depends_on:
 # Owner Acceptance 2026-06-10
 
 Status: local owner acceptance candidate; no TestFlight build yet
-Scope: VO2 max / Zone 2 / strength classification / Apple Health-backed metric metadata / feedback persistence
+Scope: VO2 max / Zone 2 / strength classification / Apple Health-backed metric metadata / sleep context / feedback persistence
 
 ## Purpose
 
@@ -27,6 +27,7 @@ It answers whether the current local build is ready for a hands-on pass over:
 - Zone 2 setup and claim-bounded ranges
 - strength classification and strength metric disclosure
 - Apple Health-backed metadata source-role disclosure
+- Apple Health sleep context as supportive recovery context
 - workout classification feedback save / duplicate behavior
 
 It does not validate medical accuracy, lab equivalence, training plan adherence,
@@ -41,8 +42,8 @@ Minimum setup:
 
 - Build and launch the app locally.
 - Confirm sample workouts are available, or import `SampleData/workouts.example.json`.
-- If testing on device with Apple Health, grant only the existing app-requested read permissions.
-- Do not add new HealthKit permissions for this acceptance pass.
+- If testing on device with Apple Health, grant the app-requested read permissions, including Sleep Analysis when prompted.
+- Do not manually add unrelated HealthKit permissions outside the app-requested read set.
 - Do not require Garmin, COROS, Strava live sync, TestFlight, or lab data.
 
 ## Local Smoke Commands
@@ -69,6 +70,12 @@ Recommended classification smoke:
 
 ```bash
 swift test --filter 'testTrainingModeClassifierClassifiesStrengthHighHRAsConditioningLikeBeforeStrengthPattern|testTrainingModeClassifierClassifiesTypicalStrengthAsStrengthPattern|testTrainingModeClassifierDowngradesSwimmingZone2LikeClassification|testTrainingModeClassifierDowngradesSwimmingVO2LikeClassification'
+```
+
+Recommended sleep context smoke:
+
+```bash
+swift test --filter 'testHealthKitReadTypeIdentifiersIncludeVO2MaxAndRecovery|testHealthKitWorkoutRepositoryCarriesAppleSleepContext|testViewModelCarriesSleepContextIntoCurrentWeeklySummary|testWeeklyVisibleMissingEvidenceRemovesSleepWhenContextIsAvailable'
 ```
 
 ## Manual Test Checklist
@@ -114,6 +121,7 @@ Check these fields when present:
 - running power
 - cycling power
 - workout route
+- sleep analysis
 
 Expected behavior:
 
@@ -121,9 +129,21 @@ Expected behavior:
 - Heart-rate recovery is recovery context, not a diagnosis.
 - Running and cycling power are external-load context, not threshold proof.
 - Workout route is terrain / context support, not a fitness verdict.
+- Sleep analysis is supportive recovery context, not a recovery diagnosis or readiness verdict.
 - Missing Apple Health fields are quiet absences, not full-workout failures.
 
-### 5. Feedback Persistence
+### 5. Sleep Context
+
+1. On device, grant Apple Health Sleep Analysis read access when prompted.
+2. Open the weekly overview after Apple Health data refresh.
+3. If recent sleep data exists, confirm the advanced section shows sleep context: nights covered, average sleep duration, and coverage ratio.
+4. If recent sleep data exists, confirm provenance display no longer lists sleep as missing evidence.
+5. Confirm the copy says sleep is recovery context only.
+6. Confirm the copy does not diagnose recovery, readiness, sleep adequacy, illness, stress, or overtraining.
+7. Confirm the copy does not prescribe training changes such as "do not train today."
+8. If no recent sleep data exists, confirm the absence is shown as missing/insufficient context rather than a workout failure.
+
+### 6. Feedback Persistence
 
 1. Open a workout detail with a classification result.
 2. Submit feedback as accurate.
@@ -144,6 +164,8 @@ Allowed:
 - `肌力訓練型態`
 - `偏高密度循環訓練`
 - `心率恢復脈絡`
+- `睡眠脈絡`
+- `恢復脈絡參考`
 - `外部負荷脈絡`
 - `路線脈絡`
 - `回饋已保存`
@@ -161,6 +183,10 @@ Forbidden:
 - `已量測 VT1`
 - `全身肌力診斷`
 - `臨床肌力診斷`
+- `恢復診斷`
+- `readiness verdict`
+- `睡眠不足，所以今天不要練`
+- `睡眠資料證明你已恢復`
 - `目的符合度`
 - `本次意圖`
 - `未達標`
@@ -174,6 +200,7 @@ Zone 2: pass / concern / fail
 VO2 max: pass / concern / fail
 Strength: pass / concern / fail
 Apple Health metadata: pass / concern / fail
+Sleep context: pass / concern / fail
 Feedback persistence: pass / concern / fail
 Overclaim check: pass / concern / fail
 Most confusing screen:
@@ -187,6 +214,7 @@ This owner acceptance pass is useful when it can answer:
 - Can the owner understand what the app thinks happened in the workout?
 - Does the detail view disclose evidence/source limits without becoming unreadable?
 - Do Apple Health fields improve context without upgrading claim authority?
+- Does sleep context appear as supportive recovery context without becoming a diagnosis or prescription?
 - Does Zone 2 setup feel consistent after Resting HR import, suggestion, apply, and reset?
 - Does feedback save as calibration data without becoming workout intent?
 
@@ -196,9 +224,9 @@ This pass does not require:
 
 - TestFlight build
 - App Store readiness
-- new SwiftUI sections
-- weekly rendering changes
-- new HealthKit permissions
+- SwiftUI sections beyond the current sleep context surface
+- weekly classifier or coaching changes
+- HealthKit permissions beyond the current app-requested read set
 - new classifier logic
 - Garmin / COROS / Strava expansion
 - clinical or lab-grade validation
