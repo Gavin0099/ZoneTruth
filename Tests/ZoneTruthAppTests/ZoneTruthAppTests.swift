@@ -353,7 +353,8 @@ final class ZoneTruthAppTests: XCTestCase {
                     heartRateRecoveryOneMinute: .sharingDenied,
                     runningPower: .sharingDenied,
                     cyclingPower: .sharingDenied,
-                    workoutRoute: .sharingAuthorized
+                    workoutRoute: .sharingAuthorized,
+                    sleepAnalysis: .sharingDenied
                 ),
                 debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary(
                     count: 1,
@@ -376,6 +377,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(combinedLog.contains("[HealthKit] refreshResult authorization=sharing_authorized"), combinedLog)
         XCTAssertTrue(combinedLog.contains("type_authorization"), combinedLog)
         XCTAssertTrue(combinedLog.contains("recovery=sharing_denied"), combinedLog)
+        XCTAssertTrue(combinedLog.contains("sleepAnalysis=sharing_denied"), combinedLog)
         XCTAssertTrue(combinedLog.contains("[HealthKit] refreshResult workout_count=1"), combinedLog)
         XCTAssertTrue(combinedLog.contains("vo2=ok"), combinedLog)
         XCTAssertTrue(combinedLog.contains("recovery=ok"), combinedLog)
@@ -416,7 +418,8 @@ final class ZoneTruthAppTests: XCTestCase {
                     heartRateRecoveryOneMinute: .sharingDenied,
                     runningPower: .sharingDenied,
                     cyclingPower: .sharingDenied,
-                    workoutRoute: .sharingDenied
+                    workoutRoute: .sharingDenied,
+                    sleepAnalysis: .sharingDenied
                 ),
                 debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary(
                     count: 0,
@@ -437,6 +440,55 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(combinedLog.contains("recovery_candidates=0"), combinedLog)
         XCTAssertTrue(combinedLog.contains("global_recovery_probe count=0"), combinedLog)
         XCTAssertTrue(combinedLog.contains("global_recovery_fallback"), combinedLog)
+    }
+
+    func testHealthKitRefreshResultLogsSleepDiagnosticCountsAndErrors() async {
+        let sleepContext = WeeklySleepContext(
+            lookbackDays: 7,
+            nightsWithSleep: 3,
+            averageSleepHours: 6.5
+        )
+        let availableLog = DebugLogRecorder()
+        let availableRepository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()],
+                sleepQueryResult: HealthKitSleepContextQueryResult(
+                    context: sleepContext,
+                    lookbackDays: 7,
+                    rawSampleCount: 9,
+                    asleepSampleCount: 6
+                )
+            ),
+            debugLogger: availableLog.record(_:)
+        )
+
+        _ = await availableRepository.refreshResult()
+        let availableCombinedLog = availableLog.combinedLog()
+
+        XCTAssertTrue(availableCombinedLog.contains("sleep_context lookback_days=7 raw_samples=9 asleep_samples=6 status=available"), availableCombinedLog)
+        XCTAssertTrue(availableCombinedLog.contains("nights=3/7"), availableCombinedLog)
+        XCTAssertTrue(availableCombinedLog.contains("avg_hours=6.5"), availableCombinedLog)
+
+        let errorLog = DebugLogRecorder()
+        let errorRepository = HealthKitWorkoutRepository(
+            store: StubHealthKitWorkoutStore(
+                isAvailable: true,
+                authorizationStatus: .sharingAuthorized,
+                requestedAuthorizationStatus: .sharingAuthorized,
+                snapshots: [makeHealthSnapshot()],
+                sleepQueryError: HealthKitStoreError.unauthorized
+            ),
+            debugLogger: errorLog.record(_:)
+        )
+
+        _ = await errorRepository.refreshResult()
+        let errorCombinedLog = errorLog.combinedLog()
+
+        XCTAssertTrue(errorCombinedLog.contains("sleep_context error=unauthorized lookback_days=7"), errorCombinedLog)
+        XCTAssertFalse(errorCombinedLog.contains("sleep_context=missing"), errorCombinedLog)
     }
 
     func testHealthKitRefreshResultTreatsReadableSnapshotsAsAuthorizedWhenRawStatusDenied() async {
@@ -3484,6 +3536,8 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
     let requestedAuthorizationStatus: HealthAuthorizationStatus
     let snapshots: [HealthKitWorkoutSnapshot]
     var sleepContext: WeeklySleepContext? = nil
+    var sleepQueryResult: HealthKitSleepContextQueryResult? = nil
+    var sleepQueryError: Error? = nil
     var restingHeartRateBaseline: Double? = nil
     var debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails? = nil
     var debugGlobalRecoveryProbeValue: HealthKitRecoveryProbeSummary? = nil
@@ -3497,9 +3551,19 @@ private struct StubHealthKitWorkoutStore: HealthKitWorkoutStore {
         return snapshots
     }
 
-    func fetchRecentSleepContext(days: Int) async throws -> WeeklySleepContext? {
-        _ = days
-        return sleepContext
+    func fetchRecentSleepContext(days: Int) async throws -> HealthKitSleepContextQueryResult {
+        if let sleepQueryError {
+            throw sleepQueryError
+        }
+        if let sleepQueryResult {
+            return sleepQueryResult
+        }
+        return HealthKitSleepContextQueryResult(
+            context: sleepContext,
+            lookbackDays: days,
+            rawSampleCount: sleepContext?.nightsWithSleep ?? 0,
+            asleepSampleCount: sleepContext?.nightsWithSleep ?? 0
+        )
     }
 
     func fetchRestingHeartRateBaseline() async throws -> Double? {

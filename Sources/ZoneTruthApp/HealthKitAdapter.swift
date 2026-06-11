@@ -109,10 +109,29 @@ protocol HealthKitWorkoutStore {
 
     func requestAuthorization() async -> HealthAuthorizationStatus
     func fetchRecentWorkouts(limit: Int) async throws -> [HealthKitWorkoutSnapshot]
-    func fetchRecentSleepContext(days: Int) async throws -> WeeklySleepContext?
+    func fetchRecentSleepContext(days: Int) async throws -> HealthKitSleepContextQueryResult
     func fetchRestingHeartRateBaseline() async throws -> Double?
     func debugAuthorizationDetails() async -> HealthKitAuthorizationDebugDetails?
     func debugGlobalRecoveryProbe(limit: Int) async -> HealthKitRecoveryProbeSummary?
+}
+
+struct HealthKitSleepContextQueryResult: Equatable, Sendable {
+    let context: WeeklySleepContext?
+    let lookbackDays: Int
+    let rawSampleCount: Int
+    let asleepSampleCount: Int
+
+    init(
+        context: WeeklySleepContext?,
+        lookbackDays: Int,
+        rawSampleCount: Int,
+        asleepSampleCount: Int
+    ) {
+        self.context = context
+        self.lookbackDays = lookbackDays
+        self.rawSampleCount = rawSampleCount
+        self.asleepSampleCount = asleepSampleCount
+    }
 }
 
 final class HealthKitWorkoutRepository: WorkoutRepository {
@@ -178,14 +197,13 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         do {
             let snapshots = try await store.fetchRecentWorkouts(limit: workoutLimit)
             cachedWorkouts = snapshots.map(\.toDomainWorkout)
-            cachedSleepContext = try? await store.fetchRecentSleepContext(days: 7)
+            await loadSleepContext(context: "requestHealthAccess", days: 7)
             let effectiveStatus = effectiveAuthorizationStatus(
                 rawStatus: authorizationStatus,
                 workouts: cachedWorkouts
             )
             debugLogger("[HealthKit] requestHealthAccess authorization=\(effectiveStatus.debugLabel) raw_authorization=\(authorizationStatus.debugLabel)")
             logWorkoutLoadSummary(context: "requestHealthAccess", snapshots: snapshots, workouts: cachedWorkouts)
-            logSleepContext(context: "requestHealthAccess", sleepContext: cachedSleepContext)
             return WorkoutLoadResult(
                 workouts: cachedWorkouts,
                 source: .healthKit,
@@ -218,14 +236,13 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         do {
             let snapshots = try await store.fetchRecentWorkouts(limit: workoutLimit)
             cachedWorkouts = snapshots.map(\.toDomainWorkout)
-            cachedSleepContext = try? await store.fetchRecentSleepContext(days: 7)
+            await loadSleepContext(context: "refreshResult", days: 7)
             let rawStatus = store.authorizationStatus
             let effectiveStatus = effectiveAuthorizationStatus(rawStatus: rawStatus, workouts: cachedWorkouts)
             debugLogger("[HealthKit] refreshResult authorization=\(effectiveStatus.debugLabel) raw_authorization=\(rawStatus.debugLabel)")
             await logAuthorizationDetails(context: "refreshResult")
             await logGlobalRecoveryProbe(context: "refreshResult")
             logWorkoutLoadSummary(context: "refreshResult", snapshots: snapshots, workouts: cachedWorkouts)
-            logSleepContext(context: "refreshResult", sleepContext: cachedSleepContext)
         } catch {
             cachedWorkouts = []
             cachedSleepContext = nil
@@ -245,14 +262,33 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         )
     }
 
-    private func logSleepContext(context: String, sleepContext: WeeklySleepContext?) {
-        guard let sleepContext, sleepContext.hasSleepData else {
-            debugLogger("[HealthKit] \(context) sleep_context=missing")
+    private func loadSleepContext(context: String, days: Int) async {
+        do {
+            let result = try await store.fetchRecentSleepContext(days: days)
+            cachedSleepContext = result.context
+            logSleepContext(context: context, result: result)
+        } catch {
+            cachedSleepContext = nil
+            debugLogger(
+                "[HealthKit] \(context) sleep_context error=\(healthKitSleepErrorLabel(error)) " +
+                "lookback_days=\(max(1, days))"
+            )
+        }
+    }
+
+    private func logSleepContext(context: String, result: HealthKitSleepContextQueryResult) {
+        let base = "[HealthKit] \(context) sleep_context " +
+            "lookback_days=\(result.lookbackDays) " +
+            "raw_samples=\(result.rawSampleCount) " +
+            "asleep_samples=\(result.asleepSampleCount)"
+        guard let sleepContext = result.context, sleepContext.hasSleepData else {
+            debugLogger("\(base) status=missing")
             return
         }
         let avg = sleepContext.averageSleepHours.map { String(format: "%.1f", $0) } ?? "unknown"
         debugLogger(
-            "[HealthKit] \(context) sleep_context nights=\(sleepContext.nightsWithSleep)/\(sleepContext.lookbackDays) " +
+            "\(base) status=available " +
+            "nights=\(sleepContext.nightsWithSleep)/\(sleepContext.lookbackDays) " +
             "avg_hours=\(avg)"
         )
     }
@@ -279,7 +315,8 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
             "recovery=\(details.heartRateRecoveryOneMinute.debugLabel) " +
             "runningPower=\(details.runningPower.debugLabel) " +
             "cyclingPower=\(details.cyclingPower.debugLabel) " +
-            "route=\(details.workoutRoute.debugLabel)"
+            "route=\(details.workoutRoute.debugLabel) " +
+            "sleepAnalysis=\(details.sleepAnalysis.debugLabel)"
         )
     }
 
@@ -358,6 +395,17 @@ private func healthKitWorkoutDebugSummary(
         "recovery_candidates=\(debugSnapshot?.recoveryCandidateCount ?? -1)"
     ].joined(separator: " ")
     return "[HealthKit] workout[\(index)] type=\(workout.workoutType.rawValue) hr_samples=\(workout.heartRateSamples.count) \(flags)"
+}
+
+private func healthKitSleepErrorLabel(_ error: Error) -> String {
+    if let storeError = error as? HealthKitStoreError {
+        switch storeError {
+        case .unavailable: return "unavailable"
+        case .unauthorized: return "unauthorized"
+        case .queryNotSupported: return "query_not_supported"
+        }
+    }
+    return String(describing: error)
 }
 
 private func debugPresenceLabel(_ value: Any?) -> String {
@@ -564,7 +612,7 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
         #endif
     }
 
-    func fetchRecentSleepContext(days: Int) async throws -> WeeklySleepContext? {
+    func fetchRecentSleepContext(days: Int) async throws -> HealthKitSleepContextQueryResult {
         guard isAvailable else { throw HealthKitStoreError.unavailable }
 
         #if canImport(HealthKit)
@@ -602,7 +650,8 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
                 let vo2MaxType = HKObjectType.quantityType(forIdentifier: .vo2Max),
                 let recoveryType = HKObjectType.quantityType(forIdentifier: .heartRateRecoveryOneMinute),
                 let runningPowerType = HKObjectType.quantityType(forIdentifier: .runningPower),
-                let cyclingPowerType = HKObjectType.quantityType(forIdentifier: .cyclingPower)
+                let cyclingPowerType = HKObjectType.quantityType(forIdentifier: .cyclingPower),
+                let sleepAnalysisType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)
             else {
                 return nil
             }
@@ -614,7 +663,8 @@ struct SystemHealthKitWorkoutStore: HealthKitWorkoutStore {
                 heartRateRecoveryOneMinute: mapAuthorizationStatus(store.authorizationStatus(for: recoveryType)),
                 runningPower: mapAuthorizationStatus(store.authorizationStatus(for: runningPowerType)),
                 cyclingPower: mapAuthorizationStatus(store.authorizationStatus(for: cyclingPowerType)),
-                workoutRoute: mapAuthorizationStatus(store.authorizationStatus(for: HKSeriesType.workoutRoute()))
+                workoutRoute: mapAuthorizationStatus(store.authorizationStatus(for: HKSeriesType.workoutRoute())),
+                sleepAnalysis: mapAuthorizationStatus(store.authorizationStatus(for: sleepAnalysisType))
             )
         }
         return nil
@@ -666,6 +716,7 @@ struct HealthKitAuthorizationDebugDetails: Equatable, Sendable {
     let runningPower: HealthAuthorizationStatus
     let cyclingPower: HealthAuthorizationStatus
     let workoutRoute: HealthAuthorizationStatus
+    let sleepAnalysis: HealthAuthorizationStatus
 }
 
 struct HealthKitRecoveryProbeRecord: Equatable, Sendable {
@@ -870,7 +921,7 @@ private func recentSleepContext(
     now: Date = Date(),
     from store: HKHealthStore,
     calendar: Calendar = .current
-) async throws -> WeeklySleepContext? {
+) async throws -> HealthKitSleepContextQueryResult {
     guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
         throw HealthKitStoreError.queryNotSupported
     }
@@ -897,7 +948,6 @@ private func recentSleepContext(
     }
 
     let asleepSamples = samples.filter(isAsleepSleepAnalysisSample)
-    guard !asleepSamples.isEmpty else { return nil }
 
     var sleepSecondsByDay: [Date: TimeInterval] = [:]
     for sample in asleepSamples {
@@ -909,14 +959,26 @@ private func recentSleepContext(
         sleepSecondsByDay[day, default: 0] += duration
     }
 
-    guard !sleepSecondsByDay.isEmpty else { return nil }
+    guard !sleepSecondsByDay.isEmpty else {
+        return HealthKitSleepContextQueryResult(
+            context: nil,
+            lookbackDays: lookbackDays,
+            rawSampleCount: samples.count,
+            asleepSampleCount: asleepSamples.count
+        )
+    }
     let totalSleepHours = sleepSecondsByDay.values.reduce(0, +) / 3_600
-    return WeeklySleepContext(
+    return HealthKitSleepContextQueryResult(
+        context: WeeklySleepContext(
+            lookbackDays: lookbackDays,
+            nightsWithSleep: sleepSecondsByDay.count,
+            averageSleepHours: totalSleepHours / Double(sleepSecondsByDay.count),
+            source: .apple,
+            sourceLabel: "Apple Health sleep analysis"
+        ),
         lookbackDays: lookbackDays,
-        nightsWithSleep: sleepSecondsByDay.count,
-        averageSleepHours: totalSleepHours / Double(sleepSecondsByDay.count),
-        source: .apple,
-        sourceLabel: "Apple Health sleep analysis"
+        rawSampleCount: samples.count,
+        asleepSampleCount: asleepSamples.count
     )
 }
 

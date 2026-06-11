@@ -80,6 +80,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] Owner acceptance / manual test checklist 2026-06-10：新增 `docs/OWNER_ACCEPTANCE_2026-06-10.md`，整合 VO2 max、Zone 2、肌力分類、Apple Health-backed metadata disclosure、feedback persistence 路徑、不可宣稱邊界與本機 smoke command；後續已補 sleep context 驗收與 `sleepAnalysis` 權限描述
 - [x] Owner acceptance observed wording fix：依實機截圖修正 workout detail 與 weekly dashboard 文案，將訓練目標/覆寫語意改為判讀校準/回饋語意，移除主 UI debug token 與英文來源字串，降低 weekly coaching CTA 語氣，補 weekly rendering / workout detail wording guards；不改 classifier、不改 HealthKit
 - [x] Apple Health sleep context spec sync：更新 `docs/APPLE_HEALTH_TRAINING_DATA_ROLE_MATRIX.md`、`docs/OWNER_ACCEPTANCE_2026-06-10.md` 與 plan，明確 `sleepAnalysis` 是 `AH-R3 supportive_context_signal` / supportive recovery context；修正舊版 HealthKit 權限描述；不改 Swift code、不改 UI、不改 tests
+- [x] Apple Health sleepAnalysis 授權診斷：type authorization log 補 `sleepAnalysis`，sleep query 不再用 `try?` 靜默失敗，log raw/asleep sample counts 與 error reason；不改 classifier、不改 weekly claim、不把睡眠變成恢復診斷
 - [ ] 下一步：重新在實機跑 owner acceptance；若還有 concern/fail，只針對畫面觀察到的問題定義下一個窄 DONE
 
 本次治理同步（2026-06-09）：
@@ -282,6 +283,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-11 | 增加 Apple Health sleepAnalysis 授權診斷：HealthKit debug log 顯示 sleepAnalysis 權限、sleep query raw/asleep sample counts 與 error reason；產品 claim 與 classifier 不變 |
 | 2026-06-11 | 同步 ai-governance-framework 最新 upstream（`b841a9c660820`）：刷新 baseline/framework lock，導入 F-7 full update、memory workflow、managed hook installer、dirty runtime ledger detector 與 Copilot advisory；產品 Swift code/UI/tests 不變 |
 | 2026-06-10 | 完成實機 owner acceptance 第一輪文案修正：workout detail 改為判讀校準語意，weekly dashboard 移除目標覆寫/debug token/英文來源字串並降低 coaching 語氣 |
 | 2026-06-10 | 建立 `docs/OWNER_ACCEPTANCE_2026-06-10.md` 作為最新 owner acceptance 測試入口，整合 VO2 max / Zone 2 / Strength / Apple Health-backed metadata / feedback persistence |
