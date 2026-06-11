@@ -1038,8 +1038,14 @@ struct WorkoutDetailView: View {
                         .foregroundStyle(.white)
 
                         DisclosureGroup(WorkoutDetailInformationArchitecture.methodSettings) {
-                            SettingsView(settingsManager: settingsManager)
-                                .padding(.top, 8)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(zoneContextSummary)
+                                Text("全域設定請到下方「設定」分頁調整。")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.top, 8)
                         }
                         .font(.subheadline.bold())
                         .foregroundStyle(.white)
@@ -2196,6 +2202,148 @@ enum CalibrationSuggestionPresenter {
             applyButtonTitle: "套用參考範圍",
             isApplyDisabled: false
         )
+    }
+}
+
+struct AppSettingsView: View {
+    @ObservedObject var viewModel: WorkoutListViewModel
+    @ObservedObject var settingsManager: SettingsManager
+
+    var body: some View {
+        ZStack {
+            PremiumColor.bgDark.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    AppleHealthStatusCard(
+                        details: viewModel.healthAuthorizationDetails,
+                        canManageHealthAccess: viewModel.canManageHealthAccess,
+                        isRequestingAuthorization: viewModel.isRequestingAuthorization,
+                        onRefresh: {
+                            Task { await viewModel.refreshHealthAuthorizationDetails() }
+                        },
+                        onRequestHealthAccess: {
+                            Task { await viewModel.requestHealthAccess() }
+                        }
+                    )
+
+                    SettingsView(settingsManager: settingsManager)
+                }
+                .padding(20)
+            }
+        }
+        .navigationTitle("設定")
+        .iosNavigationBarStyling()
+        .task {
+            await viewModel.refreshHealthAuthorizationDetails()
+        }
+    }
+}
+
+struct AppleHealthStatusCard: View {
+    let details: HealthKitAuthorizationDebugDetails?
+    let canManageHealthAccess: Bool
+    let isRequestingAuthorization: Bool
+    let onRefresh: () -> Void
+    let onRequestHealthAccess: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+                Label("Apple Health 狀態", systemImage: "heart.text.square")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                Button(action: onRefresh) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.body.bold())
+                        .frame(width: 34, height: 34)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(PremiumColor.skyBlue)
+                .accessibilityLabel("刷新 Apple Health 狀態")
+            }
+
+            Text("這裡只顯示授權與資料讀取狀態，睡眠資料只作為恢復脈絡參考。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 8) {
+                healthStatusRow("運動紀錄", status: details?.workout)
+                healthStatusRow("心率", status: details?.heartRate)
+                healthStatusRow("最大攝氧量估算", status: details?.vo2Max)
+                healthStatusRow("心率恢復", status: details?.heartRateRecoveryOneMinute)
+                healthStatusRow("路線", status: details?.workoutRoute)
+                healthStatusRow("睡眠分析", status: details?.sleepAnalysis)
+            }
+
+            Button(action: onRequestHealthAccess) {
+                HStack {
+                    if isRequestingAuthorization {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "heart.badge.plus")
+                    }
+                    Text(isRequestingAuthorization ? "正在要求 Apple Health 授權..." : "重新要求 Apple Health 授權")
+                        .font(.subheadline.bold())
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .background(canManageHealthAccess ? PremiumColor.skyBlue.opacity(0.28) : Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(canManageHealthAccess ? PremiumColor.skyBlue.opacity(0.55) : PremiumColor.border, lineWidth: 1)
+            )
+            .disabled(!canManageHealthAccess || isRequestingAuthorization)
+        }
+        .padding(14)
+        .background(PremiumColor.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(PremiumColor.border, lineWidth: 1)
+        )
+    }
+
+    private func healthStatusRow(_ title: String, status: HealthAuthorizationStatus?) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.88))
+
+            Spacer()
+
+            Text(status?.localizedStatusLabel ?? "尚未讀取")
+                .font(.caption.bold())
+                .foregroundStyle(statusColor(status))
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(statusColor(status).opacity(0.14))
+                .clipShape(Capsule())
+        }
+    }
+
+    private func statusColor(_ status: HealthAuthorizationStatus?) -> Color {
+        switch status {
+        case .sharingAuthorized:
+            return PremiumColor.emerald
+        case .notDetermined:
+            return PremiumColor.gold
+        case .sharingDenied:
+            return PremiumColor.redOrange
+        case .unavailable:
+            return .secondary
+        case nil:
+            return .secondary
+        }
     }
 }
 

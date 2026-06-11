@@ -180,6 +180,10 @@ final class HealthKitWorkoutRepository: WorkoutRepository {
         return requestedStatus
     }
 
+    func healthAuthorizationDetails() async -> HealthKitAuthorizationDebugDetails? {
+        await store.debugAuthorizationDetails()
+    }
+
     func requestHealthAccess() async -> WorkoutLoadResult {
         guard store.isAvailable else {
             debugLogger("[HealthKit] requestHealthAccess unavailable")
@@ -449,7 +453,7 @@ private let healthKitProbeDateFormatter: ISO8601DateFormatter = {
     return formatter
 }()
 
-private extension HealthAuthorizationStatus {
+extension HealthAuthorizationStatus {
     var debugLabel: String {
         switch self {
         case .unavailable:
@@ -460,6 +464,19 @@ private extension HealthAuthorizationStatus {
             return "sharing_denied"
         case .sharingAuthorized:
             return "sharing_authorized"
+        }
+    }
+
+    var localizedStatusLabel: String {
+        switch self {
+        case .unavailable:
+            return "不可用"
+        case .notDetermined:
+            return "尚未決定"
+        case .sharingDenied:
+            return "未授權"
+        case .sharingAuthorized:
+            return "已授權"
         }
     }
 }

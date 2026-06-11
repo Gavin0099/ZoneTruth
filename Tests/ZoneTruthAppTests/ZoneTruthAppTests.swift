@@ -2100,6 +2100,83 @@ final class ZoneTruthAppTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testAppSettingsViewSmokeCompilesWithAppleHealthStatusCard() {
+        let suiteName = "test.app.settings.global.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = SettingsManager(userDefaults: defaults)
+        let viewModel = WorkoutListViewModel(
+            repository: HealthKitWorkoutRepository(
+                store: StubHealthKitWorkoutStore(
+                    isAvailable: true,
+                    authorizationStatus: .sharingAuthorized,
+                    requestedAuthorizationStatus: .sharingAuthorized,
+                    snapshots: [makeHealthSnapshot()],
+                    debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails(
+                        workout: .sharingAuthorized,
+                        heartRate: .sharingAuthorized,
+                        vo2Max: .sharingAuthorized,
+                        heartRateRecoveryOneMinute: .sharingAuthorized,
+                        runningPower: .sharingDenied,
+                        cyclingPower: .sharingDenied,
+                        workoutRoute: .sharingAuthorized,
+                        sleepAnalysis: .notDetermined
+                    )
+                )
+            ),
+            settingsManager: settings
+        )
+        let view = AppSettingsView(viewModel: viewModel, settingsManager: settings)
+
+        _ = view.body
+    }
+
+    @MainActor
+    func testViewModelCanManageHealthAccessAfterHealthKitDataLoaded() async {
+        let viewModel = WorkoutListViewModel(
+            repository: HealthKitWorkoutRepository(
+                store: StubHealthKitWorkoutStore(
+                    isAvailable: true,
+                    authorizationStatus: .sharingDenied,
+                    requestedAuthorizationStatus: .sharingAuthorized,
+                    snapshots: [makeHealthSnapshot()],
+                    debugAuthorizationDetailsValue: HealthKitAuthorizationDebugDetails(
+                        workout: .sharingDenied,
+                        heartRate: .sharingDenied,
+                        vo2Max: .sharingDenied,
+                        heartRateRecoveryOneMinute: .sharingDenied,
+                        runningPower: .sharingDenied,
+                        cyclingPower: .sharingDenied,
+                        workoutRoute: .sharingDenied,
+                        sleepAnalysis: .notDetermined
+                    )
+                )
+            ),
+            settingsManager: SettingsManager()
+        )
+
+        await viewModel.refreshWorkouts()
+        await viewModel.refreshHealthAuthorizationDetails()
+
+        XCTAssertFalse(viewModel.canRequestHealthAccess)
+        XCTAssertTrue(viewModel.canManageHealthAccess)
+        XCTAssertEqual(viewModel.healthAuthorizationDetails?.sleepAnalysis, .notDetermined)
+    }
+
+    func testWorkoutDetailMethodSettingsNoLongerEmbedsFullSettingsView() throws {
+        let source = try appSourceText(named: "Views.swift")
+        let appRootSource = try appSourceText(named: "ZoneTruthApp.swift")
+        XCTAssertFalse(
+            source.contains("DisclosureGroup(WorkoutDetailInformationArchitecture.methodSettings) {\n                            SettingsView"),
+            "Workout detail should show only per-workout settings summary, not the full global SettingsView."
+        )
+        XCTAssertTrue(source.contains("全域設定請到下方「設定」分頁調整。"))
+        XCTAssertTrue(appRootSource.contains("AppSettingsView(viewModel:"))
+        XCTAssertTrue(source.contains("重新要求 Apple Health 授權"))
+        XCTAssertTrue(source.contains("睡眠分析"))
+    }
+
     func testMetricDisclosurePresenterUsesMetricSpecificClaimProfiles() {
         let zone2 = WorkoutIntentAnalyzer.analyze(
             SampleWorkoutCases.zone2ValidationCases().first { $0.name == "steady_zone2_run" }!.workout

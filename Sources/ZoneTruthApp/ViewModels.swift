@@ -94,6 +94,7 @@ final class WorkoutListViewModel: ObservableObject {
     @Published var isRequestingAuthorization = false
     @Published private(set) var currentSource: WorkoutDataSource = .none
     @Published private(set) var statusMessage: String?
+    @Published private(set) var healthAuthorizationDetails: HealthKitAuthorizationDebugDetails?
     @Published private(set) var weeklySummary: WeeklyWorkoutSummary
     @Published private(set) var weeklyPolicy: WeeklyLoadPolicy
     @Published private(set) var weeklyOverrideInsight: WeeklyIntentOverrideInsight
@@ -298,7 +299,16 @@ final class WorkoutListViewModel: ObservableObject {
         isRequestingAuthorization = true
         let result = await repository.requestHealthAccess()
         apply(result)
+        healthAuthorizationDetails = await repository.healthAuthorizationDetails()
         isRequestingAuthorization = false
+    }
+
+    func refreshHealthAuthorizationDetails() async {
+        guard repository.supportsHealthAuthorization else {
+            healthAuthorizationDetails = nil
+            return
+        }
+        healthAuthorizationDetails = await repository.healthAuthorizationDetails()
     }
 
     func analysisResult(for workout: WorkoutInput) -> AnalysisResult {
@@ -521,6 +531,10 @@ final class WorkoutListViewModel: ObservableObject {
     var canRequestHealthAccess: Bool {
         repository.supportsHealthAuthorization && currentSource != .healthKit && currentSource != .combined
     }
+
+    var canManageHealthAccess: Bool {
+        repository.supportsHealthAuthorization
+    }
 }
 
 private struct InMemoryWorkoutIntentOverrideStore: WorkoutIntentOverrideStore {
@@ -533,6 +547,7 @@ protocol WorkoutRepository {
     func refreshResult() async -> WorkoutLoadResult
     var supportsHealthAuthorization: Bool { get }
     func requestHealthAccess() async -> WorkoutLoadResult
+    func healthAuthorizationDetails() async -> HealthKitAuthorizationDebugDetails?
 }
 
 extension WorkoutRepository {
@@ -552,6 +567,10 @@ extension WorkoutRepository {
 
     func requestHealthAccess() async -> WorkoutLoadResult {
         await refreshResult()
+    }
+
+    func healthAuthorizationDetails() async -> HealthKitAuthorizationDebugDetails? {
+        nil
     }
 }
 

@@ -126,6 +126,13 @@ struct CompositeWorkoutRepository: WorkoutRepository {
         return await refreshResult()
     }
 
+    func healthAuthorizationDetails() async -> HealthKitAuthorizationDebugDetails? {
+        for repository in repositories where repository.supportsHealthAuthorization {
+            return await repository.healthAuthorizationDetails()
+        }
+        return nil
+    }
+
     private func resolve(results: [WorkoutLoadResult]) -> WorkoutLoadResult {
         var realResults: [WorkoutLoadResult] = []
         var mockResult: WorkoutLoadResult?

@@ -35,6 +35,13 @@ public struct ZoneTruthMainView: View {
             .tabItem {
                 Label("本週", systemImage: "calendar")
             }
+
+            NavigationStack {
+                AppSettingsView(viewModel: viewModel, settingsManager: settingsManager)
+            }
+            .tabItem {
+                Label("設定", systemImage: "gearshape")
+            }
         }
         .tint(PremiumColor.skyBlue)
         .onOpenURL { url in
