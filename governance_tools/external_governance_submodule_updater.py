@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 
 DEFAULT_SUBMODULE_PATH = "ai-governance-framework"
@@ -37,6 +37,7 @@ class UpdateResult:
     commit_hash: str | None
     message: str
     errors: list[str]
+    full_update_stage_report: dict[str, Any]
 
 
 class SubmoduleUpdateError(RuntimeError):
@@ -91,10 +92,13 @@ def _git_env() -> dict[str, str]:
 
 
 def _require_clean_nested(submodule_repo: Path) -> None:
-    status = _run_git(submodule_repo, ["status", "--short"]).stdout
+    # Only block on tracked-file changes; untracked files in the submodule
+    # checkout (e.g. runtime artifacts, DB files) should not prevent a pointer
+    # update since they won't be staged or committed by the updater.
+    status = _run_git(submodule_repo, ["status", "--short", "--untracked-files=no"]).stdout
     if status:
         raise SubmoduleUpdateError(
-            f"nested submodule checkout is dirty: {submodule_repo}"
+            f"nested submodule checkout has tracked-file changes: {submodule_repo}"
         )
 
 
@@ -118,6 +122,23 @@ def _require_registered_submodule(repo: Path, submodule_path: str) -> None:
         )
 
 
+def _is_initialized_git_checkout(repo: Path) -> bool:
+    result = _run_git(repo, ["rev-parse", "--show-toplevel"], check=False)
+    if result.returncode != 0 or not result.stdout:
+        return False
+    try:
+        return Path(result.stdout).resolve() == repo.resolve()
+    except OSError:
+        return False
+
+
+def _require_initialized_git_checkout(submodule_repo: Path) -> None:
+    if not _is_initialized_git_checkout(submodule_repo):
+        raise SubmoduleUpdateError(
+            f"submodule path is not an initialized git checkout: {submodule_repo}"
+        )
+
+
 def _resolve_head(repo: Path, ref: str) -> str:
     return _run_git(repo, ["rev-parse", ref]).stdout
 
@@ -125,6 +146,251 @@ def _resolve_head(repo: Path, ref: str) -> str:
 def _staged_files(repo: Path) -> list[str]:
     output = _run_git(repo, ["diff", "--cached", "--name-only"]).stdout
     return [line.strip() for line in output.splitlines() if line.strip()]
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _write_text_if_changed(path: Path, text: str) -> bool:
+    if path.exists() and _read_text(path) == text:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return True
+
+
+def _write_bytes_if_changed(path: Path, payload: bytes) -> bool:
+    if path.exists() and path.read_bytes() == payload:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return True
+
+
+def _extract_agents_update_section(source_agents: Path) -> str | None:
+    text = _read_text(source_agents)
+    start_marker = "## AI Governance Update Intent Rule"
+    end_marker = "## Repo-Specific Risk Levels"
+    start = text.find(start_marker)
+    end = text.find(end_marker)
+    if start == -1 or end == -1 or end <= start:
+        return None
+    return text[start:end].strip() + "\n"
+
+
+def _memory_workflow_router_section() -> str:
+    return (
+        "## AI Governance Memory Workflow Router\n\n"
+        "<!-- governance:key=memory_workflow -->\n"
+        "- Before claiming completion for any change touching `memory/**`, run "
+        "`python -m governance_tools.memory_workflow --check --repo .`.\n"
+        "- For memory completion claims, run "
+        "`python -m governance_tools.memory_workflow --check --repo . --run-guard` "
+        "and report blockers before claiming DONE.\n"
+        "- Use the canonical memory writer for session-derived memory; do not edit "
+        "memory records as ordinary markdown.\n"
+        "- Canonical writer signal: `governance_tools.memory_record` / "
+        "`memory_record.py`.\n"
+    )
+
+
+def _ensure_memory_workflow_router(repo: Path) -> dict[str, Any]:
+    agents = repo / "AGENTS.md"
+    if not agents.exists():
+        return {
+            "status": "missing",
+            "changed_files": [],
+            "errors": [f"missing AGENTS.md: {agents}"],
+        }
+    current = _read_text(agents)
+    if "governance:key=memory_workflow" in current and "memory_workflow" in current:
+        return {"status": "verified", "changed_files": [], "errors": []}
+    updated = current.rstrip() + "\n\n" + _memory_workflow_router_section()
+    changed = _write_text_if_changed(agents, updated)
+    return {
+        "status": "updated" if changed else "verified",
+        "changed_files": ["AGENTS.md"] if changed else [],
+        "errors": [],
+    }
+
+
+def _refresh_repo_local_instructions(repo: Path, submodule_repo: Path) -> dict[str, Any]:
+    source_base = submodule_repo / "baselines" / "repo-min" / "AGENTS.base.md"
+    source_agents = submodule_repo / "baselines" / "repo-min" / "AGENTS.md"
+    target_base = repo / "AGENTS.base.md"
+    target_agents = repo / "AGENTS.md"
+    changed: list[str] = []
+    errors: list[str] = []
+
+    if not source_base.exists():
+        errors.append("missing source baselines/repo-min/AGENTS.base.md")
+    else:
+        if _write_text_if_changed(target_base, _read_text(source_base)):
+            changed.append("AGENTS.base.md")
+
+    if not source_agents.exists():
+        errors.append("missing source baselines/repo-min/AGENTS.md")
+    else:
+        source_text = _read_text(source_agents)
+        section = _extract_agents_update_section(source_agents)
+        if not target_agents.exists():
+            if _write_text_if_changed(target_agents, source_text):
+                changed.append("AGENTS.md")
+        elif section is None:
+            errors.append("missing AI Governance update section in source AGENTS.md")
+        else:
+            current = _read_text(target_agents)
+            start_marker = "## AI Governance Update Intent Rule"
+            end_marker = "## Repo-Specific Risk Levels"
+            start = current.find(start_marker)
+            end = current.find(end_marker)
+            if start != -1 and end != -1 and end > start:
+                updated = current[:start] + section + "\n" + current[end:]
+            elif section.strip() in current:
+                updated = current
+            else:
+                suffix = "" if current.endswith("\n") else "\n"
+                updated = current + suffix + "\n" + section
+            if _write_text_if_changed(target_agents, updated):
+                changed.append("AGENTS.md")
+
+    router_report = _ensure_memory_workflow_router(repo)
+    for changed_file in router_report["changed_files"]:
+        if changed_file not in changed:
+            changed.append(changed_file)
+    errors.extend(router_report["errors"])
+
+    if errors:
+        status = "blocked"
+    elif changed:
+        status = "updated"
+    else:
+        status = "already_current"
+    return {
+        "status": status,
+        "changed_files": changed,
+        "errors": errors,
+        "memory_workflow_router": router_report,
+    }
+
+
+def _check_memory_writer_coverage(repo: Path) -> str:
+    agents = repo / "AGENTS.md"
+    if not agents.exists():
+        return "missing"
+    text = _read_text(agents)
+    if (
+        "governance:key=memory_workflow" in text
+        and "memory_workflow" in text
+        and ("governance_tools.memory_record" in text or "memory_record.py" in text)
+    ):
+        return "verified"
+    return "missing"
+
+
+def _ensure_hook_advisory(repo: Path, submodule_repo: Path) -> dict[str, Any]:
+    source_hook_dir = submodule_repo / "scripts" / "hooks"
+    hook_dir = repo / ".git" / "hooks"
+    changed: list[str] = []
+    errors: list[str] = []
+
+    if not hook_dir.is_dir():
+        return {
+            "status": "missing",
+            "changed_files": [],
+            "errors": [f"missing git hooks directory: {hook_dir}"],
+        }
+    if not source_hook_dir.is_dir():
+        return {
+            "status": "missing",
+            "changed_files": [],
+            "errors": [f"missing framework hooks source: {source_hook_dir}"],
+        }
+
+    for hook_name in ("pre-commit", "pre-push"):
+        source = source_hook_dir / hook_name
+        target = hook_dir / hook_name
+        if not source.is_file():
+            errors.append(f"missing source hook: {source}")
+            continue
+        if _write_bytes_if_changed(target, source.read_bytes()):
+            changed.append(str(target))
+
+    config = hook_dir / "ai-governance-framework-root"
+    if _write_text_if_changed(config, f"{submodule_repo}\n"):
+        changed.append(str(config))
+
+    if errors:
+        status = "missing"
+    elif _check_hook_validator_enforcement(repo) == "verified":
+        status = "updated" if changed else "verified"
+    else:
+        status = "missing"
+    return {"status": status, "changed_files": changed, "errors": errors}
+
+
+def _check_hook_validator_enforcement(repo: Path) -> str:
+    hook_candidates = [repo / ".git" / "hooks" / "pre-commit", repo / ".githooks" / "pre-commit"]
+    for candidate in hook_candidates:
+        if not candidate.exists() or candidate.stat().st_size == 0:
+            continue
+        text = candidate.read_text(encoding="utf-8", errors="replace")
+        if "MEMORY_WORKFLOW_TOOL" in text and "memory_workflow" in text:
+            return "verified"
+    return "missing"
+
+
+def _check_existing_memory_normalization(repo: Path) -> str:
+    memory_dir = repo / "memory"
+    if not memory_dir.exists():
+        return "not_applicable"
+    if any(memory_dir.glob("*.md")):
+        return "not_verified"
+    return "not_applicable"
+
+
+def _final_full_update_status(report: dict[str, Any]) -> str:
+    framework = report["framework_pointer"]
+    repo_local = report["repo_local_instruction"]
+    memory = report["memory_writer_coverage"]
+    hook = report["hook_validator_enforcement"]
+    normalization = report["existing_memory_normalization"]
+    if "blocked" in {framework, repo_local, memory, hook, normalization}:
+        return "blocked"
+    if framework == "not_present":
+        return "not_submodule_consumer"
+    if "not_verified" in {framework, repo_local, memory, hook, normalization}:
+        return "not_verified"
+    if "missing" in {repo_local, memory, hook} or normalization == "needed":
+        return "partially_updated"
+    completed_values = {"updated", "already_current", "verified", "completed", "not_applicable"}
+    if {framework, repo_local, memory, hook, normalization} <= completed_values:
+        if framework == "already_current" and repo_local == "already_current":
+            return "already_current"
+        return "full_update_completed"
+    return "partially_updated"
+
+
+def _build_full_update_stage_report(
+    *,
+    framework_pointer: str,
+    repo_local_instruction: str = "not_verified",
+    memory_writer_coverage: str = "not_verified",
+    hook_validator_enforcement: str = "not_verified",
+    existing_memory_normalization: str = "not_verified",
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    report: dict[str, Any] = {
+        "framework_pointer": framework_pointer,
+        "repo_local_instruction": repo_local_instruction,
+        "memory_writer_coverage": memory_writer_coverage,
+        "hook_validator_enforcement": hook_validator_enforcement,
+        "existing_memory_normalization": existing_memory_normalization,
+        "details": details or {},
+    }
+    report["final_status"] = _final_full_update_status(report)
+    return report
 
 
 def update_governance_submodule(
@@ -147,6 +413,7 @@ def update_governance_submodule(
     try:
         _run_git(repo, ["rev-parse", "--is-inside-work-tree"])
         _require_registered_submodule(repo, submodule_path)
+        _require_initialized_git_checkout(submodule_repo)
         _require_no_initial_staged_files(repo)
         _require_clean_nested(submodule_repo)
 
@@ -170,6 +437,35 @@ def update_governance_submodule(
             target_head = _resolve_head(submodule_repo, target_ref)
 
         if not dry_run and before_head == target_head:
+            instruction_report = _refresh_repo_local_instructions(repo, submodule_repo)
+            hook_report = _ensure_hook_advisory(repo, submodule_repo)
+            full_update_stage_report = _build_full_update_stage_report(
+                framework_pointer="already_current",
+                repo_local_instruction=instruction_report["status"],
+                memory_writer_coverage=_check_memory_writer_coverage(repo),
+                hook_validator_enforcement=hook_report["status"],
+                existing_memory_normalization=_check_existing_memory_normalization(repo),
+                details={
+                    "repo_local_instruction": instruction_report,
+                    "hook_validator_enforcement": hook_report,
+                },
+            )
+            if stage or commit:
+                allowed = {submodule_path, "AGENTS.base.md", "AGENTS.md"}
+                _run_git(repo, ["add", "--", "AGENTS.base.md", "AGENTS.md"])
+                staged = _staged_files(repo)
+                if not set(staged) <= allowed:
+                    raise SubmoduleUpdateError(
+                        f"staged files are outside F-7 full update scope: {staged}"
+                    )
+            else:
+                staged = []
+            committed = False
+            commit_hash: str | None = None
+            if commit and staged:
+                _run_git(repo, ["commit", "-m", commit_message])
+                committed = True
+                commit_hash = _resolve_head(repo, "HEAD")
             return UpdateResult(
                 ok=True,
                 mode="apply",
@@ -180,11 +476,12 @@ def update_governance_submodule(
                 before_head=before_head,
                 target_head=target_head,
                 after_head=before_head,
-                staged_files=[],
-                committed=False,
-                commit_hash=None,
+                staged_files=staged,
+                committed=committed,
+                commit_hash=commit_hash,
                 message="submodule already at target; no files modified",
                 errors=[],
+                full_update_stage_report=full_update_stage_report,
             )
 
         if dry_run:
@@ -211,6 +508,12 @@ def update_governance_submodule(
                 commit_hash=None,
                 message="dry run complete; no files modified",
                 errors=[],
+                full_update_stage_report=_build_full_update_stage_report(
+                    framework_pointer=(
+                        "already_current" if before_head == target_head else "not_verified"
+                    ),
+                    details={"dry_run": True},
+                ),
             )
 
         merge_result = _run_git(
@@ -241,12 +544,27 @@ def update_governance_submodule(
                 f"after_head {after_head} does not match target_head {target_head}"
             )
 
+        instruction_report = _refresh_repo_local_instructions(repo, submodule_repo)
+        hook_report = _ensure_hook_advisory(repo, submodule_repo)
+        full_update_stage_report = _build_full_update_stage_report(
+            framework_pointer="updated",
+            repo_local_instruction=instruction_report["status"],
+            memory_writer_coverage=_check_memory_writer_coverage(repo),
+            hook_validator_enforcement=hook_report["status"],
+            existing_memory_normalization=_check_existing_memory_normalization(repo),
+            details={
+                "repo_local_instruction": instruction_report,
+                "hook_validator_enforcement": hook_report,
+            },
+        )
+
         if stage or commit:
-            _run_git(repo, ["add", "--", submodule_path])
+            allowed = {submodule_path, "AGENTS.base.md", "AGENTS.md"}
+            _run_git(repo, ["add", "--", submodule_path, "AGENTS.base.md", "AGENTS.md"])
             staged = _staged_files(repo)
-            if staged != [submodule_path]:
+            if not set(staged) <= allowed:
                 raise SubmoduleUpdateError(
-                    f"staged files are not path-limited to {submodule_path}: {staged}"
+                    f"staged files are outside F-7 full update scope: {staged}"
                 )
         else:
             staged = []
@@ -273,14 +591,16 @@ def update_governance_submodule(
             commit_hash=commit_hash,
             message="submodule pointer update complete",
             errors=[],
+            full_update_stage_report=full_update_stage_report,
         )
     except SubmoduleUpdateError as exc:
         errors.append(str(exc))
         before = ""
         after = ""
         try:
-            before = _resolve_head(submodule_repo, "HEAD")
-            after = before
+            if _is_initialized_git_checkout(submodule_repo):
+                before = _resolve_head(submodule_repo, "HEAD")
+                after = before
         except Exception:
             pass
         return UpdateResult(
@@ -298,6 +618,14 @@ def update_governance_submodule(
             commit_hash=None,
             message="submodule pointer update failed",
             errors=errors,
+            full_update_stage_report=_build_full_update_stage_report(
+                framework_pointer=(
+                    "not_present"
+                    if errors and "submodule not registered" in errors[0]
+                    else "blocked"
+                ),
+                details={"errors": errors},
+            ),
         )
 
 
@@ -316,6 +644,13 @@ def format_human(result: UpdateResult) -> str:
         f"committed={result.committed}",
         f"commit_hash={result.commit_hash or '-'}",
         f"message={result.message}",
+        "full_update_stage_report:",
+        f"- framework_pointer={result.full_update_stage_report.get('framework_pointer')}",
+        f"- repo_local_instruction={result.full_update_stage_report.get('repo_local_instruction')}",
+        f"- memory_writer_coverage={result.full_update_stage_report.get('memory_writer_coverage')}",
+        f"- hook_validator_enforcement={result.full_update_stage_report.get('hook_validator_enforcement')}",
+        f"- existing_memory_normalization={result.full_update_stage_report.get('existing_memory_normalization')}",
+        f"- final_status={result.full_update_stage_report.get('final_status')}",
     ]
     if result.errors:
         lines.append("errors:")

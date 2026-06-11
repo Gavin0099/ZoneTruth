@@ -234,3 +234,14 @@ See `TOOLS.md` for companion and chat operation guidance.
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
 
+<!-- governance:key=f7_update_boundary -->
+- F-7 updates must preserve existing repo-specific AGENTS.md rules.
+- Validate F-7 state with `python -X utf8 -m governance_tools.f7_full_update --repo . --format json` from the framework environment.
+- Required external contract surfaces: contract.yaml, governance/framework.lock.json, .git/hooks/pre-commit, .git/hooks/pre-push, .github/copilot-instructions.md.
+
+
+<!-- governance:key=memory_workflow -->
+- Before claiming completion for any change touching `memory/**`, run `python -m governance_tools.memory_workflow --check --repo .`.
+- For memory completion claims, run `python -m governance_tools.memory_workflow --check --repo . --run-guard` and report blockers before claiming DONE.
+- Use the canonical memory writer for session-derived memory; do not edit memory records as ordinary markdown.
+

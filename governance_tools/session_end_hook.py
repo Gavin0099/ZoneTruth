@@ -34,6 +34,7 @@ import re
 import subprocess
 import sys
 import uuid
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -42,7 +43,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime_hooks.core.session_end import run_session_end
-from runtime_hooks.core._canonical_closeout import write_candidate
+from runtime_hooks.core._canonical_closeout import write_candidate, read_current_session_id
 from governance_tools.gate_policy import (
     load_policy,
     classify_artifact,
@@ -55,6 +56,9 @@ from governance_tools.gate_policy import (
 )
 from governance_tools.taxonomy_expansion_log import append_pending_entry
 from governance_tools.memory_significance import write_candidate_and_advisory
+from governance_tools.codeburn_token_summary import compute_codeburn_token_summary
+from governance_tools.memory_authority_guard import run_guard as _run_memory_guard
+from governance_tools.memory_workflow import assess_memory_workflow
 
 
 CLOSEOUT_FILE = "artifacts/session-closeout.txt"
@@ -1319,6 +1323,122 @@ def _generate_session_id() -> str:
     return f"session-{ts}-{uuid.uuid4().hex[:6]}"
 
 
+def _detect_transcript_provider(transcript_path: Path) -> str:
+    """Detect whether a JSONL transcript is from Claude or Codex."""
+    try:
+        with transcript_path.open("r", encoding="utf-8", errors="replace") as fh:
+            for raw_line in fh:
+                try:
+                    rec = json.loads(raw_line)
+                except Exception:
+                    continue
+                if rec.get("type") == "event_msg":
+                    return "codex"
+                if rec.get("type") == "assistant":
+                    return "claude"
+    except Exception:
+        pass
+    return "claude"
+
+
+def _ingest_transcript_for_closeout(
+    project_root: Path,
+    session_id: str,
+    transcript_path: "Path | None",
+) -> None:
+    """Pre-closeout ingest bridge.
+
+    Gap 2 fix: writes to repo-local artifacts/codeburn_closeout_ingest.db
+               (matches find_latest_codeburn_db pattern; not ~/.codeburn/).
+    Gap 1 fix: uses closeout session_id (not transcript stem or provider UUID).
+
+    Auto-detection: if transcript_path is None or does not exist, attempts to
+    discover the current session JSONL from ~/.claude/projects/ using the
+    phase2 claude_code_jsonl_ingestor.  This enables scope=current_session
+    even when the stop hook payload does not include transcript_path.
+
+    Must be called BEFORE compute_codeburn_token_summary so the token summary
+    query can resolve preferred_session_id → scope=current_session.
+
+    Fail-silent: never raises; missing transcript or import errors are swallowed.
+    """
+    # Resolve effective transcript path: explicit first, then auto-detect.
+    effective_path: "Path | None" = None
+    auto_detected = False
+    if transcript_path is not None and transcript_path.exists():
+        effective_path = transcript_path
+    else:
+        try:
+            from codeburn.phase2.claude_code_jsonl_ingestor import find_claude_session_jsonl
+            discovered = find_claude_session_jsonl()
+            if discovered is not None and discovered.exists():
+                effective_path = discovered
+                auto_detected = True
+        except Exception:
+            pass
+
+    if effective_path is None:
+        return
+
+    try:
+        import sqlite3 as _sl3
+        from codeburn.phase1.claude_log_ingestor import _ensure_schema
+    except ImportError:
+        return
+
+    db_path = project_root / "artifacts" / "codeburn_closeout_ingest.db"
+    (project_root / "artifacts").mkdir(parents=True, exist_ok=True)
+
+    # Ensure schema and sessions row (FK: steps.session_id → sessions.session_id).
+    try:
+        conn = _sl3.connect(str(db_path))
+        _ensure_schema(conn)
+        if not conn.execute(
+            "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+        ).fetchone():
+            conn.execute(
+                "INSERT INTO sessions(session_id, task, created_at, data_quality)"
+                " VALUES(?, ?, ?, ?)",
+                (
+                    session_id,
+                    "closeout_transcript_ingest",
+                    datetime.now(timezone.utc).isoformat(),
+                    "partial",
+                ),
+            )
+            conn.commit()
+        conn.close()
+    except Exception:
+        return
+
+    # Ingest with closeout session_id into repo-local DB.
+    try:
+        if auto_detected:
+            # Auto-detected path: use phase2 claude_code_jsonl_ingestor directly.
+            import sqlite3 as _sl3c
+            from codeburn.phase2.claude_code_jsonl_ingestor import ingest_claude_code_session
+            conn3 = _sl3c.connect(str(db_path))
+            ingest_claude_code_session(str(effective_path), session_id, conn3)
+            conn3.close()
+        else:
+            provider = _detect_transcript_provider(effective_path)
+            if provider == "codex":
+                import sqlite3 as _sl3b
+                from codeburn.phase2.codex_log_ingestor import ingest_codex_session
+                conn2 = _sl3b.connect(str(db_path))
+                ingest_codex_session(str(effective_path), session_id, conn2)
+                conn2.close()
+            else:
+                from codeburn.phase1.claude_log_ingestor import ingest as _claude_ingest
+                _claude_ingest(
+                    artifact_path=effective_path,
+                    session_id=session_id,
+                    db_path=db_path,
+                )
+    except Exception:
+        pass
+
+
 def _build_canonical_usage_audit(
     canonical_path_audit: dict,
     canonical_audit_trend: dict,
@@ -1425,7 +1545,94 @@ def _build_canonical_usage_audit(
 
 # ── Main hook logic ───────────────────────────────────────────────────────────
 
-def run_session_end_hook(project_root: Path) -> dict[str, Any]:
+def _collect_memory_authority_surface(project_root: Path) -> dict[str, Any]:
+    """
+    Run memory authority guard and return a compact observation surface.
+
+    Scope: repo-wide (Phase 1 — observation persistence only).
+    Non-blocking: any failure is caught and recorded as memory_authority_error.
+    skip_git=True: avoids subprocess overhead at session_end time.
+    """
+    try:
+        memory_root = project_root / "memory"
+        if not memory_root.exists():
+            return {
+                "memory_authority_guard_ran": False,
+                "memory_authority_scope": "repo",
+                "memory_authority_warning_codes": [],
+                "memory_unbound_count": 0,
+                "memory_authority_coverage": None,
+                "memory_authority_error": "memory_root_missing",
+            }
+        guard = _run_memory_guard(memory_root, project_root, skip_git=True)
+        counts: dict[str, int] = guard.get("violation_counts_by_code") or {}
+        sd = (guard.get("authority_coverage_rate") or {}).get("session_derived") or {}
+        return {
+            "memory_authority_guard_ran": True,
+            "memory_authority_scope": "repo",
+            "memory_authority_warning_codes": sorted(counts.keys()),
+            "memory_unbound_count": counts.get("unbound_memory", 0),
+            "memory_authority_coverage": {
+                "session_entries_total": sd.get("total_entries", 0),
+                "session_entries_bound": sd.get("bound_entries", 0),
+                "session_authority_rate": sd.get("rate"),
+            },
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "memory_authority_guard_ran": False,
+            "memory_authority_scope": "repo",
+            "memory_authority_warning_codes": ["MEMORY_AUTHORITY_GUARD_ERROR"],
+            "memory_unbound_count": 0,
+            "memory_authority_coverage": None,
+            "memory_authority_error": str(exc),
+        }
+
+
+def _collect_memory_workflow_surface(project_root: Path) -> dict[str, Any]:
+    """
+    Run the MEM-DISPATCH advisory surface for session_end reporting.
+
+    This is report-only. It never changes ok/gate/blocking behavior.
+    """
+    try:
+        dispatch = assess_memory_workflow(project_root, run_guard_check=True)
+        payload = asdict(dispatch)
+        guard_summary = payload.get("guard_summary") or {}
+        return {
+            "memory_workflow_dispatch_ran": True,
+            "memory_workflow_status": payload.get("status"),
+            "memory_task_classification": payload.get("task_classification"),
+            "memory_files_in_diff": payload.get("memory_files_in_diff") or [],
+            "canonical_writer_required": bool(payload.get("canonical_writer_required")),
+            "memory_authority_guard_ran": bool(payload.get("guard_ran")),
+            "memory_completion_claim_allowed": bool(payload.get("completion_claim_allowed")),
+            "memory_workflow_warning_codes": payload.get("warnings") or [],
+            "memory_workflow_blocker_codes": payload.get("blockers") or [],
+            "memory_workflow_guard_summary": {
+                "non_canonical_writer": int(guard_summary.get("non_canonical_writer") or 0),
+                "active_non_canonical_writer": int(guard_summary.get("active_non_canonical_writer") or 0),
+                "missing_canonical_memory": int(guard_summary.get("missing_canonical_memory") or 0),
+                "unbound_memory": int(guard_summary.get("unbound_memory") or 0),
+            },
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "memory_workflow_dispatch_ran": False,
+            "memory_workflow_status": "MEMORY_WORKFLOW_DISPATCH_ERROR",
+            "memory_task_classification": "unknown",
+            "memory_files_in_diff": [],
+            "canonical_writer_required": False,
+            "memory_authority_guard_ran": False,
+            "memory_completion_claim_allowed": False,
+            "memory_workflow_warning_codes": ["MEMORY_WORKFLOW_DISPATCH_ERROR"],
+            "memory_workflow_blocker_codes": [],
+            "memory_workflow_guard_summary": {},
+            "memory_workflow_error": str(exc),
+        }
+
+
+def run_session_end_hook(project_root: Path, *, transcript_path: Path | None = None, hook_session_id: str | None = None) -> dict[str, Any]:
     closeout_path = project_root / CLOSEOUT_FILE
     closeout_trigger_mode = "manual"
     clf = classify_closeout(closeout_path, project_root)
@@ -1434,7 +1641,11 @@ def run_session_end_hook(project_root: Path) -> dict[str, Any]:
     memory_tier = clf["memory_tier"]
     fields = clf["fields"]
 
-    session_id = _generate_session_id()
+    session_id = (
+        read_current_session_id(project_root)
+        or hook_session_id
+        or _generate_session_id()
+    )
     runtime_contract = _build_runtime_contract(fields, memory_tier)
 
     # Detect readiness level as metadata — NEVER used as decision input.
@@ -1649,6 +1860,19 @@ def run_session_end_hook(project_root: Path) -> dict[str, Any]:
             f"[memory_significance] advisory generation failed: {exc}"
         )
 
+    # Pre-closeout transcript ingest bridge (Gap 1 + Gap 2 + auto-detection).
+    # Must run before compute_codeburn_token_summary so the query resolves
+    # preferred_session_id → scope=current_session.
+    # Bridge is now always called; it handles None/missing transcript_path by
+    # attempting auto-detection from ~/.claude/projects/.
+    _ingest_transcript_for_closeout(project_root, session_id, transcript_path)
+
+    # Memory authority observation surface — Phase 1 (non-blocking, repo-scoped).
+    # Converts console-only warning output into a persistent artifact field so
+    # downstream tooling (matrix, closeout summary) can consume and aggregate it.
+    memory_authority = _collect_memory_authority_surface(project_root)
+    memory_workflow = _collect_memory_workflow_surface(project_root)
+
     return {
         "ok": base_ok,
         "session_id": session_id,
@@ -1659,6 +1883,8 @@ def run_session_end_hook(project_root: Path) -> dict[str, Any]:
         "memory_update_result": memory_update_result,
         "memory_update_skipped_reason": memory_update_skipped_reason,
         "memory_significance": memory_significance_artifacts,
+        "memory_authority": memory_authority,
+        "memory_workflow": memory_workflow,
         "hook_coverage_tier": closeout_eval["hook_coverage_tier"],
         "closeout_evaluation": closeout_eval,
         "repo_readiness_level": readiness["level"],
@@ -1702,6 +1928,9 @@ def run_session_end_hook(project_root: Path) -> dict[str, Any]:
         # It is a human-readable abstraction, not an authoritative gate signal.
         # Source of truth for automation: ok + gate_policy.blocked.
         "gate_verdict": gate_verdict,
+        "codeburn_token_summary": compute_codeburn_token_summary(
+            project_root, preferred_session_id=session_id
+        ),
         "warnings": gate_warnings,
         "errors": gate_errors,
     }
@@ -1810,6 +2039,7 @@ def format_human_result(result: dict[str, Any]) -> str:
 
     lines += [
         f"session_id={result['session_id']}",
+        f"codeburn_token_summary={result.get('codeburn_token_summary', 'NA')}",
         f"closeout_trigger_mode={result.get('closeout_trigger_mode', 'manual')}",
         f"closeout_status={result['closeout_status']}",
         f"memory_tier={result['memory_tier']}",

@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 FRAMEWORK_MARKER = "AI Governance Framework"
+COPILOT_INSTRUCTIONS_MARKER = "AI Governance Framework: copilot-instructions"
 REQUIRED_FRAMEWORK_FILES = [
     "scripts/lib/python.sh",
     "scripts/run-runtime-governance.sh",
@@ -43,7 +44,7 @@ def _contains_framework_marker(path: Path) -> bool:
 
 def _normalize_framework_root(raw_value: str) -> Path:
     """Accept Windows-native paths and Git Bash/MSYS paths like /e/work/repo."""
-    candidate = raw_value.strip()
+    candidate = raw_value.strip().lstrip("\ufeff")
     msys_match = re.match(r"^/([a-zA-Z])/(.*)$", candidate)
     if msys_match:
         drive = msys_match.group(1).upper()
@@ -83,6 +84,24 @@ def validate_hook_install(repo_root: Path, framework_root: Path | None = None) -
         errors.append(f"missing AI Governance pre-commit hook: {pre_commit}")
     if not checks["pre_push_installed"]:
         errors.append(f"missing AI Governance pre-push hook: {pre_push}")
+
+    # copilot-instructions check (warning only — not a blocking requirement)
+    copilot_instructions = repo_root / ".github" / "copilot-instructions.md"
+    copilot_present = copilot_instructions.is_file()
+    copilot_governed = copilot_present and COPILOT_INSTRUCTIONS_MARKER in (
+        copilot_instructions.read_text(encoding="utf-8") if copilot_present else ""
+    )
+    checks["copilot_instructions_present"] = copilot_present
+    checks["copilot_instructions_governed"] = copilot_governed
+    if not copilot_present:
+        warnings.append(
+            f"copilot-instructions.md not found: {copilot_instructions} "
+            f"— run install-hooks.sh to deploy DONE boundary rules for Copilot Workspace"
+        )
+    elif not copilot_governed:
+        warnings.append(
+            f"copilot-instructions.md exists but was not deployed by AI Governance Framework: {copilot_instructions}"
+        )
 
     resolved_framework_root = framework_root.resolve() if framework_root is not None else None
     if config_file.is_file():

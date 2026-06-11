@@ -32,6 +32,29 @@ fi
 
 PLAN_FILE="$TARGET_REPO_ROOT/PLAN.md"
 TOOL="$FRAMEWORK_ROOT/governance_tools/plan_freshness.py"
+MEMORY_WORKFLOW_TOOL="$FRAMEWORK_ROOT/governance_tools/memory_workflow.py"
+
+# Advisory-only memory workflow dispatch.
+# This makes governed memory edits visible before commit without changing the
+# commit gate. Selective blocking remains opt-in via memory_workflow.py
+# --fail-on-blocker and is not enabled by this hook.
+if [ -f "$MEMORY_WORKFLOW_TOOL" ]; then
+    if set_python_cmd; then
+        MEMORY_WORKFLOW_RESULT=$("${PYTHON_CMD[@]}" "$MEMORY_WORKFLOW_TOOL" --repo "$TARGET_REPO_ROOT" --check --format json 2>/dev/null) || true
+        if [ -n "$MEMORY_WORKFLOW_RESULT" ]; then
+            MEMORY_WORKFLOW_STATUS=$(echo "$MEMORY_WORKFLOW_RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || true)
+            MEMORY_WORKFLOW_ALLOWED=$(echo "$MEMORY_WORKFLOW_RESULT" | "${PYTHON_CMD[@]}" -c "import sys,json; d=json.load(sys.stdin); print(d.get('completion_claim_allowed', True))" 2>/dev/null || true)
+            if [ "$MEMORY_WORKFLOW_STATUS" = "memory_workflow_required" ]; then
+                echo ""
+                echo "[governance] memory workflow advisory: memory/** changes detected"
+                echo "  run: python -m governance_tools.memory_workflow --check --repo . --run-guard"
+                echo "  completion_claim_allowed=$MEMORY_WORKFLOW_ALLOWED"
+                echo "  note: pre-commit advisory only; commit is not blocked by this check"
+                echo ""
+            fi
+        fi
+    fi
+fi
 
 # ── 跳過條件 ──────────────────────────────────────────────────────────────
 # 沒有 PLAN.md → 跳過（可能是新專案或 examples/ 子目錄）

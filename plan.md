@@ -83,6 +83,10 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [ ] 下一步：重新在實機跑 owner acceptance；若還有 concern/fail，只針對畫面觀察到的問題定義下一個窄 DONE
 
 本次治理同步（2026-06-09）：
+- [x] 2026-06-11 對齊 `ai-governance-framework` upstream 到 `b841a9c660820`（沿用 external contract / adopt + lock 模式，非 submodule pointer）
+- [x] 套用 F-7 full update：刷新 `.governance/baseline.yaml`、`governance/framework.lock.json`、AGENTS/Copilot advisory、managed hooks 與 memory workflow 入口
+- [x] 補入本次 framework 新增 / 更新的 governance surfaces：`f7_full_update.py`、`memory_workflow.py`、`hook_installer.py`、`dirty_runtime_ledger_detector.py`、hook scripts、F-7 / memory protocol 文件
+- [x] 保持產品 Swift code、UI、tests 不變
 - [x] 對齊 `ai-governance-framework` upstream 到 `9eb793dbf6c6`（沿用 adopt + lock 模式，非 submodule pointer）
 - [x] 補入新拆分的治理 routing / protocol 文件：`AI_GOVERNANCE_UPDATE_PROTOCOL.md`、`F7_FULL_UPDATE.md`、`GOVERNANCE_SURFACE_RULES.md`、`MEMORY_PROTOCOL.md`
 - [x] 刷新 `.governance/baseline.yaml` 與 `governance/framework.lock.json`
@@ -278,6 +282,7 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-06-11 | 同步 ai-governance-framework 最新 upstream（`b841a9c660820`）：刷新 baseline/framework lock，導入 F-7 full update、memory workflow、managed hook installer、dirty runtime ledger detector 與 Copilot advisory；產品 Swift code/UI/tests 不變 |
 | 2026-06-10 | 完成實機 owner acceptance 第一輪文案修正：workout detail 改為判讀校準語意，weekly dashboard 移除目標覆寫/debug token/英文來源字串並降低 coaching 語氣 |
 | 2026-06-10 | 建立 `docs/OWNER_ACCEPTANCE_2026-06-10.md` 作為最新 owner acceptance 測試入口，整合 VO2 max / Zone 2 / Strength / Apple Health-backed metadata / feedback persistence |
 | 2026-06-11 | 同步 Apple Health sleep context 規格：`sleepAnalysis` 定位為 supportive recovery context，Owner Acceptance 補睡眠驗收與目前 app-requested read set 權限描述 |

@@ -64,6 +64,11 @@ _CANONICAL_MEMORY_WRITER = "governance_tools.memory_record"
 # Before this date, old-format entries (- what changed:) are grandfathered.
 # Set to the day after canonical writer was committed (2026-04-30 commit 6d77f2d).
 _CANONICAL_WRITER_REQUIRED_FROM = "2026-05-01"
+_ACTIVE_NON_CANONICAL_WRITER_DEFAULT_FROM = "2026-06-02"
+# Violation category policy (as classified 2026-06-01):
+#   Cat1 (pre-2026-05-13, 32 entries): early Codex writer path — grandfathered, no action
+#   Cat2+3 (2026-05-18 to 05-30, 46 entries): old-format established pattern — historical debt, no backfill
+#   Cat4 (>= 2026-06-01): active violations — AGENTS.md prohibits direct write; use canonical CLI
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -379,6 +384,28 @@ def _safe_rate(numerator: int, denominator: int) -> float | None:
     return round(numerator / denominator, 4)
 
 
+def filter_active_non_canonical_writer_violations(
+    violations: list[dict[str, Any]],
+    *,
+    active_from: str = _ACTIVE_NON_CANONICAL_WRITER_DEFAULT_FROM,
+) -> list[dict[str, Any]]:
+    """Return non-canonical writer violations in the active enforcement window.
+
+    Historical violations are intentionally not migrated or reclassified by this
+    helper. The date comparison is filename-based and only applies to daily
+    memory files using YYYY-MM-DD.md names.
+    """
+    cutoff_filename = f"{active_from}.md"
+    active: list[dict[str, Any]] = []
+    for violation in violations:
+        if violation.get("code") != "non_canonical_writer":
+            continue
+        filename = str(violation.get("file", ""))
+        if _DATE_FILENAME.match(filename) and filename >= cutoff_filename:
+            active.append(violation)
+    return active
+
+
 # ── aggregate ─────────────────────────────────────────────────────────────────
 
 def run_guard(
@@ -488,6 +515,16 @@ def main(argv: list[str] | None = None) -> None:
         default='text',
         help='Output format (default: text)',
     )
+    parser.add_argument(
+        '--fail-on-active-non-canonical-writer',
+        action='store_true',
+        help='Exit nonzero when active-window non_canonical_writer violations are present.',
+    )
+    parser.add_argument(
+        '--active-from',
+        default=_ACTIVE_NON_CANONICAL_WRITER_DEFAULT_FROM,
+        help='Active non-canonical writer cutoff date, YYYY-MM-DD (default: 2026-06-02).',
+    )
     args = parser.parse_args(argv)
 
     memory_root = Path(args.memory_root)
@@ -498,6 +535,20 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
 
     result = run_guard(memory_root, project_root, skip_git=args.skip_git)
+    active_non_canonical_writer = filter_active_non_canonical_writer_violations(
+        result["violations"],
+        active_from=args.active_from,
+    )
+    result["active_non_canonical_writer"] = {
+        "active_from": args.active_from,
+        "count": len(active_non_canonical_writer),
+        "violations": active_non_canonical_writer,
+        "mode": (
+            "fail_on_active_non_canonical_writer"
+            if args.fail_on_active_non_canonical_writer
+            else "report_only"
+        ),
+    }
 
     if args.format == 'json':
         print(json.dumps(result, indent=2))
@@ -511,8 +562,19 @@ def main(argv: list[str] | None = None) -> None:
                 detail = v.get('entry') or v.get('section') or v.get('date') or v.get('file', '')
                 reason = v.get('reason', '')
                 print(f'  [{sev}] {code}: {detail!r} -- {reason}')
+        active = result["active_non_canonical_writer"]
+        print(
+            "active non-canonical writer: "
+            f"{active['count']} since {active['active_from']} "
+            f"({active['mode']})"
+        )
 
     # Phase 1: always exit 0 (warning mode)
+    if (
+        args.fail_on_active_non_canonical_writer
+        and active_non_canonical_writer
+    ):
+        sys.exit(2)
     sys.exit(0)
 
 

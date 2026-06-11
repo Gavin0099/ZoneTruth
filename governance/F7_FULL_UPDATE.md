@@ -2,7 +2,7 @@
 
 Status: extracted from AGENTS.md
 Semantic change: no
-Runtime behavior change: no
+Runtime behavior change: yes — submodule consumer apply path now refreshes memory workflow router coverage and managed hook advisory coverage.
 Enforcement change: no
 
 ## Purpose
@@ -42,14 +42,25 @@ final_status: full_update_completed | already_current | partially_updated | bloc
 If any required surface is `missing`, `needed`, `blocked`, or `not_verified`,
 the final status must not be `full_update_completed`.
 
+## Implemented Automation
+
+For `submodule_consumer` apply mode, the updater now performs these scoped
+surfaces:
+
+- refreshes `AGENTS.base.md`
+- refreshes / appends AI Governance update rules in `AGENTS.md`
+- ensures an `AGENTS.md` `governance:key=memory_workflow` router section
+- installs managed hook advisory files from the governance submodule checkout
+- reports `full_update_completed` only when memory workflow coverage, hook
+  advisory coverage, and normalization status are all eligible
+
 ## Non-Claims
 
 This protocol defines the required F-7 reporting contract. It does not by
 itself implement updater automation for all stages.
 
 Not claimed unless separately implemented and validated:
-- updater automation performs all F-7 stages
-- hooks changed
+- updater automation performs all F-7 stages for all repo roles
 - validators changed
 - artifact schema changed
 - existing memory was normalized

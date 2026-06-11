@@ -37,6 +37,19 @@ ZERO_OID="0000000000000000000000000000000000000000"
 # <local ref> <local sha1> <remote ref> <remote sha1>
 PUSH_UPDATES="$(cat || true)"
 
+commits_include_today_memory() {
+    local commit_list="$1"
+    [ -n "$commit_list" ] || return 1
+    while IFS= read -r c; do
+        [ -n "$c" ] || continue
+        if git -C "$TARGET_REPO_ROOT" diff-tree --no-commit-id --name-only -r "$c" \
+            | grep -Fxq "$TODAY_MEMORY_PATH"; then
+            return 0
+        fi
+    done <<< "$commit_list"
+    return 1
+}
+
 if ! set_python_cmd; then
     echo "[governance] warning: Python not available; some advisory checks are skipped"
 fi
@@ -100,13 +113,21 @@ if [ -n "$PUSH_UPDATES" ]; then
 
         # Fallback for missing remote commit object in local clone:
         # inspect files touched by commits that are not yet in any remote.
-        if git -C "$TARGET_REPO_ROOT" rev-list "$local_sha" --not --remotes 2>/dev/null \
-            | xargs -r git -C "$TARGET_REPO_ROOT" diff-tree --no-commit-id --name-only -r \
-            | grep -Fxq "$TODAY_MEMORY_PATH"; then
+        LOCAL_ONLY_COMMITS="$(git -C "$TARGET_REPO_ROOT" rev-list "$local_sha" --not --remotes 2>/dev/null || true)"
+        if commits_include_today_memory "$LOCAL_ONLY_COMMITS"; then
             MEMORY_UPDATED_IN_PUSH=1
             break
         fi
     done <<< "$PUSH_UPDATES"
+fi
+
+# Some environments invoke pre-push without forwarding update lines to stdin.
+# Fail closed only after checking commits that are local-only versus all remotes.
+if [ "$MEMORY_UPDATED_IN_PUSH" -ne 1 ]; then
+    UNPUSHED_COMMITS="$(git -C "$TARGET_REPO_ROOT" rev-list HEAD --not --remotes 2>/dev/null || true)"
+    if commits_include_today_memory "$UNPUSHED_COMMITS"; then
+        MEMORY_UPDATED_IN_PUSH=1
+    fi
 fi
 
 if [ "$MEMORY_UPDATED_IN_PUSH" -ne 1 ]; then
@@ -132,6 +153,11 @@ fi
 
 if [ -f "$RUNTIME_SCRIPT" ]; then
     echo "[governance] running runtime-governance enforcement before push"
+    echo "[governance] runtime-governance smoke context: framework_self_smoke_advisory"
+    echo "[governance]   framework_root=$FRAMEWORK_ROOT"
+    echo "[governance]   target_repo_root=$TARGET_REPO_ROOT"
+    echo "[governance]   smoke_project_root=$FRAMEWORK_ROOT"
+    echo "[governance]   checked_plan_path=$FRAMEWORK_ROOT/PLAN.md"
     if ! (cd "$FRAMEWORK_ROOT" && bash "$RUNTIME_SCRIPT" --mode smoke); then
         echo ""
         echo "[governance] runtime-governance enforcement failed"
@@ -151,9 +177,12 @@ fi
 
 if [ -f "$VERSION_BUMP_GUARD" ] && [ "${#PYTHON_CMD[@]}" -gt 0 ]; then
     echo "[governance] version bump recommendation (advisory)"
+    # Detect remote default branch via symbolic ref; fall back to origin/main.
+    _VBG_BASE="$(git -C "$TARGET_REPO_ROOT" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/||')"
+    [ -z "$_VBG_BASE" ] && _VBG_BASE="origin/main"
     (
         cd "$TARGET_REPO_ROOT"
-        "${PYTHON_CMD[@]}" "$VERSION_BUMP_GUARD" --base-ref origin/main --head-ref HEAD --format human
+        "${PYTHON_CMD[@]}" "$VERSION_BUMP_GUARD" --base-ref "$_VBG_BASE" --head-ref HEAD --format human
     ) || (
         cd "$TARGET_REPO_ROOT"
         "${PYTHON_CMD[@]}" "$VERSION_BUMP_GUARD" --base-ref HEAD~1 --head-ref HEAD --format human

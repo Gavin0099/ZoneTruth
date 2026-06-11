@@ -76,6 +76,66 @@ Violation code: `non_canonical_writer` warning in `memory_authority_guard`.
 Historical violations before the cutoff are not to be backfilled unless a
 separate scoped cleanup is approved.
 
+## Memory Workflow Dispatch Rule
+
+Repo memory tasks are governed operations, not normal markdown edits.
+
+Before claiming completion for any task that edits `memory/**`, the agent must
+run the memory workflow dispatcher:
+
+```powershell
+python -m governance_tools.memory_workflow --check --repo .
+```
+
+If the repo consumes this framework through a submodule, run the dispatcher from
+that submodule path:
+
+```powershell
+python ai-governance-framework/governance_tools/memory_workflow.py --check
+```
+
+The dispatcher reports whether canonical writer and memory authority guard
+requirements apply. If `memory/**` files are changed and the dispatcher was not
+run, the agent must not claim memory completion.
+
+If the authority guard was not run after memory changes, report memory status as
+not verified. Historical `missing_canonical_memory` continuity gaps are warning
+evidence, not clean-completion evidence.
+
+When validating a memory completion claim, run:
+
+```powershell
+python -m governance_tools.memory_workflow --check --repo . --run-guard
+```
+
+`missing_canonical_memory` and legacy `unbound_memory` are warning evidence.
+`active_non_canonical_writer` is reported as a blocker candidate for the current
+memory completion claim. This dispatcher is report-only unless a later
+selective-blocking phase explicitly changes enforcement.
+
+Selective blocking is opt-in:
+
+```powershell
+python -m governance_tools.memory_workflow --check --repo . --run-guard --fail-on-blocker
+```
+
+With `--fail-on-blocker`, the dispatcher exits non-zero only for current
+completion blocker candidates, such as `active_non_canonical_writer` or a
+`memory/**` diff checked without the required authority guard. Historical debt
+such as `missing_canonical_memory` remains warning evidence.
+
+The managed `pre-commit` hook may surface this dispatcher as an advisory when
+`memory/**` changes are present. That hook advisory does not enable selective
+blocking; use `--fail-on-blocker` explicitly when a scoped memory completion
+gate is required.
+
+Session closeout records the dispatcher status as advisory evidence. The
+session-end hook exposes a `memory_workflow` surface, and closeout receipt schema
+`1.2` persists the dispatcher status, task classification, warning codes,
+blocker codes, guard summary, and memory completion claim allowance. Receipt
+presence is evidence that the workflow status was observed; it is not, by
+itself, proof that memory completion was allowed.
+
 ## Post-Push Memory Protocol
 
 - After every push in a main session, append one short entry to
