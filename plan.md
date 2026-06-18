@@ -12,7 +12,7 @@ default_load: always
 > **Primary Language**: Swift (app core) / Python (governance tooling)
 > **Task Level**: L2
 > **Planning Window**: 2026-04-01 ~ 2026-06-30
-> **最後更新**: 2026-06-11
+> **最後更新**: 2026-06-18
 > **Owner**: Gavin Wu
 > **Freshness**: Sprint (7d)
 
@@ -84,7 +84,13 @@ ZoneTruth 是一款 iOS/macOS 訓練分析應用，專注於 Zone 2 訓練品質
 - [x] 全域設定頁入口：新增 App 層級「設定」分頁，將完整 SettingsView 移出單筆詳情；設定頁顯示 Apple Health 授權狀態卡與「重新要求 Apple Health 授權」按鈕，單筆詳情只保留本次設定摘要；不改 classifier、不改 weekly claim
 - [ ] 下一步：重新在實機跑 owner acceptance；若還有 concern/fail，只針對畫面觀察到的問題定義下一個窄 DONE
 
-本次治理同步（2026-06-09）：
+本次治理同步（2026-06-18）：
+- [x] 對齊 `ai-governance-framework` upstream 到 `6f0ca32d5be0`（沿用 external contract / adopt + lock 模式，非 submodule pointer）
+- [x] 以最新 framework checkout 驗證 F-7 update check：`f7_final_status=completed`、`framework_version_current=true`、`adopted_commit_current=true`
+- [x] 刷新 `governance/framework.lock.json` 與 managed git hook advisory；保持產品 Swift/UI 行為不變
+- [x] 未納入既有 `artifacts/governance/version_compatibility.json` timestamp drift
+
+前次治理同步（2026-06-09）：
 - [x] 2026-06-11 對齊 `ai-governance-framework` upstream 到 `b841a9c660820`（沿用 external contract / adopt + lock 模式，非 submodule pointer）
 - [x] 套用 F-7 full update：刷新 `.governance/baseline.yaml`、`governance/framework.lock.json`、AGENTS/Copilot advisory、managed hooks 與 memory workflow 入口
 - [x] 補入本次 framework 新增 / 更新的 governance surfaces：`f7_full_update.py`、`memory_workflow.py`、`hook_installer.py`、`dirty_runtime_ledger_detector.py`、hook scripts、F-7 / memory protocol 文件
