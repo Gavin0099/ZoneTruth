@@ -134,6 +134,90 @@ struct HealthKitSleepContextQueryResult: Equatable, Sendable {
     }
 }
 
+struct HealthKitSleepInterval: Equatable, Sendable {
+    let startDate: Date
+    let endDate: Date
+
+    init(startDate: Date, endDate: Date) {
+        self.startDate = startDate
+        self.endDate = endDate
+    }
+}
+
+func aggregateWeeklySleepContext(
+    from intervals: [HealthKitSleepInterval],
+    lookbackDays: Int,
+    startDate: Date,
+    now: Date,
+    source: TrainingMetricMethodSource = .apple,
+    sourceLabel: String? = "Apple Health sleep analysis"
+) -> WeeklySleepContext? {
+    let clippedSegments = intervals
+        .compactMap { interval -> HealthKitSleepInterval? in
+            let clippedStart = max(interval.startDate, startDate)
+            let clippedEnd = min(interval.endDate, now)
+            guard clippedEnd.timeIntervalSince(clippedStart) > 0 else { return nil }
+            return HealthKitSleepInterval(startDate: clippedStart, endDate: clippedEnd)
+        }
+        .sorted { $0.startDate < $1.startDate }
+
+    guard !clippedSegments.isEmpty else { return nil }
+
+    let normalizedSegments = clippedSegments.reduce(into: [HealthKitSleepInterval]()) { result, segment in
+        guard let last = result.last else {
+            result.append(segment)
+            return
+        }
+        if segment.startDate <= last.endDate {
+            result[result.index(before: result.endIndex)] = HealthKitSleepInterval(
+                startDate: last.startDate,
+                endDate: max(last.endDate, segment.endDate)
+            )
+        } else {
+            result.append(segment)
+        }
+    }
+
+    struct SleepEpisode {
+        var endDate: Date
+        var sleepSeconds: TimeInterval
+    }
+
+    let maxEpisodeGap: TimeInterval = 2 * 60 * 60
+    let minimumNightDuration: TimeInterval = 2 * 60 * 60
+    let episodes = normalizedSegments.reduce(into: [SleepEpisode]()) { result, segment in
+        let duration = segment.endDate.timeIntervalSince(segment.startDate)
+        guard duration > 0 else { return }
+
+        guard let last = result.last else {
+            result.append(SleepEpisode(endDate: segment.endDate, sleepSeconds: duration))
+            return
+        }
+
+        let gap = segment.startDate.timeIntervalSince(last.endDate)
+        if gap <= maxEpisodeGap {
+            result[result.index(before: result.endIndex)] = SleepEpisode(
+                endDate: max(last.endDate, segment.endDate),
+                sleepSeconds: last.sleepSeconds + duration
+            )
+        } else {
+            result.append(SleepEpisode(endDate: segment.endDate, sleepSeconds: duration))
+        }
+    }
+    let nightEpisodes = episodes.filter { $0.sleepSeconds >= minimumNightDuration }
+
+    guard !nightEpisodes.isEmpty else { return nil }
+
+    let totalSleepHours = nightEpisodes.map(\.sleepSeconds).reduce(0, +) / 3_600
+    return WeeklySleepContext(
+        lookbackDays: max(1, lookbackDays),
+        nightsWithSleep: nightEpisodes.count,
+        averageSleepHours: totalSleepHours / Double(nightEpisodes.count),
+        source: source,
+        sourceLabel: sourceLabel
+    )
+}
+
 final class HealthKitWorkoutRepository: WorkoutRepository {
     let store: HealthKitWorkoutStore
     private let workoutLimit: Int
@@ -945,7 +1029,7 @@ private func recentSleepContext(
 
     let lookbackDays = max(1, days)
     let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: now) ?? now.addingTimeInterval(-Double(lookbackDays) * 86_400)
-    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: [.strictStartDate])
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: [])
     let sortDescriptors = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
 
     let samples: [HKCategorySample] = try await withCheckedThrowingContinuation { continuation in
@@ -966,17 +1050,16 @@ private func recentSleepContext(
 
     let asleepSamples = samples.filter(isAsleepSleepAnalysisSample)
 
-    var sleepSecondsByDay: [Date: TimeInterval] = [:]
-    for sample in asleepSamples {
-        let clippedStart = max(sample.startDate, startDate)
-        let clippedEnd = min(sample.endDate, now)
-        let duration = max(0, clippedEnd.timeIntervalSince(clippedStart))
-        guard duration > 0 else { continue }
-        let day = calendar.startOfDay(for: sample.startDate)
-        sleepSecondsByDay[day, default: 0] += duration
-    }
+    let sleepContext = aggregateWeeklySleepContext(
+        from: asleepSamples.map {
+            HealthKitSleepInterval(startDate: $0.startDate, endDate: $0.endDate)
+        },
+        lookbackDays: lookbackDays,
+        startDate: startDate,
+        now: now
+    )
 
-    guard !sleepSecondsByDay.isEmpty else {
+    guard let sleepContext else {
         return HealthKitSleepContextQueryResult(
             context: nil,
             lookbackDays: lookbackDays,
@@ -984,15 +1067,9 @@ private func recentSleepContext(
             asleepSampleCount: asleepSamples.count
         )
     }
-    let totalSleepHours = sleepSecondsByDay.values.reduce(0, +) / 3_600
+
     return HealthKitSleepContextQueryResult(
-        context: WeeklySleepContext(
-            lookbackDays: lookbackDays,
-            nightsWithSleep: sleepSecondsByDay.count,
-            averageSleepHours: totalSleepHours / Double(sleepSecondsByDay.count),
-            source: .apple,
-            sourceLabel: "Apple Health sleep analysis"
-        ),
+        context: sleepContext,
         lookbackDays: lookbackDays,
         rawSampleCount: samples.count,
         asleepSampleCount: asleepSamples.count

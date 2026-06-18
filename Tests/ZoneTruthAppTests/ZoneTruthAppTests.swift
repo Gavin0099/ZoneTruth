@@ -74,6 +74,32 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertNotNil(result.statusMessage)
     }
 
+    func testCompositeWorkoutRepositoryPreservesSleepContextWhenFallingBackToMockWorkouts() {
+        let sleepContext = WeeklySleepContext(
+            lookbackDays: 7,
+            nightsWithSleep: 4,
+            averageSleepHours: 6.25
+        )
+        let repository = CompositeWorkoutRepository(
+            repositories: [
+                StaticLoadResultRepository(
+                    result: WorkoutLoadResult(
+                        workouts: [],
+                        source: .healthKit,
+                        sleepContext: sleepContext
+                    )
+                ),
+                MockWorkoutRepository(),
+            ]
+        )
+
+        let result = repository.loadResult()
+
+        XCTAssertEqual(result.source, .mockSamples)
+        XCTAssertFalse(result.workouts.isEmpty)
+        XCTAssertEqual(result.sleepContext, sleepContext)
+    }
+
     func testJSONWorkoutRepositoryBootstrapsBundledSeedOnlyWhenEnabled() throws {
         let directoryURL = try makeTemporaryDirectory()
         let missingURL = directoryURL.appendingPathComponent("workouts.json")
@@ -184,6 +210,71 @@ final class ZoneTruthAppTests: XCTestCase {
 
         XCTAssertEqual(result.source, .healthKit)
         XCTAssertEqual(result.sleepContext, sleepContext)
+    }
+
+    func testSleepContextAggregationKeepsCrossMidnightSamplesInOneNight() {
+        let start = makeUTCDate(year: 2026, month: 6, day: 1).addingTimeInterval(12 * 60 * 60)
+        let now = makeUTCDate(year: 2026, month: 6, day: 8).addingTimeInterval(12 * 60 * 60)
+        let nightStart = makeUTCDate(year: 2026, month: 6, day: 5).addingTimeInterval(23.5 * 60 * 60)
+        let midnight = makeUTCDate(year: 2026, month: 6, day: 6)
+
+        let context = aggregateWeeklySleepContext(
+            from: [
+                HealthKitSleepInterval(
+                    startDate: nightStart,
+                    endDate: midnight.addingTimeInterval(60 * 60)
+                ),
+                HealthKitSleepInterval(
+                    startDate: midnight.addingTimeInterval(80 * 60),
+                    endDate: midnight.addingTimeInterval(7 * 60 * 60)
+                )
+            ],
+            lookbackDays: 7,
+            startDate: start,
+            now: now
+        )
+
+        XCTAssertEqual(context?.nightsWithSleep, 1)
+        XCTAssertEqual(context?.averageSleepHours ?? -1, 7.0 + (10.0 / 60.0), accuracy: 0.001)
+    }
+
+    func testSleepContextAggregationClipsLookbackBoundaryOverlap() {
+        let start = makeUTCDate(year: 2026, month: 6, day: 1).addingTimeInterval(12 * 60 * 60)
+        let now = makeUTCDate(year: 2026, month: 6, day: 8).addingTimeInterval(12 * 60 * 60)
+
+        let context = aggregateWeeklySleepContext(
+            from: [
+                HealthKitSleepInterval(
+                    startDate: start.addingTimeInterval(-2 * 60 * 60),
+                    endDate: start.addingTimeInterval(2 * 60 * 60)
+                )
+            ],
+            lookbackDays: 7,
+            startDate: start,
+            now: now
+        )
+
+        XCTAssertEqual(context?.nightsWithSleep, 1)
+        XCTAssertEqual(context?.averageSleepHours ?? -1, 2.0, accuracy: 0.001)
+    }
+
+    func testSleepContextAggregationIgnoresShortNapAsNight() {
+        let start = makeUTCDate(year: 2026, month: 6, day: 1)
+        let now = makeUTCDate(year: 2026, month: 6, day: 8)
+
+        let context = aggregateWeeklySleepContext(
+            from: [
+                HealthKitSleepInterval(
+                    startDate: start.addingTimeInterval(18 * 60 * 60),
+                    endDate: start.addingTimeInterval(18.75 * 60 * 60)
+                )
+            ],
+            lookbackDays: 7,
+            startDate: start,
+            now: now
+        )
+
+        XCTAssertNil(context)
     }
 
     func testHealthKitWorkoutRepositoryMapsAppleHeartRateRecoveryContext() async {
@@ -3725,6 +3816,14 @@ private struct StaticWorkoutRepository: WorkoutRepository {
 
     func loadResult() -> WorkoutLoadResult {
         WorkoutLoadResult(workouts: workouts, source: .mockSamples, sleepContext: sleepContext)
+    }
+}
+
+private struct StaticLoadResultRepository: WorkoutRepository {
+    let result: WorkoutLoadResult
+
+    func loadResult() -> WorkoutLoadResult {
+        result
     }
 }
 

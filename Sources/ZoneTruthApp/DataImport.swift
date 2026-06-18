@@ -137,6 +137,7 @@ struct CompositeWorkoutRepository: WorkoutRepository {
     private func resolve(results: [WorkoutLoadResult]) -> WorkoutLoadResult {
         var realResults: [WorkoutLoadResult] = []
         var mockResult: WorkoutLoadResult?
+        let sleepContext = results.compactMap(\.sleepContext).first
 
         for result in results {
             if result.source == .mockSamples {
@@ -147,7 +148,20 @@ struct CompositeWorkoutRepository: WorkoutRepository {
         }
 
         guard !realResults.isEmpty else {
-            return mockResult ?? WorkoutLoadResult(workouts: [], source: .none, statusMessage: "尚未連接任何資料來源。")
+            if let mockResult {
+                return WorkoutLoadResult(
+                    workouts: mockResult.workouts,
+                    source: mockResult.source,
+                    statusMessage: mockResult.statusMessage,
+                    sleepContext: sleepContext ?? mockResult.sleepContext
+                )
+            }
+            return WorkoutLoadResult(
+                workouts: [],
+                source: .none,
+                statusMessage: "尚未連接任何資料來源。",
+                sleepContext: sleepContext
+            )
         }
 
         let merged = deduplicate(
@@ -173,7 +187,7 @@ struct CompositeWorkoutRepository: WorkoutRepository {
             workouts: Array(merged),
             source: source,
             statusMessage: statusMsg,
-            sleepContext: realResults.compactMap(\.sleepContext).first
+            sleepContext: sleepContext
         )
     }
 }
