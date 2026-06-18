@@ -636,6 +636,16 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertTrue(urlString?.contains("scope=activity:read,activity:read_all") == true)
     }
 
+    func testStravaAppDefaultDoesNotEmbedClientSecret() throws {
+        XCTAssertNil(StravaOAuthConfiguration.appDefault)
+
+        let source = try appSourceText(named: "StravaAdapter.swift")
+        XCTAssertFalse(source.contains("StravaCredentials"))
+        XCTAssertFalse(source.contains("static let clientSecret"))
+        let secretLiteralPattern = #"clientSecret\s*:\s*"[a-f0-9]{40}""#
+        XCTAssertNil(source.range(of: secretLiteralPattern, options: String.CompareOptions.regularExpression))
+    }
+
     func testStravaAuthorizationParserParsesAcceptedCallback() {
         let callbackURL = URL(string: "zonetruth://strava/callback?state=zonetruth&code=abc123&scope=activity:read_all,activity:read")!
 

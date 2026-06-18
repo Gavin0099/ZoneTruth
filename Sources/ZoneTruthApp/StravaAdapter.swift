@@ -670,21 +670,11 @@ final class StravaCallbackHandler {
 }
 
 extension StravaOAuthConfiguration {
-    // Returns nil when placeholder credentials have not been filled in.
+    // Native clients must not embed Strava client secrets. Keep Strava disabled
+    // until token exchange is moved to a server-side OAuth broker.
     static var appDefault: StravaOAuthConfiguration? {
-        guard StravaCredentials.clientID != 0 else { return nil }
-        return StravaOAuthConfiguration(
-            clientID: StravaCredentials.clientID,
-            clientSecret: StravaCredentials.clientSecret,
-            redirectURI: "zonetruth://localhost",
-            callbackScheme: "zonetruth"
-        )
+        nil
     }
-}
-
-private enum StravaCredentials {
-    static let clientID: Int = 248735
-    static let clientSecret: String = "6602b2daae5f48fe4782dfe3f80fcf844f6f6831"
 }
 
 private extension String {
