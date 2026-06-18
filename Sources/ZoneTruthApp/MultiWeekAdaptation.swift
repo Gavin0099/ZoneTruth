@@ -7,7 +7,7 @@ import ZoneTruthCore
 // Claim level: bounded inference only — direction is HR-derived, not directly measured.
 struct AdaptationTrend28d {
     let dominantDirection: WeeklyAdaptationDirection
-    let consistencyRatio: Double    // fraction of qualifying weeks with dominant direction
+    let consistencyRatio: Double    // fraction of meaningful weeks with dominant direction
     let qualifyingWeekCount: Int    // weeks with workoutCount >= 2
     let isStrong: Bool              // ratio >= 0.75 AND qualifyingWeekCount >= 3
 }
@@ -30,7 +30,7 @@ enum MultiWeekAdaptationAnalyzer {
         for dir in meaningful { counts[dir, default: 0] += 1 }
         guard let (dominant, dominantCount) = counts.max(by: { $0.value < $1.value }) else { return nil }
 
-        let ratio = Double(dominantCount) / Double(qualifying.count)
+        let ratio = Double(dominantCount) / Double(meaningful.count)
         let isStrong = ratio >= 0.75 && qualifying.count >= 3
 
         return AdaptationTrend28d(

@@ -3749,6 +3749,22 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertFalse(trend?.isStrong == true, "isStrong requires >= 3 qualifying weeks")
     }
 
+    func testMultiWeekAdaptationNoSignalWeeksDoNotDiluteConsistencyRatio() {
+        let summaries = [
+            makeWeeklySummary(workoutCount: 4, z2Count: 3, weekOffset: 0),
+            makeWeeklySummary(workoutCount: 4, z2Count: 3, weekOffset: 1),
+            makeWeeklySummary(workoutCount: 2, highIntensityDays: 1, weekOffset: 2),
+            makeWeeklySummary(workoutCount: 2, highIntensityDays: 1, weekOffset: 3),
+        ]
+
+        let trend = MultiWeekAdaptationAnalyzer.analyze(summaries: summaries)
+
+        XCTAssertEqual(trend?.dominantDirection, .enduranceBuild)
+        XCTAssertEqual(trend?.consistencyRatio ?? 0, 1.0, accuracy: 0.001)
+        XCTAssertEqual(trend?.qualifyingWeekCount, 4)
+        XCTAssertTrue(trend?.isStrong == true)
+    }
+
     func testMultiWeekAdaptationNilWhenAllWeeksAreNoSignal() {
         let summaries = (0..<4).map { i in
             // workoutCount = 2 but no z2, no high intensity, no rest → noSignal
