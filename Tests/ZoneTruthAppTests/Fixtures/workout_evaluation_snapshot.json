@@ -5,11 +5,11 @@
       "evaluationConfidence" : 64,
       "goalFitScore" : 57,
       "keyFindings" : [
-        "Zone 3 比例偏高，Zone 2 純度不足。",
-        "心率飄移略高，後段有強度上浮。"
+        "中高強度停留比預期稍多，純度還可以再拉回來。",
+        "後段心率有些上浮，代表強度可能慢慢墊高。"
       ],
       "legacyPassFail" : false,
-      "nextAction" : "前段先保守 5-10 分鐘，適度降低強度並將心率穩定控制在 Zone 2 上緣以下。",
+      "nextAction" : "下次前段先保守一點，讓心率更早穩住，整體會更接近想要的有氧節奏。",
       "primaryIntent" : "zone2",
       "secondarySignals" : [
         "Zone 3 比例 17%",
@@ -17,7 +17,7 @@
         "心率飄移 5.7%",
         "心率標準差 3.7 bpm"
       ],
-      "trainingTendency" : "偏 Zone 2 但強度略高"
+      "trainingTendency" : "穩定有氧為主，但強度略高"
     },
     "id" : "zone2_deviation_stable_drift"
   },
@@ -27,10 +27,10 @@
       "evaluationConfidence" : 70,
       "goalFitScore" : 84,
       "keyFindings" : [
-        "Zone 4/5 佔比足夠，符合高強度刺激需求。"
+        "高強度停留時間足夠，這次確實有做到刺激。"
       ],
       "legacyPassFail" : true,
-      "nextAction" : "可維持目前間歇結構，下一次優先觀察每組之間的恢復是否完整。",
+      "nextAction" : "這樣的結構可以延續；下次可以多觀察每組之間恢復是否有跟上。",
       "primaryIntent" : "vo2Max",
       "secondarySignals" : [
         "Zone 3 比例 0%",
@@ -38,7 +38,7 @@
         "心率飄移資料不足",
         "心率標準差 3.3 bpm"
       ],
-      "trainingTendency" : "偏高強度間歇訓練"
+      "trainingTendency" : "高強度刺激明確"
     },
     "id" : "vo2_pass"
   },
@@ -48,10 +48,10 @@
       "evaluationConfidence" : 70,
       "goalFitScore" : 46,
       "keyFindings" : [
-        "高強度停留較多，整體較偏代謝循環刺激。"
+        "高心率停留較多，整體更像連續循環式刺激。"
       ],
       "legacyPassFail" : false,
-      "nextAction" : "若目標是純肌力，可考慮拉長組間休息，降低連續高心率時間。",
+      "nextAction" : "如果你想更偏純肌力，下次可把組間休息再拉長一些。",
       "primaryIntent" : "strength",
       "secondarySignals" : [
         "Zone 3 比例 50%",
@@ -59,7 +59,7 @@
         "心率飄移資料不足",
         "心率標準差 3.6 bpm"
       ],
-      "trainingTendency" : "偏代謝循環訓練"
+      "trainingTendency" : "較像代謝循環型肌力"
     },
     "id" : "strength_metabolic_circuit"
   },
@@ -72,7 +72,7 @@
         "本次為一般活動型態，建議以描述性回顧為主。"
       ],
       "legacyPassFail" : true,
-      "nextAction" : "若需要嚴格訓練品質評估，可改用明確訓練目標（Zone2/VO2/Strength）。",
+      "nextAction" : "若想做更明確的訓練判讀，可先指定這次更接近有氧、高強度或肌力。",
       "primaryIntent" : "activity",
       "secondarySignals" : [
         "Zone 3 比例 0%",
@@ -90,11 +90,11 @@
       "evaluationConfidence" : 10,
       "goalFitScore" : 70,
       "keyFindings" : [
-        "Zone 2 佔比為主，整體強度分布穩定。",
-        "心率飄移與波動在可接受範圍。"
+        "整體大多維持在穩定有氧範圍內，節奏維持得不錯。",
+        "心率波動與後段變化都在可接受範圍。"
       ],
       "legacyPassFail" : true,
-      "nextAction" : "維持目前節奏，下一次可小幅延長訓練時間。",
+      "nextAction" : "目前節奏可以延續；如果身體感受穩定，下次可再小幅拉長時間。",
       "primaryIntent" : "zone2",
       "secondarySignals" : [
         "Zone 3 比例 0%",
@@ -102,7 +102,7 @@
         "心率飄移資料不足",
         "心率穩定度資料不足"
       ],
-      "trainingTendency" : "偏穩定有氧訓練"
+      "trainingTendency" : "穩定有氧表現穩定"
     },
     "id" : "sparse_hr_samples"
   }

@@ -1063,7 +1063,8 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(evaluation.primaryIntent, .zone2)
         XCTAssertFalse(evaluation.legacyPassFail)
         XCTAssertTrue(evaluation.trainingTendency.contains("穩定有氧"))
-        XCTAssertTrue(evaluation.nextAction.contains("降低") || evaluation.nextAction.contains("放慢") || evaluation.nextAction.contains("強度"))
+        XCTAssertTrue(evaluation.nextAction.contains("心率"))
+        XCTAssertTrue(evaluation.nextAction.contains("有氧節奏"))
     }
 
     func testSemanticGuardNoHarshFailureToneWhenLegacyPassFailFalse() {
