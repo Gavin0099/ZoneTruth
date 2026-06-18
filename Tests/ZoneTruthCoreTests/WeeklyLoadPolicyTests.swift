@@ -122,6 +122,18 @@ final class WeeklyLoadPolicyTests: XCTestCase {
         XCTAssertTrue(policy.keyFindings.contains { $0.contains("VO2") || $0.contains("高強度") })
     }
 
+    func testSingleVO2WorkoutIsHighIntensityFocusedNotUnderloaded() {
+        let monday = weekMonday
+        let cal = utcCalendar
+        let workouts = [
+            makeWorkout(.vo2Interval, monday, 2700),
+        ]
+        let summary = WeeklyObservationBuilder.build(workouts: workouts, weekStart: monday, calendar: cal, asOf: weekEndAsOf)
+        let policy = WeeklyLoadPolicyEngine.evaluate(summary: summary)
+
+        XCTAssertEqual(policy.loadTendency, .highIntensityFocused)
+    }
+
     // MARK: - Balanced week
 
     func testBalancedWeekIsLow() {

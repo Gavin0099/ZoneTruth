@@ -1856,11 +1856,17 @@ public enum WeeklyLoadPolicyEngine {
     }
 
     private static func assessLoadTendency(summary: WeeklyWorkoutSummary) -> LoadTendency {
-        guard summary.workoutCount > 1 else { return .underloaded }
         let vo2Count = summary.intentDistribution[.vo2Interval, default: 0]
         let z2Count = summary.intentDistribution[.zone2, default: 0]
         let total = summary.workoutCount
+        guard total > 0 else { return .underloaded }
 
+        if total == 1 {
+            if vo2Count > 0 || summary.highIntensityDays > 0 {
+                return .highIntensityFocused
+            }
+            return .underloaded
+        }
         if Double(vo2Count) / Double(total) >= 0.4 || vo2Count >= 3 {
             return .highIntensityFocused
         }
