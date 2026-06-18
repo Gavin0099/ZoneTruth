@@ -1,5 +1,11 @@
 import Foundation
 
+func bodyCompositionSpanDays(from earliestDate: Date, to latestDate: Date) -> Int {
+    let interval = latestDate.timeIntervalSince(earliestDate)
+    guard interval > 0 else { return 0 }
+    return max(1, Int(ceil(interval / 86_400)))
+}
+
 // MARK: - Raw measurement
 
 public struct BodyCompositionMeasurement: Codable, Equatable, Sendable {
@@ -149,6 +155,6 @@ public struct BodyCompositionLedger: Equatable, Sendable {
     }
 
     public var spanDays: Int {
-        Int(latestDate.timeIntervalSince(earliestDate) / 86400)
+        bodyCompositionSpanDays(from: earliestDate, to: latestDate)
     }
 }

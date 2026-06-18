@@ -76,7 +76,7 @@ public enum BodyCompositionTrendAnalyzer {
 
         let delta = last.1 - first.1
         let pct = first.1 == 0 ? 0 : (delta / abs(first.1)) * 100
-        let spanDays = Int(last.0.timeIntervalSince(first.0) / 86400)
+        let spanDays = bodyCompositionSpanDays(from: first.0, to: last.0)
 
         let direction: TrendDirection
         if abs(delta) <= noiseBand {

@@ -43,6 +43,33 @@ final class BodyCompositionTrendAnalyzerTests: XCTestCase {
         XCTAssertTrue(ledger?.isBodyRecomposition ?? false)
     }
 
+    func testAnalyzeRoundsPositiveSubDaySpanUpToOneDay() {
+        let measurements = [
+            measurement(
+                date: Date(timeIntervalSince1970: 0),
+                weightKg: 70.0,
+                muscleKg: 30.0,
+                fatKg: 15.0,
+                visceralCm2: 90.0
+            ),
+            measurement(
+                date: Date(timeIntervalSince1970: 23 * 60 * 60),
+                weightKg: 69.0,
+                muscleKg: 30.2,
+                fatKg: 14.0,
+                visceralCm2: 84.0
+            ),
+        ]
+
+        let ledger = BodyCompositionTrendAnalyzer.analyze(measurements: measurements)
+
+        XCTAssertEqual(ledger?.spanDays, 1)
+        XCTAssertEqual(ledger?.fatTrend.spanDays, 1)
+        XCTAssertEqual(ledger?.muscleTrend.spanDays, 1)
+        XCTAssertEqual(ledger?.visceralFatTrend.spanDays, 1)
+        XCTAssertEqual(ledger?.weightTrend.spanDays, 1)
+    }
+
     private func measurement(
         dayOffset: Int,
         weightKg: Double,
@@ -50,8 +77,24 @@ final class BodyCompositionTrendAnalyzerTests: XCTestCase {
         fatKg: Double,
         visceralCm2: Double
     ) -> BodyCompositionMeasurement {
-        BodyCompositionMeasurement(
+        measurement(
             date: Date(timeIntervalSince1970: TimeInterval(dayOffset * 86_400)),
+            weightKg: weightKg,
+            muscleKg: muscleKg,
+            fatKg: fatKg,
+            visceralCm2: visceralCm2
+        )
+    }
+
+    private func measurement(
+        date: Date,
+        weightKg: Double,
+        muscleKg: Double,
+        fatKg: Double,
+        visceralCm2: Double
+    ) -> BodyCompositionMeasurement {
+        BodyCompositionMeasurement(
+            date: date,
             weightKg: weightKg,
             skeletalMuscleKg: muscleKg,
             bodyFatKg: fatKg,
