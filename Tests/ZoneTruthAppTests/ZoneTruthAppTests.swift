@@ -2981,6 +2981,14 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(ledger?.measurements.count, measurements.count)
     }
 
+    func testBodyCompositionMeasurementDateLabelKeepsCompactFormat() {
+        let date = Date(timeIntervalSince1970: 1_780_000_000)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yy.MM.dd"
+
+        XCTAssertEqual(bodyCompositionMeasurementDateLabel(date), formatter.string(from: date))
+    }
+
     @MainActor
     func testBodyCompositionContextSectionSmokeCompiles() {
         guard let ledger = BodyCompositionRepository.defaultSeedLedger() else {

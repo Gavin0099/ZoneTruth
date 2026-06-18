@@ -1,6 +1,16 @@
 import SwiftUI
 import ZoneTruthCore
 
+private let bodyCompositionMeasurementDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yy.MM.dd"
+    return formatter
+}()
+
+func bodyCompositionMeasurementDateLabel(_ date: Date) -> String {
+    bodyCompositionMeasurementDateFormatter.string(from: date)
+}
+
 // MARK: - Standalone body composition history tab / sheet
 
 struct BodyCompositionView: View {
@@ -362,9 +372,7 @@ struct BodyCompositionContextSection: View {
     }
 
     private func dateLabel(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yy.MM.dd"
-        return f.string(from: date)
+        bodyCompositionMeasurementDateLabel(date)
     }
 
     private func fmt1(_ value: Double) -> String {
