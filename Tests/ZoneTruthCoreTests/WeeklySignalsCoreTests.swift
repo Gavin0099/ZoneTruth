@@ -17,6 +17,21 @@ final class WeeklySignalsCoreTests: XCTestCase {
         XCTAssertEqual(WeeklyFreshnessSignal.classify(workouts: [], weekStart: weekStart, now: now), .missing)
     }
 
+    func testWeeklyFreshnessSignalExcludesWorkoutsAfterWeekWindow() {
+        let weekStart = makeUTCDate(year: 2026, month: 5, day: 18)
+        let now = weekStart.addingTimeInterval(8 * 86400)
+        let staleWorkoutInWeek = makeWorkoutForFreshness(startDate: weekStart.addingTimeInterval(24 * 3600))
+        let freshWorkoutAfterWeek = makeWorkoutForFreshness(startDate: weekStart.addingTimeInterval(7 * 86400 + 12 * 3600))
+
+        let freshness = WeeklyFreshnessSignal.classify(
+            workouts: [staleWorkoutInWeek, freshWorkoutAfterWeek],
+            weekStart: weekStart,
+            now: now
+        )
+
+        XCTAssertEqual(freshness, .stale)
+    }
+
     func testWeeklyConfidenceSemanticsDowngradesWithSparseHRVAndStaleFreshness() {
         let sparseHRV = WeeklyConfidenceSemantics.calibrated(
             baseConfidence: 0.85,

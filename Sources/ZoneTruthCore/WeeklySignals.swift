@@ -25,7 +25,12 @@ public enum WeeklyFreshnessSignal {
         weekStart: Date,
         now: Date = Date()
     ) -> WeeklyDataFreshness {
-        let weekWorkouts = workouts.filter { $0.startDate >= weekStart }
+        let calendar = Calendar.current
+        let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)
+            ?? weekStart.addingTimeInterval(7 * 24 * 60 * 60)
+        let weekWorkouts = workouts.filter { workout in
+            workout.startDate >= weekStart && workout.startDate < nextWeekStart
+        }
         guard let latest = weekWorkouts.map(\.startDate).max() else {
             return .missing
         }
