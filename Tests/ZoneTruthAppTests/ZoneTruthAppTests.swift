@@ -1086,6 +1086,76 @@ final class ZoneTruthAppTests: XCTestCase {
     }
 
     @MainActor
+    func testViewModelUpdateIntentPreservesHealthKitContextFields() {
+        let startDate = Date(timeIntervalSince1970: 1_710_000_000)
+        let workout = WorkoutInput(
+            workoutType: .cycling,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(3_600),
+            heartRateSamples: [
+                HeartRateSample(timestamp: startDate, bpm: 122),
+                HeartRateSample(timestamp: startDate.addingTimeInterval(600), bpm: 128),
+            ],
+            hrvSDNNMilliseconds: 42,
+            intent: .zone2,
+            intentSource: .auto,
+            dataSource: "healthkit",
+            activeCaloriesKcal: 520,
+            totalDistanceMeters: 18_400,
+            vo2MaxEstimate: VO2MaxEstimate(
+                value: 47,
+                source: .apple,
+                sourceLabel: "Apple Health VO2 max"
+            ),
+            heartRateRecoveryOneMinute: HeartRateRecoveryObservation(
+                value: 18,
+                source: .apple,
+                sourceLabel: "Apple Health 1-minute heart-rate recovery"
+            ),
+            runningPower: RunningPowerObservation(
+                averageWatts: 238,
+                source: .runningHRSpeed,
+                sourceLabel: "Apple Health running power"
+            ),
+            cyclingPower: CyclingPowerObservation(
+                averageWatts: 211,
+                source: .cyclingPowerHR,
+                sourceLabel: "Apple Health cycling power"
+            ),
+            workoutRoute: WorkoutRouteObservation(
+                pointCount: 128,
+                elevationGainMeters: 86,
+                source: .workoutRoute,
+                sourceLabel: "Apple Health workout route"
+            ),
+            externalLoadDecoupling: ExternalLoadDecouplingObservation(
+                decouplingRatio: 0.056,
+                firstHalfAverageHeartRate: 126,
+                secondHalfAverageHeartRate: 131,
+                firstHalfAverageWatts: 214,
+                secondHalfAverageWatts: 211,
+                source: .cyclingPowerHR,
+                sourceLabel: "Apple Health cycling power and heart rate"
+            )
+        )
+        let viewModel = WorkoutListViewModel(
+            repository: StaticWorkoutRepository(workouts: [workout]),
+            settingsManager: SettingsManager()
+        )
+
+        viewModel.selectWorkout(workout)
+        viewModel.updateIntent(TrainingIntent.vo2Interval)
+
+        let updated = viewModel.workouts.first
+        XCTAssertEqual(updated?.intent, .vo2Interval)
+        XCTAssertEqual(updated?.heartRateRecoveryOneMinute, workout.heartRateRecoveryOneMinute)
+        XCTAssertEqual(updated?.runningPower, workout.runningPower)
+        XCTAssertEqual(updated?.cyclingPower, workout.cyclingPower)
+        XCTAssertEqual(updated?.workoutRoute, workout.workoutRoute)
+        XCTAssertEqual(updated?.externalLoadDecoupling, workout.externalLoadDecoupling)
+    }
+
+    @MainActor
     func testViewModelFeedbackRecorderPersistsIntoInjectedStore() {
         let feedbackStore = InMemoryTrainingClassificationFeedbackStore()
         let viewModel = WorkoutListViewModel(

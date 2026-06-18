@@ -206,6 +206,11 @@ final class WorkoutListViewModel: ObservableObject {
                 activeCaloriesKcal: current.activeCaloriesKcal,
                 totalDistanceMeters: current.totalDistanceMeters,
                 vo2MaxEstimate: current.vo2MaxEstimate,
+                heartRateRecoveryOneMinute: current.heartRateRecoveryOneMinute,
+                runningPower: current.runningPower,
+                cyclingPower: current.cyclingPower,
+                workoutRoute: current.workoutRoute,
+                externalLoadDecoupling: current.externalLoadDecoupling,
                 strengthMetrics: current.strengthMetrics
             )
         }
@@ -326,6 +331,11 @@ final class WorkoutListViewModel: ObservableObject {
             activeCaloriesKcal: workout.activeCaloriesKcal,
             totalDistanceMeters: workout.totalDistanceMeters,
             vo2MaxEstimate: workout.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: workout.heartRateRecoveryOneMinute,
+            runningPower: workout.runningPower,
+            cyclingPower: workout.cyclingPower,
+            workoutRoute: workout.workoutRoute,
+            externalLoadDecoupling: workout.externalLoadDecoupling,
             strengthMetrics: workout.strengthMetrics
         )
         return WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
@@ -346,6 +356,11 @@ final class WorkoutListViewModel: ObservableObject {
             activeCaloriesKcal: workout.activeCaloriesKcal,
             totalDistanceMeters: workout.totalDistanceMeters,
             vo2MaxEstimate: workout.vo2MaxEstimate,
+            heartRateRecoveryOneMinute: workout.heartRateRecoveryOneMinute,
+            runningPower: workout.runningPower,
+            cyclingPower: workout.cyclingPower,
+            workoutRoute: workout.workoutRoute,
+            externalLoadDecoupling: workout.externalLoadDecoupling,
             strengthMetrics: workout.strengthMetrics
         )
         let legacy = WorkoutIntentAnalyzer.analyze(rewritten, policy: settingsManager.policy)
@@ -404,6 +419,11 @@ final class WorkoutListViewModel: ObservableObject {
                 activeCaloriesKcal: base.activeCaloriesKcal,
                 totalDistanceMeters: base.totalDistanceMeters,
                 vo2MaxEstimate: base.vo2MaxEstimate,
+                heartRateRecoveryOneMinute: base.heartRateRecoveryOneMinute,
+                runningPower: base.runningPower,
+                cyclingPower: base.cyclingPower,
+                workoutRoute: base.workoutRoute,
+                externalLoadDecoupling: base.externalLoadDecoupling,
                 strengthMetrics: base.strengthMetrics
             )
         }.map { base in
@@ -423,6 +443,11 @@ final class WorkoutListViewModel: ObservableObject {
                 activeCaloriesKcal: base.activeCaloriesKcal,
                 totalDistanceMeters: base.totalDistanceMeters,
                 vo2MaxEstimate: base.vo2MaxEstimate,
+                heartRateRecoveryOneMinute: base.heartRateRecoveryOneMinute,
+                runningPower: base.runningPower,
+                cyclingPower: base.cyclingPower,
+                workoutRoute: base.workoutRoute,
+                externalLoadDecoupling: base.externalLoadDecoupling,
                 strengthMetrics: base.strengthMetrics
             )
         }
@@ -516,6 +541,11 @@ final class WorkoutListViewModel: ObservableObject {
                     activeCaloriesKcal: workout.activeCaloriesKcal,
                     totalDistanceMeters: workout.totalDistanceMeters,
                     vo2MaxEstimate: workout.vo2MaxEstimate,
+                    heartRateRecoveryOneMinute: workout.heartRateRecoveryOneMinute,
+                    runningPower: workout.runningPower,
+                    cyclingPower: workout.cyclingPower,
+                    workoutRoute: workout.workoutRoute,
+                    externalLoadDecoupling: workout.externalLoadDecoupling,
                     strengthMetrics: workout.strengthMetrics
                 )
             },
