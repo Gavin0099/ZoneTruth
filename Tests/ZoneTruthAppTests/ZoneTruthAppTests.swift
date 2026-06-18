@@ -238,7 +238,7 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(context?.averageSleepHours ?? -1, 7.0 + (10.0 / 60.0), accuracy: 0.001)
     }
 
-    func testSleepContextAggregationClipsLookbackBoundaryOverlap() {
+    func testSleepContextAggregationKeepsFullEpisodeAcrossLookbackBoundary() {
         let start = makeUTCDate(year: 2026, month: 6, day: 1).addingTimeInterval(12 * 60 * 60)
         let now = makeUTCDate(year: 2026, month: 6, day: 8).addingTimeInterval(12 * 60 * 60)
 
@@ -247,6 +247,26 @@ final class ZoneTruthAppTests: XCTestCase {
                 HealthKitSleepInterval(
                     startDate: start.addingTimeInterval(-2 * 60 * 60),
                     endDate: start.addingTimeInterval(2 * 60 * 60)
+                )
+            ],
+            lookbackDays: 7,
+            startDate: start,
+            now: now
+        )
+
+        XCTAssertEqual(context?.nightsWithSleep, 1)
+        XCTAssertEqual(context?.averageSleepHours ?? -1, 4.0, accuracy: 0.001)
+    }
+
+    func testSleepContextAggregationKeepsBoundaryEpisodeWhenClippedDurationIsShort() {
+        let start = makeUTCDate(year: 2026, month: 6, day: 1).addingTimeInterval(12 * 60 * 60)
+        let now = makeUTCDate(year: 2026, month: 6, day: 8).addingTimeInterval(12 * 60 * 60)
+
+        let context = aggregateWeeklySleepContext(
+            from: [
+                HealthKitSleepInterval(
+                    startDate: start.addingTimeInterval(-90 * 60),
+                    endDate: start.addingTimeInterval(30 * 60)
                 )
             ],
             lookbackDays: 7,

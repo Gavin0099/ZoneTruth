@@ -185,26 +185,44 @@ func aggregateWeeklySleepContext(
     source: TrainingMetricMethodSource = .apple,
     sourceLabel: String? = "Apple Health sleep analysis"
 ) -> WeeklySleepContext? {
+    struct SleepSegment {
+        var startDate: Date
+        var endDate: Date
+        var episodeStartDate: Date
+        var episodeEndDate: Date
+
+        var episodeSleepSeconds: TimeInterval {
+            episodeEndDate.timeIntervalSince(episodeStartDate)
+        }
+    }
+
     let clippedSegments = intervals
-        .compactMap { interval -> HealthKitSleepInterval? in
+        .compactMap { interval -> SleepSegment? in
             let clippedStart = max(interval.startDate, startDate)
             let clippedEnd = min(interval.endDate, now)
             guard clippedEnd.timeIntervalSince(clippedStart) > 0 else { return nil }
-            return HealthKitSleepInterval(startDate: clippedStart, endDate: clippedEnd)
+            return SleepSegment(
+                startDate: clippedStart,
+                endDate: clippedEnd,
+                episodeStartDate: interval.startDate,
+                episodeEndDate: min(interval.endDate, now)
+            )
         }
         .sorted { $0.startDate < $1.startDate }
 
     guard !clippedSegments.isEmpty else { return nil }
 
-    let normalizedSegments = clippedSegments.reduce(into: [HealthKitSleepInterval]()) { result, segment in
+    let normalizedSegments = clippedSegments.reduce(into: [SleepSegment]()) { result, segment in
         guard let last = result.last else {
             result.append(segment)
             return
         }
         if segment.startDate <= last.endDate {
-            result[result.index(before: result.endIndex)] = HealthKitSleepInterval(
+            result[result.index(before: result.endIndex)] = SleepSegment(
                 startDate: last.startDate,
-                endDate: max(last.endDate, segment.endDate)
+                endDate: max(last.endDate, segment.endDate),
+                episodeStartDate: min(last.episodeStartDate, segment.episodeStartDate),
+                episodeEndDate: max(last.episodeEndDate, segment.episodeEndDate)
             )
         } else {
             result.append(segment)
@@ -219,7 +237,7 @@ func aggregateWeeklySleepContext(
     let maxEpisodeGap: TimeInterval = 2 * 60 * 60
     let minimumNightDuration: TimeInterval = 2 * 60 * 60
     let episodes = normalizedSegments.reduce(into: [SleepEpisode]()) { result, segment in
-        let duration = segment.endDate.timeIntervalSince(segment.startDate)
+        let duration = segment.episodeSleepSeconds
         guard duration > 0 else { return }
 
         guard let last = result.last else {
