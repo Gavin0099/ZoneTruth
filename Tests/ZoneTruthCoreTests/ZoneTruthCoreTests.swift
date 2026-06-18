@@ -952,6 +952,46 @@ final class ZoneTruthCoreTests: XCTestCase {
         XCTAssertEqual(distribution.counts[.zone5], 1)
     }
 
+    func testZoneDistributionRatiosAreTimeWeightedForIrregularSamples() {
+        let start = Date(timeIntervalSince1970: 0)
+        let samples = [
+            HeartRateSample(timestamp: start, bpm: 115),
+            HeartRateSample(timestamp: start.addingTimeInterval(60), bpm: 130),
+            HeartRateSample(timestamp: start.addingTimeInterval(660), bpm: 130)
+        ]
+
+        let distribution = ZoneDistributionAnalyzer.analyze(
+            samples: samples,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+        let sampleCountDistribution = ZoneDistributionAnalyzer.analyzeBySampleCount(
+            samples: samples,
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+
+        XCTAssertEqual(distribution.counts[.zone2], 1)
+        XCTAssertEqual(distribution.counts[.zone3], 2)
+        XCTAssertEqual(sampleCountDistribution.ratio(for: .zone2), 1.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(sampleCountDistribution.ratio(for: .zone3), 2.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(distribution.durationsByZone[.zone2] ?? 0, 60, accuracy: 0.001)
+        XCTAssertEqual(distribution.durationsByZone[.zone3] ?? 0, 930, accuracy: 0.001)
+        XCTAssertEqual(distribution.ratio(for: .zone2), 60.0 / 990.0, accuracy: 0.001)
+        XCTAssertEqual(distribution.ratio(for: .zone3), 930.0 / 990.0, accuracy: 0.001)
+    }
+
+    func testZoneDistributionSampleCountAnalyzerPreservesLegacyRatios() {
+        let distribution = ZoneDistributionAnalyzer.analyzeBySampleCount(
+            samples: makeSamples([115, 115, 130]),
+            zoneBounds: AnalysisPolicy.default.zoneBounds
+        )
+
+        XCTAssertTrue(distribution.durationsByZone.isEmpty)
+        XCTAssertEqual(distribution.counts[.zone2], 2)
+        XCTAssertEqual(distribution.counts[.zone3], 1)
+        XCTAssertEqual(distribution.ratio(for: .zone2), 2.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(distribution.ratio(for: .zone3), 1.0 / 3.0, accuracy: 0.001)
+    }
+
     func testZone2AnalyzerPassesForSteadyAerobicSession() {
         let workout = SampleWorkoutCases
             .zone2ValidationCases()

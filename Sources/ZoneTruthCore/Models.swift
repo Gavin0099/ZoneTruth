@@ -809,10 +809,16 @@ public struct WorkoutInput: Codable, Equatable, Hashable, Sendable {
 public struct ZoneDistribution: Equatable, Sendable {
     public let counts: [TrainingZone: Int]
     public let ratios: [TrainingZone: Double]
+    public let durationsByZone: [TrainingZone: TimeInterval]
 
-    public init(counts: [TrainingZone: Int], ratios: [TrainingZone: Double]) {
+    public init(
+        counts: [TrainingZone: Int],
+        ratios: [TrainingZone: Double],
+        durationsByZone: [TrainingZone: TimeInterval] = [:]
+    ) {
         self.counts = counts
         self.ratios = ratios
+        self.durationsByZone = durationsByZone
     }
 
     public func ratio(for zone: TrainingZone) -> Double {

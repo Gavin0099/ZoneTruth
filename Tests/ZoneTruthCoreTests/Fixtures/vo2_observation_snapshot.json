@@ -4,7 +4,7 @@
     "observation" : {
       "highIntensityRatio" : 1,
       "intervalPatternHint" : "possible",
-      "peakZoneRatio" : 0.375,
+      "peakZoneRatio" : 0.5,
       "sampleQuality" : "heavilyFiltered",
       "zoneDistribution" : {
         "counts" : {
@@ -18,8 +18,8 @@
           "zone1" : 0,
           "zone2" : 0,
           "zone3" : 0,
-          "zone4" : 0.625,
-          "zone5" : 0.375
+          "zone4" : 0.5,
+          "zone5" : 0.5
         }
       }
     }

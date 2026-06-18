@@ -33,6 +33,33 @@ public enum ZoneDistributionAnalyzer {
             return ZoneDistribution(counts: counts, ratios: [:])
         }
 
+        let sortedSamples = samples.sorted { $0.timestamp < $1.timestamp }
+        for sample in sortedSamples {
+            counts[zoneBounds.zone(for: sample.bpm), default: 0] += 1
+        }
+
+        guard let durationsByZone = durationWeightedZones(for: sortedSamples, zoneBounds: zoneBounds) else {
+            return analyzeBySampleCount(samples: sortedSamples, zoneBounds: zoneBounds)
+        }
+
+        let total = durationsByZone.values.reduce(0, +)
+        guard total > 0 else {
+            return analyzeBySampleCount(samples: sortedSamples, zoneBounds: zoneBounds)
+        }
+
+        let ratios = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { zone in
+            (zone, durationsByZone[zone, default: 0] / total)
+        })
+
+        return ZoneDistribution(counts: counts, ratios: ratios, durationsByZone: durationsByZone)
+    }
+
+    public static func analyzeBySampleCount(samples: [HeartRateSample], zoneBounds: ZoneBounds) -> ZoneDistribution {
+        var counts = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { ($0, 0) })
+        guard !samples.isEmpty else {
+            return ZoneDistribution(counts: counts, ratios: [:])
+        }
+
         for sample in samples {
             counts[zoneBounds.zone(for: sample.bpm), default: 0] += 1
         }
@@ -47,11 +74,21 @@ public enum ZoneDistributionAnalyzer {
 
     public static func merge(_ distributions: [ZoneDistribution]) -> ZoneDistribution {
         var mergedCounts = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { ($0, 0) })
+        var mergedDurations = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { ($0, 0.0) })
         for distribution in distributions {
             for zone in TrainingZone.allCases {
                 mergedCounts[zone, default: 0] += distribution.counts[zone, default: 0]
+                mergedDurations[zone, default: 0] += distribution.durationsByZone[zone, default: 0]
             }
         }
+        let totalDuration = mergedDurations.values.reduce(0, +)
+        if totalDuration > 0 {
+            let ratios = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { zone in
+                (zone, mergedDurations[zone, default: 0] / totalDuration)
+            })
+            return ZoneDistribution(counts: mergedCounts, ratios: ratios, durationsByZone: mergedDurations)
+        }
+
         let total = Double(mergedCounts.values.reduce(0, +))
         guard total > 0 else {
             return ZoneDistribution(counts: mergedCounts, ratios: [:])
@@ -60,6 +97,43 @@ public enum ZoneDistributionAnalyzer {
             (zone, Double(mergedCounts[zone, default: 0]) / total)
         })
         return ZoneDistribution(counts: mergedCounts, ratios: ratios)
+    }
+
+    private static func durationWeightedZones(
+        for samples: [HeartRateSample],
+        zoneBounds: ZoneBounds
+    ) -> [TrainingZone: TimeInterval]? {
+        guard samples.count >= 2 else { return nil }
+
+        let intervals = zip(samples, samples.dropFirst()).map {
+            $1.timestamp.timeIntervalSince($0.timestamp)
+        }.filter { $0 > 0 }
+        guard let inferredFinalDuration = median(of: intervals), inferredFinalDuration > 0 else {
+            return nil
+        }
+
+        var durations = Dictionary(uniqueKeysWithValues: TrainingZone.allCases.map { ($0, 0.0) })
+        for index in samples.indices {
+            let duration: TimeInterval
+            if index < samples.index(before: samples.endIndex) {
+                duration = samples[index + 1].timestamp.timeIntervalSince(samples[index].timestamp)
+            } else {
+                duration = inferredFinalDuration
+            }
+            guard duration > 0 else { continue }
+            durations[zoneBounds.zone(for: samples[index].bpm), default: 0] += duration
+        }
+        return durations
+    }
+
+    private static func median(of values: [TimeInterval]) -> TimeInterval? {
+        guard !values.isEmpty else { return nil }
+        let sorted = values.sorted()
+        let midpoint = sorted.count / 2
+        if sorted.count.isMultiple(of: 2) {
+            return (sorted[midpoint - 1] + sorted[midpoint]) / 2
+        }
+        return sorted[midpoint]
     }
 }
 
