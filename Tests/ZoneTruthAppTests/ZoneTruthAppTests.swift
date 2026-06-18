@@ -74,6 +74,23 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertNotNil(result.statusMessage)
     }
 
+    func testJSONWorkoutRepositoryBootstrapsBundledSeedOnlyWhenEnabled() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let missingURL = directoryURL.appendingPathComponent("workouts.json")
+
+        let repository = JSONWorkoutRepository(
+            fileURL: missingURL,
+            fileManager: .default,
+            bootstrapSeedIfMissing: true
+        )
+
+        let result = repository.loadResult()
+
+        XCTAssertFalse(result.workouts.isEmpty)
+        XCTAssertEqual(result.source, .jsonImport)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: missingURL.path))
+    }
+
     func testHealthKitWorkoutRepositoryReturnsEmptyWhenUnauthorized() {
         let repository = HealthKitWorkoutRepository(
             store: StubHealthKitWorkoutStore(

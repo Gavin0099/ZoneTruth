@@ -26,7 +26,8 @@ struct AppEnvironment {
         )
         let importedRepository = JSONWorkoutRepository(
             fileURL: defaultImportURL(fileManager: fileManager),
-            fileManager: fileManager
+            fileManager: fileManager,
+            bootstrapSeedIfMissing: true
         )
         let callbackHandler = stravaConfig.map {
             StravaCallbackHandler(configuration: $0, sessionStore: sessionStore)
@@ -180,15 +181,17 @@ struct CompositeWorkoutRepository: WorkoutRepository {
 struct JSONWorkoutRepository: WorkoutRepository {
     let fileURL: URL
     let fileManager: FileManager
+    let bootstrapSeedIfMissing: Bool
 
-    init(fileURL: URL, fileManager: FileManager = .default) {
+    init(fileURL: URL, fileManager: FileManager = .default, bootstrapSeedIfMissing: Bool = false) {
         self.fileURL = fileURL
         self.fileManager = fileManager
+        self.bootstrapSeedIfMissing = bootstrapSeedIfMissing
     }
 
     func loadResult() -> WorkoutLoadResult {
         guard fileManager.fileExists(atPath: fileURL.path) else {
-            if bootstrapBundledSeedIfNeeded() {
+            if bootstrapSeedIfMissing && bootstrapBundledSeedIfNeeded() {
                 return loadResult()
             }
             return WorkoutLoadResult(
