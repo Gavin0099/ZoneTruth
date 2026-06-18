@@ -424,6 +424,43 @@ final class ZoneTruthAppTests: XCTestCase {
         XCTAssertEqual(result.workouts.first?.workoutRoute?.sourceLabel, "Apple Health workout route")
     }
 
+    func testWorkoutRouteQueryBatchCollectorCompletesOnlyOnceAfterError() {
+        enum RouteError: Error {
+            case transient
+        }
+
+        let collector = WorkoutRouteQueryBatchCollector<Int>()
+
+        XCTAssertNil(collector.record(locations: [1, 2], done: false, error: nil))
+
+        let errorCompletion = collector.record(locations: nil, done: false, error: RouteError.transient)
+        switch errorCompletion {
+        case .failure(RouteError.transient):
+            break
+        default:
+            XCTFail("Expected transient route error completion")
+        }
+
+        let laterCompletion = collector.record(locations: [3], done: true, error: nil)
+        XCTAssertNil(laterCompletion)
+    }
+
+    func testWorkoutRouteQueryBatchCollectorReturnsAccumulatedLocationsOnceOnDone() {
+        let collector = WorkoutRouteQueryBatchCollector<Int>()
+
+        XCTAssertNil(collector.record(locations: [1, 2], done: false, error: nil))
+
+        let completion = collector.record(locations: [3], done: true, error: nil)
+        switch completion {
+        case .success(let locations):
+            XCTAssertEqual(locations, [1, 2, 3])
+        default:
+            XCTFail("Expected accumulated route locations")
+        }
+
+        XCTAssertNil(collector.record(locations: [4], done: true, error: nil))
+    }
+
     func testHealthKitWorkoutRepositoryMapsExternalLoadDecouplingContext() async {
         let repository = HealthKitWorkoutRepository(
             store: StubHealthKitWorkoutStore(

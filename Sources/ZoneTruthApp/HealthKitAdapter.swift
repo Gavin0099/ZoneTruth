@@ -144,6 +144,39 @@ struct HealthKitSleepInterval: Equatable, Sendable {
     }
 }
 
+final class WorkoutRouteQueryBatchCollector<Location>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var locations: [Location] = []
+    private var isFinished = false
+
+    func record(
+        locations locationsOrNil: [Location]?,
+        done: Bool,
+        error: Error?
+    ) -> Result<[Location], Error>? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !isFinished else { return nil }
+
+        if let error {
+            isFinished = true
+            return .failure(error)
+        }
+
+        if let locationsOrNil {
+            locations.append(contentsOf: locationsOrNil)
+        }
+
+        if done {
+            isFinished = true
+            return .success(locations)
+        }
+
+        return nil
+    }
+}
+
 func aggregateWeeklySleepContext(
     from intervals: [HealthKitSleepInterval],
     lookbackDays: Int,
@@ -1525,17 +1558,10 @@ private func workoutRoutes(for workout: HKWorkout, from store: HKHealthStore) as
 @available(iOS 17.0, macOS 14.0, *)
 private func routeLocations(for route: HKWorkoutRoute, from store: HKHealthStore) async throws -> [CLLocation] {
     try await withCheckedThrowingContinuation { continuation in
-        var allLocations: [CLLocation] = []
+        let collector = WorkoutRouteQueryBatchCollector<CLLocation>()
         let query = HKWorkoutRouteQuery(route: route) { _, locationsOrNil, done, error in
-            if let error {
-                continuation.resume(throwing: error)
-                return
-            }
-            if let locationsOrNil {
-                allLocations.append(contentsOf: locationsOrNil)
-            }
-            if done {
-                continuation.resume(returning: allLocations)
+            if let completion = collector.record(locations: locationsOrNil, done: done, error: error) {
+                continuation.resume(with: completion)
             }
         }
         store.execute(query)
