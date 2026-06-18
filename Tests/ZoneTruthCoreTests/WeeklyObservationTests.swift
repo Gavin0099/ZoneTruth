@@ -137,6 +137,27 @@ final class WeeklyObservationTests: XCTestCase {
         XCTAssertEqual(summary.weekEnd, lastSundayMoment)
     }
 
+    func testWeeklyBuildersHandleExtremeWeekStartWithoutCrashing() {
+        let weekStart = Date.distantFuture
+        let summary = WeeklyObservationBuilder.build(
+            workouts: [],
+            weekStart: weekStart,
+            calendar: utcCalendar,
+            asOf: weekStart
+        )
+        let distribution = WeeklyTrainingModeDistributionBuilder.build(
+            workouts: [],
+            weekStart: weekStart,
+            calendar: utcCalendar,
+            asOf: weekStart
+        )
+
+        XCTAssertEqual(summary.weekStart, weekStart)
+        XCTAssertEqual(summary.workoutCount, 0)
+        XCTAssertEqual(distribution.weekStart, weekStart)
+        XCTAssertEqual(distribution.workoutCount, 0)
+    }
+
     func testWeeklySummaryIncludesHRVObservationCoverageAndAverage() {
         let monday = weekMonday
         let workouts = [

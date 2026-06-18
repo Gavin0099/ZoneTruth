@@ -1592,8 +1592,7 @@ public enum WeeklyObservationBuilder {
         policy: AnalysisPolicy = .default,
         sleepContext: WeeklySleepContext? = nil
     ) -> WeeklyWorkoutSummary {
-        let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)!
-        let weekEnd = nextWeekStart.addingTimeInterval(-1)
+        let (nextWeekStart, weekEnd) = weekBoundaryDates(weekStart: weekStart, calendar: calendar)
         let effectiveEnd = min(nextWeekStart, asOf)
 
         let elapsedDays: Int = {
@@ -1706,6 +1705,12 @@ public enum TrainingClassificationSnapshotProvider {
     }
 }
 
+private func weekBoundaryDates(weekStart: Date, calendar: Calendar) -> (nextWeekStart: Date, weekEnd: Date) {
+    let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)
+        ?? weekStart.addingTimeInterval(7 * 24 * 60 * 60)
+    return (nextWeekStart, nextWeekStart.addingTimeInterval(-1))
+}
+
 public enum WeeklyTrainingModeDistributionBuilder {
     public static func build(
         workouts: [WorkoutInput],
@@ -1716,8 +1721,7 @@ public enum WeeklyTrainingModeDistributionBuilder {
         zoneConfigVersion: String? = nil,
         usedPersonalizedZones: Bool = false
     ) -> WeeklyTrainingModeDistribution {
-        let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)!
-        let weekEnd = nextWeekStart.addingTimeInterval(-1)
+        let (nextWeekStart, weekEnd) = weekBoundaryDates(weekStart: weekStart, calendar: calendar)
         let effectiveEnd = min(nextWeekStart, asOf)
         let weekWorkouts = workouts.filter {
             $0.startDate >= weekStart && $0.startDate < effectiveEnd
